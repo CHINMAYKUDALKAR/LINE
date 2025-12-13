@@ -1,0 +1,99 @@
+import { CanActivate, ExecutionContext } from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
+import { PrismaService } from './prisma.service';
+export declare const RequireIPAllowlist: () => (target: any, propertyKey?: string, descriptor?: PropertyDescriptor) => any;
+export declare const SkipIPAllowlist: () => (target: any, propertyKey?: string, descriptor?: PropertyDescriptor) => any;
+export declare class IPAllowlistGuard implements CanActivate {
+    private reflector;
+    private prisma;
+    constructor(reflector: Reflector, prisma: PrismaService);
+    canActivate(context: ExecutionContext): Promise<boolean>;
+    private getClientIP;
+    private isIPAllowed;
+    private isIPInCIDR;
+    private ipToLong;
+}
+export declare class IPAllowlistService {
+    private prisma;
+    constructor(prisma: PrismaService);
+    getPolicy(tenantId: string): Promise<{
+        id: string;
+        tenantId: string;
+        ipAllowlistEnabled: boolean;
+        allowedIPs: string[];
+        passwordMinLength: number;
+        passwordRequireUppercase: boolean;
+        passwordRequireLowercase: boolean;
+        passwordRequireNumber: boolean;
+        passwordRequireSymbol: boolean;
+        passwordMaxAgeDays: number | null;
+        maxConcurrentSessions: number | null;
+        sessionTimeoutMinutes: number | null;
+        createdAt: Date;
+        updatedAt: Date;
+    } | null>;
+    updateIPAllowlist(tenantId: string, allowedIPs: string[], enabled: boolean): Promise<{
+        id: string;
+        tenantId: string;
+        ipAllowlistEnabled: boolean;
+        allowedIPs: string[];
+        passwordMinLength: number;
+        passwordRequireUppercase: boolean;
+        passwordRequireLowercase: boolean;
+        passwordRequireNumber: boolean;
+        passwordRequireSymbol: boolean;
+        passwordMaxAgeDays: number | null;
+        maxConcurrentSessions: number | null;
+        sessionTimeoutMinutes: number | null;
+        createdAt: Date;
+        updatedAt: Date;
+    }>;
+    addIP(tenantId: string, ip: string): Promise<{
+        id: string;
+        tenantId: string;
+        ipAllowlistEnabled: boolean;
+        allowedIPs: string[];
+        passwordMinLength: number;
+        passwordRequireUppercase: boolean;
+        passwordRequireLowercase: boolean;
+        passwordRequireNumber: boolean;
+        passwordRequireSymbol: boolean;
+        passwordMaxAgeDays: number | null;
+        maxConcurrentSessions: number | null;
+        sessionTimeoutMinutes: number | null;
+        createdAt: Date;
+        updatedAt: Date;
+    } | null>;
+    removeIP(tenantId: string, ip: string): Promise<{
+        id: string;
+        tenantId: string;
+        ipAllowlistEnabled: boolean;
+        allowedIPs: string[];
+        passwordMinLength: number;
+        passwordRequireUppercase: boolean;
+        passwordRequireLowercase: boolean;
+        passwordRequireNumber: boolean;
+        passwordRequireSymbol: boolean;
+        passwordMaxAgeDays: number | null;
+        maxConcurrentSessions: number | null;
+        sessionTimeoutMinutes: number | null;
+        createdAt: Date;
+        updatedAt: Date;
+    }>;
+    toggleIPAllowlist(tenantId: string, enabled: boolean): Promise<{
+        id: string;
+        tenantId: string;
+        ipAllowlistEnabled: boolean;
+        allowedIPs: string[];
+        passwordMinLength: number;
+        passwordRequireUppercase: boolean;
+        passwordRequireLowercase: boolean;
+        passwordRequireNumber: boolean;
+        passwordRequireSymbol: boolean;
+        passwordMaxAgeDays: number | null;
+        maxConcurrentSessions: number | null;
+        sessionTimeoutMinutes: number | null;
+        createdAt: Date;
+        updatedAt: Date;
+    }>;
+}

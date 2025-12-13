@@ -1,0 +1,88 @@
+import type { Response } from 'express';
+import { ReportsService } from './reports.service';
+import { CreateScheduledReportDto, ReportType } from './dto/scheduled-report.dto';
+export declare class ReportsController {
+    private svc;
+    constructor(svc: ReportsService);
+    overview(req: any, refresh?: string): Promise<{
+        funnel: unknown;
+        timeToHire: any;
+        interviewerLoad: unknown;
+    }>;
+    funnel(req: any, refresh?: string): Promise<unknown>;
+    timeToHire(req: any, refresh?: string): Promise<any>;
+    interviewerLoad(req: any, refresh?: string): Promise<unknown>;
+    exportCsv(req: any, res: Response, type: ReportType): Promise<void>;
+    exportPdf(req: any, res: Response, type: ReportType): Promise<void>;
+    createSchedule(req: any, dto: CreateScheduledReportDto): Promise<{
+        id: string;
+        tenantId: string;
+        createdById: string;
+        reportType: string;
+        frequency: string;
+        recipients: string[];
+        dayOfWeek: number | null;
+        dayOfMonth: number | null;
+        time: string;
+        name: string | null;
+        isActive: boolean;
+        lastRunAt: Date | null;
+        nextRunAt: Date | null;
+        createdAt: Date;
+        updatedAt: Date;
+    }>;
+    listSchedules(req: any): Promise<{
+        id: string;
+        tenantId: string;
+        createdById: string;
+        reportType: string;
+        frequency: string;
+        recipients: string[];
+        dayOfWeek: number | null;
+        dayOfMonth: number | null;
+        time: string;
+        name: string | null;
+        isActive: boolean;
+        lastRunAt: Date | null;
+        nextRunAt: Date | null;
+        createdAt: Date;
+        updatedAt: Date;
+    }[]>;
+    getSchedule(req: any, id: string): Promise<{
+        id: string;
+        tenantId: string;
+        createdById: string;
+        reportType: string;
+        frequency: string;
+        recipients: string[];
+        dayOfWeek: number | null;
+        dayOfMonth: number | null;
+        time: string;
+        name: string | null;
+        isActive: boolean;
+        lastRunAt: Date | null;
+        nextRunAt: Date | null;
+        createdAt: Date;
+        updatedAt: Date;
+    }>;
+    deleteSchedule(req: any, id: string): Promise<{
+        success: boolean;
+    }>;
+    toggleSchedule(req: any, id: string): Promise<{
+        id: string;
+        tenantId: string;
+        createdById: string;
+        reportType: string;
+        frequency: string;
+        recipients: string[];
+        dayOfWeek: number | null;
+        dayOfMonth: number | null;
+        time: string;
+        name: string | null;
+        isActive: boolean;
+        lastRunAt: Date | null;
+        nextRunAt: Date | null;
+        createdAt: Date;
+        updatedAt: Date;
+    }>;
+}

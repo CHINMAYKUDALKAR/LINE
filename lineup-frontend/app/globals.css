@@ -1,0 +1,166 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+    :root {
+        /* App Background: #F7F9FC */
+        --background: 210 30% 98%;
+        /* Card Background: #FFFFFF */
+        --foreground: 222 47% 11%;
+        /* #0F172A */
+
+        --card: 0 0% 100%;
+        --card-foreground: 222 47% 11%;
+
+        --popover: 0 0% 100%;
+        --popover-foreground: 222 47% 11%;
+
+        /* Primary: #2563EB (Blue-600) */
+        --primary: 221 83% 53%;
+        --primary-foreground: 0 0% 100%;
+
+        /* Secondary: Use white + border for secondary actions */
+        --secondary: 0 0% 100%;
+        --secondary-foreground: 222 47% 11%;
+
+        /* Muted: #F1F5F9 (Subtle Hover) */
+        --muted: 210 20% 96%;
+        --muted-foreground: 215 16% 47%;
+        /* #64748B */
+
+        --accent: 210 40% 98%;
+        /* Soft accent for hover */
+        --accent-foreground: 222 47% 11%;
+
+        /* Error: #DC2626 */
+        --destructive: 0 72% 51%;
+        --destructive-foreground: 0 0% 100%;
+
+        /* Borders: #E5E7EB */
+        --border: 220 13% 91%;
+        --input: 220 13% 91%;
+        --ring: 221 83% 53%;
+        /* Match Primary */
+
+        --radius: 0.5rem;
+
+        /* Chart Colors */
+        --chart-1: 221 83% 53%;
+        /* Blue */
+        --chart-2: 142 76% 36%;
+        /* Green */
+        --chart-3: 38 92% 50%;
+        /* Amber */
+        --chart-4: 262 83% 58%;
+        /* Purple */
+        --chart-5: 215 16% 47%;
+        /* Slate */
+
+        /* Sidebar: White background, consistent with prompt */
+        --sidebar-background: 0 0% 100%;
+        --sidebar-foreground: 215 16% 47%;
+        /* Muted text default */
+        --sidebar-primary: 221 83% 53%;
+        --sidebar-primary-foreground: 0 0% 100%;
+        --sidebar-accent: 214 95% 93%;
+        /* Blue-100 for active state */
+        --sidebar-accent-foreground: 222 47% 11%;
+        /* Dark text for active */
+        --sidebar-border: 220 13% 91%;
+        --sidebar-ring: 221 83% 53%;
+    }
+
+    .dark {
+        /* 
+         * PROFESSIONAL DARK MODE - Tailwind Slate Palette
+         * All colors use consistent 215-220° hue for natural blending
+         */
+
+        /* Background: Slate-950 #020617 */
+        --background: 222 47% 2%;
+        /* Foreground Text: Slate-50 #F8FAFC */
+        --foreground: 210 40% 98%;
+
+        /* Card: Slate-900 #0F172A - slightly lifted from background */
+        --card: 222 47% 11%;
+        --card-foreground: 210 40% 98%;
+
+        /* Popover: Same as card */
+        --popover: 222 47% 11%;
+        --popover-foreground: 210 40% 98%;
+
+        /* Primary: Blue-600 (unchanged brand color) */
+        --primary: 221 83% 53%;
+        --primary-foreground: 0 0% 100%;
+
+        /* Secondary: Slate-800 #1E293B */
+        --secondary: 217 33% 17%;
+        --secondary-foreground: 210 40% 98%;
+
+        /* Muted: Slate-800 for backgrounds, Slate-400 for text */
+        --muted: 217 33% 17%;
+        --muted-foreground: 215 20% 65%;
+
+        /* Accent: Slate-800 for hover states */
+        --accent: 217 33% 17%;
+        --accent-foreground: 210 40% 98%;
+
+        /* Destructive: Red-500 */
+        --destructive: 0 84% 60%;
+        --destructive-foreground: 0 0% 100%;
+
+        /* Border: Slate-700 #334155 - visible but subtle */
+        --border: 215 25% 27%;
+        --input: 215 25% 27%;
+        --ring: 221 83% 53%;
+
+        /* Sidebar: Slate-950 #020617 (matches background for seamless look) */
+        --sidebar-background: 222 47% 2%;
+        --sidebar-foreground: 215 20% 65%;
+        --sidebar-primary: 221 83% 53%;
+        --sidebar-primary-foreground: 0 0% 100%;
+        /* Active state: Blue with transparency simulation */
+        --sidebar-accent: 217 33% 17%;
+        --sidebar-accent-foreground: 217 91% 60%;
+        --sidebar-border: 215 25% 27%;
+        --sidebar-ring: 221 83% 53%;
+
+        /* Charts: Brighter colors for dark mode visibility */
+        --chart-1: 217 91% 60%;
+        --chart-2: 142 71% 45%;
+        --chart-3: 38 92% 50%;
+        --chart-4: 263 70% 70%;
+        --chart-5: 215 20% 65%;
+    }
+}
+
+@layer base {
+    * {
+        @apply border-border;
+    }
+
+    body {
+        @apply bg-background text-foreground font-sans antialiased;
+    }
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+    height: 6px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-track {
+    background: hsl(var(--muted));
+    border-radius: 3px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+    background: hsl(var(--border));
+    border-radius: 3px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--muted-foreground) / 0.5);
+}

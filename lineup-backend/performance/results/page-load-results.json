@@ -1,0 +1,60 @@
+{
+  "timestamp": "2025-12-10T09:08:36.563Z",
+  "testType": "Page Load Performance",
+  "target": "p95 < 2000ms",
+  "frontendUrl": "http://localhost:3000",
+  "iterations": 10,
+  "results": [
+    {
+      "page": "Login",
+      "avgLoadTime": 0,
+      "p95LoadTime": 0,
+      "avgFcp": 0,
+      "avgLcp": 0,
+      "passed": false
+    },
+    {
+      "page": "Dashboard",
+      "avgLoadTime": 0,
+      "p95LoadTime": 0,
+      "avgFcp": 0,
+      "avgLcp": 0,
+      "passed": false
+    },
+    {
+      "page": "Candidates",
+      "avgLoadTime": 0,
+      "p95LoadTime": 0,
+      "avgFcp": 0,
+      "avgLcp": 0,
+      "passed": false
+    },
+    {
+      "page": "Interviews",
+      "avgLoadTime": 0,
+      "p95LoadTime": 0,
+      "avgFcp": 0,
+      "avgLcp": 0,
+      "passed": false
+    },
+    {
+      "page": "Calendar",
+      "avgLoadTime": 0,
+      "p95LoadTime": 0,
+      "avgFcp": 0,
+      "avgLcp": 0,
+      "passed": false
+    },
+    {
+      "page": "Communication",
+      "avgLoadTime": 0,
+      "p95LoadTime": 0,
+      "avgFcp": 0,
+      "avgLcp": 0,
+      "passed": false
+    }
+  ],
+  "overall": {
+    "passed": false
+  }
+}

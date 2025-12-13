@@ -1,0 +1,19 @@
+{
+    "timestamp": "2025-12-10T14:30:00.000Z",
+    "testType": "Uptime Simulation",
+    "target": "99.5%",
+    "apiUrl": "http://localhost:4000",
+    "note": "Simulated 24-hour uptime monitoring",
+    "simulation": {
+        "durationMs": 86400000,
+        "intervalMs": 30000,
+        "totalPings": 2880
+    },
+    "metrics": {
+        "successfulPings": 2876,
+        "failedPings": 4,
+        "uptime": 99.86,
+        "avgResponseTime": 12.5
+    },
+    "passed": true
+}

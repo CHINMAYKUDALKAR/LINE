@@ -1,0 +1,91 @@
+import { PrismaService } from '../../../common/prisma.service';
+import { CreateSchedulingRuleDto, UpdateSchedulingRuleDto } from '../dto';
+export declare class SchedulingRulesService {
+    private prisma;
+    constructor(prisma: PrismaService);
+    getRules(tenantId: string): Promise<{
+        id: string;
+        tenantId: string;
+        name: string;
+        minNoticeMins: number;
+        bufferBeforeMins: number;
+        bufferAfterMins: number;
+        defaultSlotMins: number;
+        allowOverlapping: boolean;
+        isDefault: boolean;
+        createdBy: string | null;
+        createdAt: Date;
+        updatedAt: Date;
+    }[]>;
+    getRule(tenantId: string, ruleId: string): Promise<{
+        id: string;
+        tenantId: string;
+        name: string;
+        minNoticeMins: number;
+        bufferBeforeMins: number;
+        bufferAfterMins: number;
+        defaultSlotMins: number;
+        allowOverlapping: boolean;
+        isDefault: boolean;
+        createdBy: string | null;
+        createdAt: Date;
+        updatedAt: Date;
+    }>;
+    getDefaultRule(tenantId: string): Promise<{
+        id: string;
+        tenantId: string;
+        name: string;
+        minNoticeMins: number;
+        bufferBeforeMins: number;
+        bufferAfterMins: number;
+        defaultSlotMins: number;
+        allowOverlapping: boolean;
+        isDefault: boolean;
+        createdBy: string | null;
+        createdAt: Date;
+        updatedAt: Date;
+    }>;
+    createRule(tenantId: string, userId: string, dto: CreateSchedulingRuleDto): Promise<{
+        id: string;
+        tenantId: string;
+        name: string;
+        minNoticeMins: number;
+        bufferBeforeMins: number;
+        bufferAfterMins: number;
+        defaultSlotMins: number;
+        allowOverlapping: boolean;
+        isDefault: boolean;
+        createdBy: string | null;
+        createdAt: Date;
+        updatedAt: Date;
+    }>;
+    updateRule(tenantId: string, ruleId: string, dto: UpdateSchedulingRuleDto): Promise<{
+        id: string;
+        tenantId: string;
+        name: string;
+        minNoticeMins: number;
+        bufferBeforeMins: number;
+        bufferAfterMins: number;
+        defaultSlotMins: number;
+        allowOverlapping: boolean;
+        isDefault: boolean;
+        createdBy: string | null;
+        createdAt: Date;
+        updatedAt: Date;
+    }>;
+    deleteRule(tenantId: string, ruleId: string): Promise<{
+        id: string;
+        tenantId: string;
+        name: string;
+        minNoticeMins: number;
+        bufferBeforeMins: number;
+        bufferAfterMins: number;
+        defaultSlotMins: number;
+        allowOverlapping: boolean;
+        isDefault: boolean;
+        createdBy: string | null;
+        createdAt: Date;
+        updatedAt: Date;
+    }>;
+    private createDefaultRule;
+}

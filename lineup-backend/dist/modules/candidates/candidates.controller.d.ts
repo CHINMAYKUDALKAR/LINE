@@ -1,0 +1,105 @@
+import { CandidatesService } from './candidates.service';
+import { CreateCandidateDto } from './dto/create-candidate.dto';
+import { UpdateCandidateDto } from './dto/update-candidate.dto';
+import { ListCandidatesDto } from './dto/list-candidates.dto';
+export declare class CandidatesController {
+    private svc;
+    constructor(svc: CandidatesService);
+    create(req: any, dto: CreateCandidateDto): Promise<{
+        id: string;
+        tenantId: string;
+        name: string;
+        email: string | null;
+        phone: string | null;
+        roleTitle: string | null;
+        stage: string;
+        source: string | null;
+        resumeUrl: string | null;
+        notes: string | null;
+        tags: string[];
+        createdById: string | null;
+        overallScore: number | null;
+        lastFeedbackAt: Date | null;
+        createdAt: Date;
+        updatedAt: Date;
+        deletedAt: Date | null;
+    }>;
+    list(req: any, dto: ListCandidatesDto): Promise<{
+        data: {
+            name: string;
+            id: string;
+            email: string | null;
+            createdAt: Date;
+            roleTitle: string | null;
+            stage: string;
+            source: string | null;
+        }[];
+        meta: {
+            total: number;
+            page: number;
+            perPage: number;
+            lastPage: number;
+        };
+    }>;
+    get(req: any, id: string): Promise<{
+        id: string;
+        tenantId: string;
+        name: string;
+        email: string | null;
+        phone: string | null;
+        roleTitle: string | null;
+        stage: string;
+        source: string | null;
+        resumeUrl: string | null;
+        notes: string | null;
+        tags: string[];
+        createdById: string | null;
+        overallScore: number | null;
+        lastFeedbackAt: Date | null;
+        createdAt: Date;
+        updatedAt: Date;
+        deletedAt: Date | null;
+    }>;
+    update(req: any, id: string, dto: UpdateCandidateDto): Promise<{
+        id: string;
+        tenantId: string;
+        name: string;
+        email: string | null;
+        phone: string | null;
+        roleTitle: string | null;
+        stage: string;
+        source: string | null;
+        resumeUrl: string | null;
+        notes: string | null;
+        tags: string[];
+        createdById: string | null;
+        overallScore: number | null;
+        lastFeedbackAt: Date | null;
+        createdAt: Date;
+        updatedAt: Date;
+        deletedAt: Date | null;
+    }>;
+    delete(req: any, id: string): Promise<{
+        success: boolean;
+    }>;
+    uploadUrl(req: any, id: string, filename: string): Promise<{
+        fileId: string;
+        uploadUrl: string;
+        s3Key: string;
+    }>;
+    attachResume(req: any, id: string, fileId: string, s3Key: string, mimeType?: string, size?: number): Promise<{
+        success: boolean;
+        fileId: string;
+    }>;
+    bulkImport(req: any, body: any): Promise<{
+        success: number;
+        failed: number;
+        duplicates: string[];
+        errors: {
+            row: number;
+            message: string;
+        }[];
+    }> | Promise<{
+        message: string;
+    }>;
+}

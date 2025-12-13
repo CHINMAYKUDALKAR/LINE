@@ -1,0 +1,144 @@
+import { PrismaService } from '../../common/prisma.service';
+import { CreateInterviewDto } from './dto/create-interview.dto';
+import { RescheduleInterviewDto } from './dto/reschedule-interview.dto';
+import { ListInterviewsDto } from './dto/list-interviews.dto';
+import { BulkScheduleDto, BulkScheduleResult } from './dto/bulk-schedule.dto';
+import { Queue } from 'bullmq';
+import { InterviewAutomationService } from './services/interview-automation.service';
+import { RecycleBinService } from '../recycle-bin/recycle-bin.service';
+export declare class InterviewsService {
+    private prisma;
+    private reminderQueue;
+    private syncQueue;
+    private automationService;
+    private recycleBinService;
+    constructor(prisma: PrismaService, reminderQueue: Queue, syncQueue: Queue, automationService: InterviewAutomationService, recycleBinService: RecycleBinService);
+    create(tenantId: string, userId: string, dto: CreateInterviewDto): Promise<{
+        id: string;
+        tenantId: string;
+        candidateId: string;
+        interviewerIds: string[];
+        date: Date;
+        durationMins: number;
+        stage: string;
+        status: string;
+        meetingLink: string | null;
+        notes: string | null;
+        avgRating: number | null;
+        hasFeedback: boolean;
+        isNoShow: boolean;
+        createdAt: Date;
+        updatedAt: Date;
+        deletedAt: Date | null;
+    }>;
+    reschedule(tenantId: string, userId: string, id: string, dto: RescheduleInterviewDto): Promise<{
+        id: string;
+        tenantId: string;
+        candidateId: string;
+        interviewerIds: string[];
+        date: Date;
+        durationMins: number;
+        stage: string;
+        status: string;
+        meetingLink: string | null;
+        notes: string | null;
+        avgRating: number | null;
+        hasFeedback: boolean;
+        isNoShow: boolean;
+        createdAt: Date;
+        updatedAt: Date;
+        deletedAt: Date | null;
+    }>;
+    get(tenantId: string, id: string): Promise<{
+        id: string;
+        tenantId: string;
+        candidateId: string;
+        interviewerIds: string[];
+        date: Date;
+        durationMins: number;
+        stage: string;
+        status: string;
+        meetingLink: string | null;
+        notes: string | null;
+        avgRating: number | null;
+        hasFeedback: boolean;
+        isNoShow: boolean;
+        createdAt: Date;
+        updatedAt: Date;
+        deletedAt: Date | null;
+    }>;
+    list(tenantId: string, dto: ListInterviewsDto): Promise<{
+        data: ({
+            candidate: {
+                name: string;
+                email: string | null;
+            };
+        } & {
+            id: string;
+            tenantId: string;
+            candidateId: string;
+            interviewerIds: string[];
+            date: Date;
+            durationMins: number;
+            stage: string;
+            status: string;
+            meetingLink: string | null;
+            notes: string | null;
+            avgRating: number | null;
+            hasFeedback: boolean;
+            isNoShow: boolean;
+            createdAt: Date;
+            updatedAt: Date;
+            deletedAt: Date | null;
+        })[];
+        meta: {
+            total: number;
+            page: number;
+            perPage: number;
+            lastPage: number;
+        };
+    }>;
+    checkConflicts(tenantId: string, interviewerIds: string[], start: Date, end: Date, excludeId?: string): Promise<void>;
+    cancel(tenantId: string, userId: string, id: string): Promise<{
+        id: string;
+        tenantId: string;
+        candidateId: string;
+        interviewerIds: string[];
+        date: Date;
+        durationMins: number;
+        stage: string;
+        status: string;
+        meetingLink: string | null;
+        notes: string | null;
+        avgRating: number | null;
+        hasFeedback: boolean;
+        isNoShow: boolean;
+        createdAt: Date;
+        updatedAt: Date;
+        deletedAt: Date | null;
+    }>;
+    complete(tenantId: string, userId: string, id: string): Promise<{
+        id: string;
+        tenantId: string;
+        candidateId: string;
+        interviewerIds: string[];
+        date: Date;
+        durationMins: number;
+        stage: string;
+        status: string;
+        meetingLink: string | null;
+        notes: string | null;
+        avgRating: number | null;
+        hasFeedback: boolean;
+        isNoShow: boolean;
+        createdAt: Date;
+        updatedAt: Date;
+        deletedAt: Date | null;
+    }>;
+    delete(tenantId: string, userId: string, id: string): Promise<{
+        success: boolean;
+    }>;
+    bulkSchedule(tenantId: string, userId: string, dto: BulkScheduleDto): Promise<BulkScheduleResult>;
+    private enqueueReminders;
+    private parseSort;
+}

@@ -1,0 +1,113 @@
+import { Injectable, BadRequestException } from '@nestjs/common';
+import { PrismaService } from '../../common/prisma.service';
+import IORedis from 'ioredis';
+import { Queue } from 'bullmq';
+import { randomPassword } from './utils/provisioning.util';
+import * as bcrypt from 'bcrypt';
+
+@Injectable()
+export class AdminConsoleService {
+    private queue: Queue;
+    constructor(private prisma: PrismaService) {
+        const conn = new IORedis(process.env.REDIS_URL || 'redis://127.0.0.1:6379', {
+            maxRetriesPerRequest: null
+        });
+        this.queue = new Queue('tenant-provision', { connection: conn });
+    }
+
+    // Platform user management
+    async createPlatformUser(dto: any, currentUserId: string) {
+        const exists = await this.prisma.user.findUnique({ where: { email: dto.email } });
+        if (exists) throw new BadRequestException('User already exists');
+
+        const pwd = dto.password || randomPassword();
+        const hashed = await bcrypt.hash(pwd, 10);
+
+        const user = await this.prisma.user.create({
+            data: {
+                email: dto.email,
+                password: hashed,
+                name: dto.name,
+                role: dto.role, // SUPERADMIN or SUPPORT
+                tenantId: null // platform-level user
+            }
+        });
+
+        // For platform action auditing, tenantId is optional in our schema or we use a convention.
+        // If AuditLog.tenantId is required (it is String, not String?), we must provide one.
+        // Schema says: tenantId String, tenant Tenant. This implies every audit log MUST belong to a tenant.
+        // This is a schema limitation for platform logs.
+        // Workaround: Use a "system" tenant or null if schema allows (it doesn't).
+        // Prompt says: "Platform audit...".
+        // I will assume for now we might need to fetch a 'system' tenant ID or allow null in schema.
+        // Since I can't change schema successfully on DB, I will modify AuditLog in schema to be optional tenantId?
+        // Doing so now would require another migration attempt. 
+        // For this skeleton, I will use a dummy UUID if I can't find one, or just `tenantId: 'platform'`.
+        // But `tenantId` is a foreign key, so it must exist. 
+        // BEST FIX: Schema was not fully updated for AuditLog optionality in prompt instructions.
+        // I made User.tenantId optional. I should probably make AuditLog.tenantId optional too.
+        // I'll update schema.prisma again to make AuditLog.tenantId optional!
+        await this.prisma.auditLog.create({ data: { userId: currentUserId, tenantId: null, action: 'platform.user.create', metadata: { userId: user.id } } });
+        // Return plaintext password only once if generated
+        return { id: user.id, password: dto.password ? null : pwd };
+    }
+
+    // Tenant provisioning: synchronous create + enqueue background setup
+    async provisionTenant(dto: any, currentUserId: string) {
+        // create tenant row
+        const tenant = await this.prisma.tenant.create({
+            data: {
+                name: dto.name,
+                domain: dto.domain || null,
+                settings: { createdBy: currentUserId }
+            }
+        });
+
+        // create audit
+        // Note: tenantId is created above.
+        await this.prisma.auditLog.create({ data: { userId: currentUserId, tenantId: tenant.id, action: 'provision.started', metadata: { dto } } });
+
+        // enqueue provisioning background job
+        await this.queue.add('provision-tenant', {
+            tenantId: tenant.id,
+            name: dto.name,
+            domain: dto.domain,
+            adminEmail: dto.initialAdminEmail
+        });
+
+        return { tenantId: tenant.id, status: 'enqueued' };
+    }
+
+    async listTenants() {
+        return this.prisma.tenant.findMany({ orderBy: { createdAt: 'desc' } });
+    }
+
+    async tenantStatus(tenantId: string) {
+        // fetch latest audit logs for provisioning events
+        const logs = await this.prisma.auditLog.findMany({
+            where: { tenantId },
+            orderBy: { createdAt: 'desc' },
+            take: 10
+        });
+        return { tenantId, logs };
+    }
+
+    async createTenantAdmin(tenantId: string, email: string) {
+        const pwd = randomPassword();
+        const hashed = await bcrypt.hash(pwd, 10);
+
+        const user = await this.prisma.user.create({
+            data: {
+                tenantId,
+                email,
+                password: hashed,
+                name: 'Tenant Admin',
+                role: 'ADMIN',
+                status: 'ACTIVE'
+            }
+        });
+
+        await this.prisma.auditLog.create({ data: { tenantId, action: 'provision.tenantAdmin.created', metadata: { email } } });
+        return { id: user.id, password: pwd };
+    }
+}
