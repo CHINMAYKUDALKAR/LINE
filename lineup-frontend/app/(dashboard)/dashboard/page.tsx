@@ -10,13 +10,57 @@ import { ScheduleInterviewModal } from '@/components/scheduling/ScheduleIntervie
 import { AddCandidateModal } from '@/components/candidates/AddCandidateModal';
 import { UploadCandidatesModal } from '@/components/candidates/UploadCandidatesModal';
 import { BulkScheduleModal } from '@/components/scheduling/BulkScheduleModal';
-import { mockMetrics, mockStageCounts, mockInterviews } from '@/lib/mock-data';
 import { useToast } from '@/hooks/use-toast';
-import { InterviewStage } from '@/types/interview';
+import { InterviewStage, InterviewStatus } from '@/types/interview';
 import { Separator } from '@/components/ui/separator';
 import { getOverview, getFunnel } from '@/lib/api/reports';
 import { getInterviews } from '@/lib/api/interviews';
 import { fadeInUp, staggerContainer, staggerItem } from '@/lib/animations';
+
+// Types for dashboard data
+type Metrics = {
+    scheduledToday: number;
+    scheduledTodayTrend: number;
+    pendingFeedback: number;
+    pendingFeedbackTrend: number;
+    completed: number;
+    completedTrend: number;
+    noShows: number;
+    noShowsTrend: number;
+};
+
+type StageCount = {
+    stage: InterviewStage;
+    label: string;
+    count: number;
+    pending: number;
+    completed: number;
+};
+
+type Interview = {
+    id: string;
+    candidateId: string;
+    candidateName: string;
+    candidateEmail: string;
+    interviewerName: string;
+    interviewerEmail: string;
+    role: string;
+    dateTime: string;
+    stage: InterviewStage;
+    status: InterviewStatus;
+    tenantId: string;
+};
+
+const emptyMetrics: Metrics = {
+    scheduledToday: 0,
+    scheduledTodayTrend: 0,
+    pendingFeedback: 0,
+    pendingFeedbackTrend: 0,
+    completed: 0,
+    completedTrend: 0,
+    noShows: 0,
+    noShowsTrend: 0,
+};
 
 const Dashboard = () => {
     const [isLoading, setIsLoading] = useState(true);
@@ -24,10 +68,10 @@ const Dashboard = () => {
     const [activeStage, setActiveStage] = useState<InterviewStage | undefined>();
     const [activeKPIFilter, setActiveKPIFilter] = useState<string | undefined>();
 
-    // Data states
-    const [metrics, setMetrics] = useState(mockMetrics);
-    const [stageCounts, setStageCounts] = useState(mockStageCounts);
-    const [interviews, setInterviews] = useState(mockInterviews);
+    // Data states - initialize with empty data, not mock data
+    const [metrics, setMetrics] = useState<Metrics>(emptyMetrics);
+    const [stageCounts, setStageCounts] = useState<StageCount[]>([]);
+    const [interviews, setInterviews] = useState<Interview[]>([]);
 
     // Modal states
     const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
@@ -87,8 +131,8 @@ const Dashboard = () => {
                     candidateId: i.candidateId,
                     candidateName: i.candidateName || 'Unknown',
                     candidateEmail: i.candidateEmail || '',
-                    interviewerName: i.interviewers[0]?.name || '',
-                    interviewerEmail: i.interviewers[0]?.email || '',
+                    interviewerName: i.interviewers?.[0]?.name || '',
+                    interviewerEmail: i.interviewers?.[0]?.email || '',
                     role: i.roleTitle || '',
                     dateTime: i.date,
                     stage: i.stage as InterviewStage,
@@ -100,8 +144,8 @@ const Dashboard = () => {
                 }
             }
         } catch (error) {
-            console.warn('Failed to load dashboard data, using mock data:', error);
-            // Keep mock data on error
+            console.error('Failed to load dashboard data:', error);
+            setHasError(true);
         } finally {
             setIsLoading(false);
         }

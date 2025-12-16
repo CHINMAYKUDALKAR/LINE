@@ -34,7 +34,7 @@ import { PrismaService } from './common/prisma.service';
 import { GlobalExceptionFilter } from './common/exceptions.filter';
 
 import { AppCommonModule } from './common/app-common.module';
-import { RateLimiterGuard } from './common/rate-limiter.guard';
+import { RateLimitGuard } from './common/rate-limit';
 import { IPAllowlistGuard } from './common/ip-allowlist.guard';
 
 @Module({
@@ -70,7 +70,7 @@ import { IPAllowlistGuard } from './common/ip-allowlist.guard';
   ],
   controllers: [HealthController],
   providers: [
-    { provide: APP_GUARD, useClass: RateLimiterGuard },
+    { provide: APP_GUARD, useClass: RateLimitGuard },
     { provide: APP_GUARD, useClass: IPAllowlistGuard },
     { provide: APP_INTERCEPTOR, useClass: LoggingInterceptor },
     { provide: APP_INTERCEPTOR, useClass: MetricsInterceptor },

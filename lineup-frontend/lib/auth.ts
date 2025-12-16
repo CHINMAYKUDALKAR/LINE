@@ -23,14 +23,3 @@ export function clearAuthToken(): void {
 export function isAuthenticated(): boolean {
     return !!getAuthToken();
 }
-
-/**
- * For development/testing: Set a mock token
- * In production, this would come from your login flow
- */
-export function setMockToken(): void {
-    // This is a placeholder - replace with real token from your auth system
-    const mockToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.mock.token';
-    setAuthToken(mockToken);
-    console.warn('Using mock auth token - replace with real authentication');
-}

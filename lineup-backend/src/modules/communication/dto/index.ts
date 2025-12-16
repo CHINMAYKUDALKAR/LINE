@@ -264,6 +264,16 @@ export class EmailConfigDto {
     @IsOptional()
     @IsString()
     region?: string;
+
+    @ApiPropertyOptional()
+    @IsOptional()
+    @IsString()
+    accessKeyId?: string;
+
+    @ApiPropertyOptional()
+    @IsOptional()
+    @IsString()
+    secretAccessKey?: string;
 }
 
 export class WhatsAppConfigDto {

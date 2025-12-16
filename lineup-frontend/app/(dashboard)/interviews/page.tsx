@@ -6,12 +6,11 @@ import { InterviewsHeader } from '@/components/interviews/InterviewsHeader';
 import { InterviewsFilterBar } from '@/components/interviews/InterviewsFilterBar';
 import { InterviewsTable } from '@/components/interviews/InterviewsTable';
 import { ScheduleInterviewModal } from '@/components/scheduling/ScheduleInterviewModal';
-import { mockCalendarEvents, mockInterviewers } from '@/lib/calendar-mock-data';
-import { currentUserRole } from '@/lib/navigation-mock-data';
 import { CalendarEvent, CalendarFilters } from '@/types/calendar';
 import { InterviewStatus, InterviewStage } from '@/types/interview';
 import { toast } from '@/hooks/use-toast';
 import { getInterviews } from '@/lib/api/interviews';
+import { useInterviewers } from '@/lib/hooks/useInterviews';
 import { Skeleton } from '@/components/ui/skeleton';
 import { fadeInUp, staggerContainer, staggerItem } from '@/lib/animations';
 
@@ -24,8 +23,9 @@ export default function InterviewsPage() {
         status: 'all',
     });
 
-    const [events, setEvents] = useState<CalendarEvent[]>(mockCalendarEvents);
+    const [events, setEvents] = useState<CalendarEvent[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const { data: interviewersData } = useInterviewers();
 
     const loadInterviews = useCallback(async () => {
         setIsLoading(true);
@@ -34,14 +34,14 @@ export default function InterviewsPage() {
 
             // Map API response to CalendarEvent format
             const mappedEvents: CalendarEvent[] = response.data.map((interview) => {
-                const interviewerName = interview.interviewers[0]?.name || 'Unassigned';
+                const interviewerName = interview.interviewers?.[0]?.name || 'Unassigned';
                 const initials = interviewerName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
 
                 return {
                     id: interview.id,
                     candidateId: interview.candidateId,
                     candidateName: interview.candidateName || 'Unknown',
-                    interviewerId: interview.interviewers[0]?.id || '',
+                    interviewerId: interview.interviewers?.[0]?.id || '',
                     interviewerName,
                     interviewerInitials: initials,
                     role: interview.roleTitle || '',
@@ -133,7 +133,7 @@ export default function InterviewsPage() {
                         onSearchChange={setSearchQuery}
                         filters={filters}
                         onFilterChange={(key, value) => setFilters(prev => ({ ...prev, [key]: value }))}
-                        interviewers={mockInterviewers}
+                        interviewers={interviewersData?.map(i => ({ id: i.id, name: i.name })) || []}
                         onClearFilters={() => {
                             setSearchQuery('');
                             setFilters({ interviewerId: 'all', stage: 'all', status: 'all' });
@@ -142,7 +142,7 @@ export default function InterviewsPage() {
 
                     <InterviewsTable
                         events={filteredEvents}
-                        userRole={currentUserRole}
+                        userRole="admin"
                         onAction={handleAction}
                         onBulkAction={handleBulkAction}
                     />

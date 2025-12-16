@@ -314,6 +314,8 @@ class EmailConfigDto {
     fromAddress;
     fromName;
     region;
+    accessKeyId;
+    secretAccessKey;
 }
 exports.EmailConfigDto = EmailConfigDto;
 __decorate([
@@ -367,6 +369,18 @@ __decorate([
     (0, class_validator_1.IsString)(),
     __metadata("design:type", String)
 ], EmailConfigDto.prototype, "region", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)(),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], EmailConfigDto.prototype, "accessKeyId", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)(),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], EmailConfigDto.prototype, "secretAccessKey", void 0);
 class WhatsAppConfigDto {
     businessId;
     phoneNumberId;

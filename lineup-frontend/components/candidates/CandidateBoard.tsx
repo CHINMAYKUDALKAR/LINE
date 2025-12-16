@@ -26,7 +26,7 @@ interface CandidateBoardProps {
 }
 
 const COLUMNS: { id: InterviewStage; title: string }[] = [
-    { id: 'received', title: 'Applied' },
+    { id: 'applied', title: 'Applied' },
     { id: 'screening', title: 'Screening' },
     { id: 'interview-1', title: 'Interview 1' },
     { id: 'interview-2', title: 'Interview 2' },

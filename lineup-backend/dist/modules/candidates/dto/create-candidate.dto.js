@@ -23,36 +23,45 @@ class CreateCandidateDto {
 exports.CreateCandidateDto = CreateCandidateDto;
 __decorate([
     (0, class_validator_1.IsString)(),
+    (0, class_validator_1.MaxLength)(255),
     __metadata("design:type", String)
 ], CreateCandidateDto.prototype, "name", void 0);
 __decorate([
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsEmail)(),
+    (0, class_validator_1.MaxLength)(255),
     __metadata("design:type", String)
 ], CreateCandidateDto.prototype, "email", void 0);
 __decorate([
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsString)(),
+    (0, class_validator_1.MaxLength)(30),
+    (0, class_validator_1.Matches)(/^[+]?[\d\s\-().]+$/, { message: 'Invalid phone format' }),
     __metadata("design:type", String)
 ], CreateCandidateDto.prototype, "phone", void 0);
 __decorate([
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsString)(),
+    (0, class_validator_1.MaxLength)(255),
     __metadata("design:type", String)
 ], CreateCandidateDto.prototype, "roleTitle", void 0);
 __decorate([
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsString)(),
+    (0, class_validator_1.MaxLength)(50),
     __metadata("design:type", String)
 ], CreateCandidateDto.prototype, "stage", void 0);
 __decorate([
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsString)(),
+    (0, class_validator_1.MaxLength)(100),
     __metadata("design:type", String)
 ], CreateCandidateDto.prototype, "source", void 0);
 __decorate([
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsArray)(),
+    (0, class_validator_1.IsString)({ each: true }),
+    (0, class_validator_1.MaxLength)(50, { each: true }),
     __metadata("design:type", Array)
 ], CreateCandidateDto.prototype, "tags", void 0);
 //# sourceMappingURL=create-candidate.dto.js.map

@@ -50,6 +50,7 @@ const common_1 = require("@nestjs/common");
 const prisma_service_1 = require("../../common/prisma.service");
 const invitation_service_1 = require("./invitation.service");
 const password_reset_service_1 = require("./password-reset.service");
+const email_service_1 = require("../email/email.service");
 const exceptions_1 = require("../../common/exceptions");
 const bcrypt = __importStar(require("bcrypt"));
 const token_util_1 = require("./utils/token.util");
@@ -61,12 +62,14 @@ let AuthService = class AuthService {
     prisma;
     invitationService;
     passwordResetService;
+    emailService;
     bruteForceService;
     passwordPolicyService;
-    constructor(prisma, invitationService, passwordResetService, bruteForceService, passwordPolicyService) {
+    constructor(prisma, invitationService, passwordResetService, emailService, bruteForceService, passwordPolicyService) {
         this.prisma = prisma;
         this.invitationService = invitationService;
         this.passwordResetService = passwordResetService;
+        this.emailService = emailService;
         this.bruteForceService = bruteForceService;
         this.passwordPolicyService = passwordPolicyService;
     }
@@ -137,30 +140,7 @@ let AuthService = class AuthService {
     }
     async register(dto) {
         if (dto.tenantId) {
-            const existing = await this.prisma.user.findUnique({ where: { email: dto.email.toLowerCase() } });
-            if (existing)
-                throw new common_1.BadRequestException('Email already exists');
-            const saltRounds = Number(process.env.BCRYPT_SALT_ROUNDS || 12);
-            const hashed = await bcrypt.hash(dto.password, saltRounds);
-            const user = await this.prisma.user.create({
-                data: {
-                    email: dto.email.toLowerCase(),
-                    password: hashed,
-                    name: dto.name || null,
-                    tenantId: dto.tenantId,
-                    role: 'RECRUITER',
-                    status: 'ACTIVE',
-                },
-            });
-            await this.prisma.userTenant.create({
-                data: {
-                    userId: user.id,
-                    tenantId: dto.tenantId,
-                    role: 'RECRUITER',
-                    status: 'ACTIVE',
-                },
-            });
-            return { id: user.id, email: user.email, name: user.name };
+            throw new common_1.BadRequestException('Direct tenant registration is not allowed. Please use an invitation link to join an existing organization.');
         }
         return this.signUpCreateTenant({
             email: dto.email,
@@ -320,14 +300,15 @@ let AuthService = class AuthService {
             if (existingUserTenant) {
                 throw new common_1.BadRequestException('You are already a member of this tenant');
             }
-            await this.prisma.user.update({
-                where: { id: user.id },
-                data: {
-                    password: hashedPassword,
-                    name: dto.name || user.name,
-                    status: 'ACTIVE',
-                },
-            });
+            if (dto.name) {
+                await this.prisma.user.update({
+                    where: { id: user.id },
+                    data: {
+                        name: dto.name,
+                        status: 'ACTIVE',
+                    },
+                });
+            }
         }
         else {
             user = await this.prisma.user.create({
@@ -520,7 +501,20 @@ let AuthService = class AuthService {
             },
         });
         const verificationUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/verify-email?token=${token}`;
-        console.log(`Verification URL for ${user.email}: ${verificationUrl}`);
+        try {
+            await this.emailService.sendMail(null, {
+                to: user.email,
+                template: 'verification',
+                context: {
+                    name: user.name || 'User',
+                    verificationUrl,
+                    expiryHours: 24,
+                },
+            });
+        }
+        catch (error) {
+            console.error('Failed to send verification email:', error);
+        }
         return { success: true, message: 'Verification email sent' };
     }
     async verifyEmail(token) {
@@ -576,6 +570,7 @@ exports.AuthService = AuthService = __decorate([
     __metadata("design:paramtypes", [prisma_service_1.PrismaService,
         invitation_service_1.InvitationService,
         password_reset_service_1.PasswordResetService,
+        email_service_1.EmailService,
         brute_force_guard_1.BruteForceService,
         password_policy_service_1.PasswordPolicyService])
 ], AuthService);

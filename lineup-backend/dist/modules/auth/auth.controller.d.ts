@@ -31,11 +31,7 @@ export declare class AuthController {
             brandingLogoUrl?: string | null;
         }[];
     }>;
-    register(dto: RegisterDto): Promise<import("./auth.service").AuthResponse | {
-        id: string;
-        email: string;
-        name: string | null;
-    }>;
+    register(dto: RegisterDto): Promise<import("./auth.service").AuthResponse>;
     checkPassword(dto: PasswordCheckDto): Promise<import("../../common/password-policy.service").PasswordValidationResult>;
     login(dto: LoginDto, req: express.Request, res: express.Response): Promise<{
         accessToken: string;
@@ -94,8 +90,8 @@ export declare class AuthController {
         role: import(".prisma/client").$Enums.Role;
         expiresAt: Date;
         tenant: {
-            name: string;
             id: string;
+            name: string;
             brandingLogoUrl: string | null;
             brandingColors: import(".prisma/client").Prisma.JsonValue;
         };

@@ -2,6 +2,7 @@ import { CandidatesService } from './candidates.service';
 import { CreateCandidateDto } from './dto/create-candidate.dto';
 import { UpdateCandidateDto } from './dto/update-candidate.dto';
 import { ListCandidatesDto } from './dto/list-candidates.dto';
+import { CreateCandidateNoteDto, UpdateCandidateNoteDto } from './dto/candidate-note.dto';
 export declare class CandidatesController {
     private svc;
     constructor(svc: CandidatesService);
@@ -26,13 +27,13 @@ export declare class CandidatesController {
     }>;
     list(req: any, dto: ListCandidatesDto): Promise<{
         data: {
-            name: string;
             id: string;
+            name: string;
             email: string | null;
-            createdAt: Date;
             roleTitle: string | null;
             stage: string;
             source: string | null;
+            createdAt: Date;
         }[];
         meta: {
             total: number;
@@ -101,5 +102,64 @@ export declare class CandidatesController {
         }[];
     }> | Promise<{
         message: string;
+    }>;
+    listDocuments(req: any, id: string): Promise<{
+        data: {
+            id: string;
+            createdAt: Date;
+            updatedAt: Date;
+            filename: string;
+            mimeType: string | null;
+            size: number | null;
+            metadata: import(".prisma/client").Prisma.JsonValue;
+        }[];
+    }>;
+    listNotes(req: any, id: string): Promise<{
+        data: {
+            author: {
+                id: string;
+                name: string | null;
+                email: string;
+            };
+            id: string;
+            tenantId: string;
+            candidateId: string;
+            authorId: string;
+            content: string;
+            createdAt: Date;
+            updatedAt: Date;
+        }[];
+        meta: {
+            total: number;
+            page: number;
+            perPage: number;
+            totalPages: number;
+        };
+    }>;
+    addNote(req: any, id: string, dto: CreateCandidateNoteDto): Promise<{
+        author: {
+            id: string;
+            name: string | null;
+            email: string;
+        };
+        id: string;
+        tenantId: string;
+        candidateId: string;
+        authorId: string;
+        content: string;
+        createdAt: Date;
+        updatedAt: Date;
+    }>;
+    updateNote(req: any, noteId: string, dto: UpdateCandidateNoteDto): Promise<{
+        id: string;
+        tenantId: string;
+        candidateId: string;
+        authorId: string;
+        content: string;
+        createdAt: Date;
+        updatedAt: Date;
+    }>;
+    deleteNote(req: any, noteId: string): Promise<{
+        success: boolean;
     }>;
 }

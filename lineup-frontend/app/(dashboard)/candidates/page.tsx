@@ -6,16 +6,17 @@ import { CandidateListHeader, ViewType } from '@/components/candidates/Candidate
 import { CandidateFilters } from '@/components/candidates/CandidateFilters';
 import { CandidateTable } from '@/components/candidates/CandidateTable';
 import { CandidateBoard } from '@/components/candidates/CandidateBoard';
-import { BulkActionsBar } from '@/components/candidates/BulkActionsBar';
 import { SendMessageDialog, MessageChannel } from '@/components/candidates/SendMessageDialog';
 import { ScheduleInterviewModal } from '@/components/scheduling/ScheduleInterviewModal';
 import { CandidateListFilters, CandidateBulkAction, CandidateListItem } from '@/types/candidate-list';
 import { currentUserRole } from '@/lib/navigation-mock-data';
-import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from '@/hooks/use-toast';
 import { useCandidates, useDeleteCandidate, useUpdateCandidate } from '@/lib/hooks/useCandidates';
 import { InterviewStage } from '@/types/interview';
 import { fadeInUp, staggerContainer, staggerItem } from '@/lib/animations';
+import { TableSkeleton } from '@/components/ui/table-skeleton';
+import { QuickActionsToolbar, QUICK_ACTIONS } from '@/components/ui/quick-actions-toolbar';
+import { Mail, MessageSquare, Calendar, Trash2 } from 'lucide-react';
 import {
     AlertDialog,
     AlertDialogAction,
@@ -51,25 +52,48 @@ export default function Candidates() {
     const [messageCandidate, setMessageCandidate] = useState<CandidateListItem | null>(null);
     const [messageChannel, setMessageChannel] = useState<MessageChannel>('EMAIL');
 
-    // Use real API data
+    // Pagination state
+    const [page, setPage] = useState(1);
+    const perPage = 25;
+
+    // Bulk delete loading state (separate from deleteCandidateMutation)
+    const [isBulkDeleting, setIsBulkDeleting] = useState(false);
+
+    // Use real API data with pagination
     const { data: candidatesData, isLoading } = useCandidates({
-        page: 1,
-        perPage: 100,
+        page,
+        perPage,
         q: filters.search || undefined,
         stage: filters.stage !== 'all' ? filters.stage : undefined,
         source: filters.source !== 'all' ? filters.source : undefined,
     });
 
+    // Type for API candidate response
+    interface ApiCandidate {
+        id: string;
+        name: string;
+        email?: string;
+        phone?: string;
+        roleTitle?: string;
+        stage?: string;
+        source?: string;
+        createdById?: string;
+        updatedAt?: string;
+        createdAt: string;
+        tags?: string[];
+        tenantId: string;
+    }
+
     // Map API candidates to CandidateListItem format
     const candidates: CandidateListItem[] = useMemo(() => {
         if (!candidatesData?.data) return [];
-        return candidatesData.data.map((c: any) => ({
+        return candidatesData.data.map((c: ApiCandidate) => ({
             id: c.id,
             name: c.name,
             email: c.email || '',
             phone: c.phone || '',
             role: c.roleTitle || '',
-            stage: (c.stage || 'received') as InterviewStage,
+            stage: (c.stage || 'applied') as InterviewStage,
             source: c.source || 'Unknown',
             recruiterName: 'Unassigned',
             recruiterId: c.createdById || '',
@@ -218,6 +242,7 @@ export default function Candidates() {
     };
 
     const confirmBulkDelete = async () => {
+        setIsBulkDeleting(true);
         try {
             await Promise.all(selectedIds.map(id => deleteCandidateMutation.mutateAsync(id)));
             toast({
@@ -232,6 +257,8 @@ export default function Candidates() {
                 description: 'Failed to delete some candidates.',
                 variant: 'destructive',
             });
+        } finally {
+            setIsBulkDeleting(false);
         }
         setShowBulkDeleteDialog(false);
     };
@@ -259,16 +286,10 @@ export default function Candidates() {
 
     if (isLoading) {
         return (
-            <div className="space-y-6">
+            <div className="space-y-6 px-8 py-6">
                 <div className="flex items-center justify-between">
-                    <Skeleton className="h-8 w-32" />
-                    <div className="flex gap-2">
-                        <Skeleton className="h-10 w-32" />
-                        <Skeleton className="h-10 w-40" />
-                    </div>
+                    <TableSkeleton rows={8} columns={5} showCheckbox showAvatar />
                 </div>
-                <Skeleton className="h-12 w-full" />
-                <Skeleton className="h-[500px] w-full" />
             </div>
         );
     }
@@ -292,7 +313,20 @@ export default function Candidates() {
 
                     <CandidateFilters filters={filters} onFiltersChange={setFilters} />
 
-                    {view === 'list' ? (
+                    {/* Empty State */}
+                    {filteredCandidates.length === 0 && !isLoading && (
+                        <div className="bg-white rounded-xl border border-slate-200 p-12 text-center">
+                            <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <svg className="w-8 h-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" />
+                                </svg>
+                            </div>
+                            <h3 className="text-lg font-semibold text-slate-900 mb-2">No candidates found</h3>
+                            <p className="text-slate-500 mb-4">Try adjusting your filters or add a new candidate to get started.</p>
+                        </div>
+                    )}
+
+                    {filteredCandidates.length > 0 && view === 'list' ? (
                         <CandidateTable
                             candidates={filteredCandidates}
                             selectedIds={selectedIds}
@@ -304,6 +338,9 @@ export default function Candidates() {
                             onSendWhatsApp={handleSendWhatsApp}
                             onSendSMS={handleSendSMS}
                             onDelete={handleDelete}
+                            onUpdateCandidate={async (id, updates) => {
+                                await updateCandidateMutation.mutateAsync({ id, data: updates as any });
+                            }}
                         />
                     ) : (
                         <div className="h-[calc(100vh-280px)]">
@@ -318,9 +355,37 @@ export default function Candidates() {
                         </div>
                     )}
 
-                    <BulkActionsBar
+                    <QuickActionsToolbar
                         selectedCount={selectedIds.length}
-                        onAction={handleBulkAction}
+                        primaryActions={[
+                            {
+                                id: 'email',
+                                label: 'Email',
+                                icon: <Mail className="h-4 w-4" />,
+                                onClick: () => handleBulkAction('email'),
+                            },
+                            {
+                                id: 'schedule',
+                                label: 'Schedule',
+                                icon: <Calendar className="h-4 w-4" />,
+                                onClick: () => handleBulkAction('schedule'),
+                            },
+                            {
+                                id: 'delete',
+                                label: 'Delete',
+                                icon: <Trash2 className="h-4 w-4" />,
+                                variant: 'destructive',
+                                onClick: () => handleBulkAction('delete'),
+                            },
+                        ]}
+                        secondaryActions={[
+                            {
+                                id: 'sms',
+                                label: 'Send SMS',
+                                icon: <MessageSquare className="h-4 w-4" />,
+                                onClick: () => handleBulkAction('sms'),
+                            },
+                        ]}
                         onClearSelection={() => setSelectedIds([])}
                     />
 
@@ -365,9 +430,10 @@ export default function Candidates() {
                                 <AlertDialogCancel>Cancel</AlertDialogCancel>
                                 <AlertDialogAction
                                     onClick={confirmBulkDelete}
+                                    disabled={isBulkDeleting}
                                     className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                                 >
-                                    {deleteCandidateMutation.isPending ? 'Deleting...' : 'Delete All'}
+                                    {isBulkDeleting ? 'Deleting...' : 'Delete All'}
                                 </AlertDialogAction>
                             </AlertDialogFooter>
                         </AlertDialogContent>

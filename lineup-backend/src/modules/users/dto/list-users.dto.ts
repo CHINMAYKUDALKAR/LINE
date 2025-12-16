@@ -14,6 +14,11 @@ export class ListUsersDto {
     @IsEnum(Role)
     role?: Role;
 
+    @ApiProperty({ description: 'Filter by multiple roles (comma-separated)', required: false, example: 'ADMIN,MANAGER,INTERVIEWER' })
+    @IsOptional()
+    @IsString()
+    roles?: string;
+
     @ApiProperty({ description: 'Filter by status', enum: UserStatus, required: false })
     @IsOptional()
     @IsEnum(UserStatus)

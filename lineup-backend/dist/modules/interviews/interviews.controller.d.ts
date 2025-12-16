@@ -3,6 +3,7 @@ import { CreateInterviewDto } from './dto/create-interview.dto';
 import { RescheduleInterviewDto } from './dto/reschedule-interview.dto';
 import { ListInterviewsDto } from './dto/list-interviews.dto';
 import { BulkScheduleDto } from './dto/bulk-schedule.dto';
+import { CreateInterviewNoteDto, UpdateInterviewNoteDto } from './dto/interview-note.dto';
 export declare class InterviewsController {
     private svc;
     constructor(svc: InterviewsService);
@@ -68,6 +69,15 @@ export declare class InterviewsController {
             createdAt: Date;
             updatedAt: Date;
             deletedAt: Date | null;
+        } & {
+            interviewers: Array<{
+                id: string;
+                name: string | null;
+                email: string;
+                role: string;
+            }>;
+            candidateName: string;
+            candidateEmail: string;
         })[];
         meta: {
             total: number;
@@ -77,6 +87,11 @@ export declare class InterviewsController {
         };
     }>;
     get(req: any, id: string): Promise<{
+        candidate: {
+            name: string;
+            email: string | null;
+        };
+    } & {
         id: string;
         tenantId: string;
         candidateId: string;
@@ -93,6 +108,15 @@ export declare class InterviewsController {
         createdAt: Date;
         updatedAt: Date;
         deletedAt: Date | null;
+    } & {
+        interviewers: Array<{
+            id: string;
+            name: string | null;
+            email: string;
+            role: string;
+        }>;
+        candidateName: string;
+        candidateEmail: string;
     }>;
     cancel(req: any, id: string): Promise<{
         id: string;
@@ -132,5 +156,62 @@ export declare class InterviewsController {
         createdAt: Date;
         updatedAt: Date;
         deletedAt: Date | null;
+    }>;
+    listNotes(req: any, id: string): Promise<{
+        data: {
+            author: {
+                id: string;
+                name: string | null;
+                email: string;
+            };
+            authorId: string;
+        }[];
+        meta: {
+            total: number;
+            page: number;
+            perPage: number;
+            totalPages: number;
+        };
+    }>;
+    addNote(req: any, id: string, dto: CreateInterviewNoteDto): Promise<{
+        author: {
+            id: string;
+            name: string | null;
+            email: string;
+        };
+        id: string;
+        tenantId: string;
+        interviewId: string;
+        authorId: string;
+        content: string;
+        createdAt: Date;
+        updatedAt: Date;
+    }>;
+    updateNote(req: any, noteId: string, dto: UpdateInterviewNoteDto): Promise<{
+        id: string;
+        tenantId: string;
+        interviewId: string;
+        authorId: string;
+        content: string;
+        createdAt: Date;
+        updatedAt: Date;
+    }>;
+    deleteNote(req: any, noteId: string): Promise<{
+        success: boolean;
+    }>;
+    getTimeline(req: any, id: string): Promise<{
+        data: {
+            type: "note" | "feedback" | "activity";
+            id: string;
+            createdAt: Date;
+            author?: {
+                id: string;
+                name: string | null;
+                email: string;
+            } | undefined;
+            content?: string;
+            rating?: number;
+            action?: string;
+        }[];
     }>;
 }

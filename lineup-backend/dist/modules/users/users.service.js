@@ -141,6 +141,12 @@ let UsersService = class UsersService {
         }
         if (dto.role)
             where.role = dto.role;
+        if (dto.roles) {
+            const roleList = dto.roles.split(',').map(r => r.trim()).filter(r => r);
+            if (roleList.length > 0) {
+                where.role = { in: roleList };
+            }
+        }
         if (dto.status)
             where.status = dto.status;
         const [total, data] = await Promise.all([

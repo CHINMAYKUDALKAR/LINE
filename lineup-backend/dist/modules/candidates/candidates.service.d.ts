@@ -73,13 +73,13 @@ export declare class CandidatesService {
     }>;
     list(tenantId: string, dto: ListCandidatesDto): Promise<{
         data: {
-            name: string;
             id: string;
+            name: string;
             email: string | null;
-            createdAt: Date;
             roleTitle: string | null;
             stage: string;
             source: string | null;
+            createdAt: Date;
         }[];
         meta: {
             total: number;
@@ -121,6 +121,66 @@ export declare class CandidatesService {
             row: number;
             message: string;
         }>;
+    }>;
+    listDocuments(tenantId: string, candidateId: string): Promise<{
+        data: {
+            id: string;
+            createdAt: Date;
+            updatedAt: Date;
+            filename: string;
+            mimeType: string | null;
+            size: number | null;
+            metadata: import(".prisma/client").Prisma.JsonValue;
+        }[];
+    }>;
+    listNotes(tenantId: string, candidateId: string, page?: number, perPage?: number): Promise<{
+        data: {
+            author: {
+                id: string;
+                name: string | null;
+                email: string;
+            };
+            id: string;
+            tenantId: string;
+            candidateId: string;
+            authorId: string;
+            content: string;
+            createdAt: Date;
+            updatedAt: Date;
+        }[];
+        meta: {
+            total: number;
+            page: number;
+            perPage: number;
+            totalPages: number;
+        };
+    }>;
+    private sanitizeContent;
+    addNote(tenantId: string, candidateId: string, userId: string, content: string): Promise<{
+        author: {
+            id: string;
+            name: string | null;
+            email: string;
+        };
+        id: string;
+        tenantId: string;
+        candidateId: string;
+        authorId: string;
+        content: string;
+        createdAt: Date;
+        updatedAt: Date;
+    }>;
+    updateNote(tenantId: string, noteId: string, userId: string, userRole: string, content: string): Promise<{
+        id: string;
+        tenantId: string;
+        candidateId: string;
+        authorId: string;
+        content: string;
+        createdAt: Date;
+        updatedAt: Date;
+    }>;
+    deleteNote(tenantId: string, noteId: string, userId: string, userRole: string): Promise<{
+        success: boolean;
     }>;
     private parseSort;
 }

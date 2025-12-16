@@ -65,6 +65,8 @@ export declare class EmailConfigDto {
     fromAddress?: string;
     fromName?: string;
     region?: string;
+    accessKeyId?: string;
+    secretAccessKey?: string;
 }
 export declare class WhatsAppConfigDto {
     businessId: string;

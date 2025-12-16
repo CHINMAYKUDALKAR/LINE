@@ -112,10 +112,14 @@ let InterviewsService = class InterviewsService {
         return updated;
     }
     async get(tenantId, id) {
-        const interview = await this.prisma.interview.findUnique({ where: { id } });
+        const interview = await this.prisma.interview.findUnique({
+            where: { id },
+            include: { candidate: { select: { name: true, email: true } } }
+        });
         if (!interview || interview.tenantId !== tenantId)
             throw new common_1.NotFoundException('Interview not found');
-        return interview;
+        const [enriched] = await this.enrichWithInterviewers(tenantId, [interview]);
+        return enriched;
     }
     async list(tenantId, dto) {
         const page = Number(dto.page) || 1;
@@ -150,7 +154,8 @@ let InterviewsService = class InterviewsService {
                 include: { candidate: { select: { name: true, email: true } } }
             })
         ]);
-        return { data, meta: { total, page, perPage, lastPage: Math.ceil(total / perPage) } };
+        const enrichedData = await this.enrichWithInterviewers(tenantId, data);
+        return { data: enrichedData, meta: { total, page, perPage, lastPage: Math.ceil(total / perPage) } };
     }
     async checkConflicts(tenantId, interviewerIds, start, end, excludeId) {
         const potentialConflicts = await this.prisma.interview.findMany({
@@ -352,9 +357,197 @@ let InterviewsService = class InterviewsService {
             await this.reminderQueue.add('reminder', { interviewId, tenantId, type: '1h' }, { delay: remind1h.getTime() - Date.now() });
         }
     }
+    sanitizeContent(content) {
+        return content
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#x27;')
+            .replace(/\//g, '&#x2F;');
+    }
+    async listNotes(tenantId, interviewId, page = 1, perPage = 20) {
+        await this.get(tenantId, interviewId);
+        const skip = (page - 1) * perPage;
+        const [notes, total] = await Promise.all([
+            this.prisma.interviewNote.findMany({
+                where: { tenantId, interviewId },
+                orderBy: { createdAt: 'desc' },
+                skip,
+                take: perPage,
+            }),
+            this.prisma.interviewNote.count({ where: { tenantId, interviewId } }),
+        ]);
+        const authorIds = [...new Set(notes.map((n) => n.authorId))];
+        const authors = authorIds.length > 0 ? await this.prisma.user.findMany({
+            where: { id: { in: authorIds } },
+            select: { id: true, name: true, email: true },
+        }) : [];
+        const authorMap = new Map(authors.map(a => [a.id, a]));
+        const enrichedNotes = notes.map((note) => ({
+            ...note,
+            author: authorMap.get(note.authorId) || { id: note.authorId, name: 'Unknown', email: '' },
+        }));
+        return {
+            data: enrichedNotes,
+            meta: { total, page, perPage, totalPages: Math.ceil(total / perPage) },
+        };
+    }
+    async addNote(tenantId, interviewId, userId, content) {
+        await this.get(tenantId, interviewId);
+        const sanitizedContent = this.sanitizeContent(content);
+        const note = await this.prisma.interviewNote.create({
+            data: {
+                tenantId,
+                interviewId,
+                authorId: userId,
+                content: sanitizedContent,
+            },
+        });
+        await this.prisma.auditLog.create({
+            data: { tenantId, userId, action: 'INTERVIEW_NOTE_ADD', metadata: { interviewId, noteId: note.id } },
+        });
+        const author = await this.prisma.user.findUnique({
+            where: { id: userId },
+            select: { id: true, name: true, email: true },
+        });
+        return { ...note, author: author || { id: userId, name: 'Unknown', email: '' } };
+    }
+    async updateNote(tenantId, noteId, userId, userRole, content) {
+        const note = await this.prisma.interviewNote.findUnique({ where: { id: noteId } });
+        if (!note || note.tenantId !== tenantId) {
+            throw new common_1.NotFoundException('Note not found');
+        }
+        if (note.authorId !== userId && userRole !== 'ADMIN') {
+            throw new common_1.BadRequestException('Only the author or an admin can update this note');
+        }
+        const sanitizedContent = this.sanitizeContent(content);
+        const updated = await this.prisma.interviewNote.update({
+            where: { id: noteId },
+            data: { content: sanitizedContent },
+        });
+        await this.prisma.auditLog.create({
+            data: { tenantId, userId, action: 'INTERVIEW_NOTE_UPDATE', metadata: { noteId } },
+        });
+        return updated;
+    }
+    async deleteNote(tenantId, noteId, userId, userRole) {
+        const note = await this.prisma.interviewNote.findUnique({ where: { id: noteId } });
+        if (!note || note.tenantId !== tenantId) {
+            throw new common_1.NotFoundException('Note not found');
+        }
+        if (note.authorId !== userId && userRole !== 'ADMIN') {
+            throw new common_1.BadRequestException('Only the author or an admin can delete this note');
+        }
+        await this.prisma.interviewNote.delete({ where: { id: noteId } });
+        await this.prisma.auditLog.create({
+            data: { tenantId, userId, action: 'INTERVIEW_NOTE_DELETE', metadata: { noteId, interviewId: note.interviewId } },
+        });
+        return { success: true };
+    }
+    async getTimeline(tenantId, interviewId) {
+        await this.get(tenantId, interviewId);
+        const [notes, feedbacks, auditLogs] = await Promise.all([
+            this.prisma.interviewNote.findMany({
+                where: { tenantId, interviewId },
+                orderBy: { createdAt: 'desc' },
+            }),
+            this.prisma.feedback.findMany({
+                where: { tenantId, interviewId },
+                orderBy: { createdAt: 'desc' },
+            }),
+            this.prisma.auditLog.findMany({
+                where: {
+                    tenantId,
+                    action: { startsWith: 'INTERVIEW_' },
+                    OR: [
+                        { metadata: { path: ['interviewId'], equals: interviewId } },
+                        { metadata: { path: ['id'], equals: interviewId } },
+                    ],
+                },
+                orderBy: { createdAt: 'desc' },
+                take: 50,
+            }),
+        ]);
+        const userIds = new Set();
+        notes.forEach((n) => userIds.add(n.authorId));
+        feedbacks.forEach(f => userIds.add(f.interviewerId));
+        auditLogs.forEach(a => { if (a.userId)
+            userIds.add(a.userId); });
+        const users = userIds.size > 0 ? await this.prisma.user.findMany({
+            where: { id: { in: [...userIds] } },
+            select: { id: true, name: true, email: true },
+        }) : [];
+        const userMap = new Map(users.map(u => [u.id, u]));
+        const timeline = [];
+        notes.forEach((note) => {
+            timeline.push({
+                type: 'note',
+                id: note.id,
+                createdAt: note.createdAt,
+                author: userMap.get(note.authorId) || { id: note.authorId, name: 'Unknown', email: '' },
+                content: note.content,
+            });
+        });
+        feedbacks.forEach(fb => {
+            timeline.push({
+                type: 'feedback',
+                id: fb.id,
+                createdAt: fb.createdAt,
+                author: userMap.get(fb.interviewerId) || { id: fb.interviewerId, name: 'Unknown', email: '' },
+                rating: fb.rating,
+                content: fb.comments || undefined,
+            });
+        });
+        auditLogs.forEach(log => {
+            timeline.push({
+                type: 'activity',
+                id: log.id,
+                createdAt: log.createdAt,
+                author: log.userId ? (userMap.get(log.userId) || { id: log.userId, name: 'Unknown', email: '' }) : undefined,
+                action: log.action,
+            });
+        });
+        timeline.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+        return { data: timeline };
+    }
     parseSort(sort) {
         const [field, dir] = sort.split(':');
         return { [field]: dir };
+    }
+    async enrichWithInterviewers(tenantId, interviews) {
+        if (interviews.length === 0) {
+            return [];
+        }
+        const allInterviewerIds = new Set();
+        for (const interview of interviews) {
+            for (const id of interview.interviewerIds) {
+                allInterviewerIds.add(id);
+            }
+        }
+        let userMap = new Map();
+        if (allInterviewerIds.size > 0) {
+            const users = await this.prisma.user.findMany({
+                where: {
+                    id: { in: Array.from(allInterviewerIds) },
+                    tenantId,
+                },
+                select: {
+                    id: true,
+                    name: true,
+                    email: true,
+                    role: true,
+                },
+            });
+            userMap = new Map(users.map(u => [u.id, u]));
+        }
+        return interviews.map(interview => ({
+            ...interview,
+            candidateName: interview.candidate?.name || 'Unknown',
+            candidateEmail: interview.candidate?.email || '',
+            interviewers: interview.interviewerIds
+                .map(id => userMap.get(id))
+                .filter((u) => u !== undefined),
+        }));
     }
 };
 exports.InterviewsService = InterviewsService;

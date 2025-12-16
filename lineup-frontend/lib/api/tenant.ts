@@ -501,9 +501,17 @@ export const tenantApi = {
   async exportAuditLogsCSV() {
     console.log("[API] GET /api/v1/audit/export/csv");
     try {
-      const response = await client.get("/audit/export/csv", { responseType: 'blob' as any });
-      // Trigger download
-      const blob = new Blob([response as any], { type: 'text/csv' });
+      // Use raw fetch for blob download since client doesn't support responseType
+      const response = await fetch("/api/v1/audit/export/csv", {
+        method: 'GET',
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error('Export failed');
+      }
+
+      const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;

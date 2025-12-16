@@ -1,6 +1,7 @@
 export type InterviewStatus = 'scheduled' | 'completed' | 'cancelled' | 'no-show' | 'pending-feedback';
 
 export type InterviewStage =
+  | 'applied'
   | 'received'
   | 'screening'
   | 'interview-1'

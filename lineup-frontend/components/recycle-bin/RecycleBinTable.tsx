@@ -80,105 +80,110 @@ export function RecycleBinTable({
     };
 
     return (
-        <div className="rounded-lg border bg-card">
-            <Table>
-                <TableHeader>
-                    <TableRow className="hover:bg-transparent">
-                        <TableHead className="w-[60px]">Type</TableHead>
-                        <TableHead>Name / Details</TableHead>
-                        <TableHead>Deleted</TableHead>
-                        {isAdmin && <TableHead>Deleted By</TableHead>}
-                        <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                </TableHeader>
-                <TableBody>
-                    {items.length === 0 ? (
-                        <TableRow>
-                            <TableCell colSpan={isAdmin ? 5 : 4} className="h-32 text-center">
-                                <div className="flex flex-col items-center gap-2">
-                                    <Trash2 className="h-12 w-12 text-muted-foreground/50" />
-                                    <p className="text-muted-foreground">No items in recycle bin</p>
-                                    <p className="text-sm text-muted-foreground/70">
-                                        Deleted items will appear here
-                                    </p>
-                                </div>
-                            </TableCell>
+        <div className="rounded-lg border bg-card overflow-hidden">
+            {/* Responsive: horizontal scroll on mobile */}
+            <div className="overflow-x-auto">
+                <Table className="min-w-[500px]">
+                    <TableHeader>
+                        <TableRow className="hover:bg-transparent">
+                            <TableHead className="w-[60px]">Type</TableHead>
+                            <TableHead>Name / Details</TableHead>
+                            {/* Hidden on mobile: Deleted column details */}
+                            <TableHead className="hidden sm:table-cell">Deleted</TableHead>
+                            {isAdmin && <TableHead className="hidden md:table-cell">Deleted By</TableHead>}
+                            <TableHead className="text-right">Actions</TableHead>
                         </TableRow>
-                    ) : (
-                        items.map((item) => (
-                            <TableRow key={item.id} className="group">
-                                <TableCell>
-                                    <Tooltip>
-                                        <TooltipTrigger>
-                                            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-muted">
-                                                {getIcon(item.module)}
-                                            </div>
-                                        </TooltipTrigger>
-                                        <TooltipContent>
-                                            {getModuleLabel(item.module)}
-                                        </TooltipContent>
-                                    </Tooltip>
-                                </TableCell>
-                                <TableCell>
-                                    <div className="flex flex-col gap-1">
-                                        <span className="font-medium">{getDisplayName(item)}</span>
-                                        <Badge variant="secondary" className={`w-fit text-xs ${getModuleBadgeColor(item.module)}`}>
-                                            {getModuleLabel(item.module)}
-                                        </Badge>
-                                    </div>
-                                </TableCell>
-                                <TableCell>
-                                    <div className="flex flex-col">
-                                        <span className="text-sm">
-                                            {new Date(item.deletedAt).toLocaleDateString()}
-                                        </span>
-                                        <span className="text-xs text-muted-foreground">
-                                            {formatDistanceToNow(new Date(item.deletedAt), { addSuffix: true })}
-                                        </span>
-                                    </div>
-                                </TableCell>
-                                {isAdmin && (
-                                    <TableCell className="text-sm text-muted-foreground">
-                                        {item.deletedBy || 'Unknown'}
-                                    </TableCell>
-                                )}
-                                <TableCell className="text-right">
-                                    <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={() => onRestore(item)}
-                                            disabled={!!isRestoring || !!isPurging}
-                                        >
-                                            {isRestoring === item.id ? (
-                                                <div className="animate-spin h-3 w-3 border border-current border-t-transparent rounded-full mr-1" />
-                                            ) : (
-                                                <RefreshCcw className="h-3 w-3 mr-1" />
-                                            )}
-                                            Restore
-                                        </Button>
-                                        {isAdmin && (
-                                            <Button
-                                                variant="destructive"
-                                                size="sm"
-                                                onClick={() => onPurge(item)}
-                                                disabled={!!isRestoring || !!isPurging}
-                                            >
-                                                {isPurging === item.id ? (
-                                                    <div className="animate-spin h-3 w-3 border border-current border-t-transparent rounded-full mr-1" />
-                                                ) : (
-                                                    <Trash2 className="h-3 w-3 mr-1" />
-                                                )}
-                                                Delete Forever
-                                            </Button>
-                                        )}
+                    </TableHeader>
+                    <TableBody>
+                        {items.length === 0 ? (
+                            <TableRow>
+                                <TableCell colSpan={isAdmin ? 5 : 4} className="h-32 text-center">
+                                    <div className="flex flex-col items-center gap-2">
+                                        <Trash2 className="h-12 w-12 text-muted-foreground/50" />
+                                        <p className="text-muted-foreground">No items in recycle bin</p>
+                                        <p className="text-sm text-muted-foreground/70">
+                                            Deleted items will appear here
+                                        </p>
                                     </div>
                                 </TableCell>
                             </TableRow>
-                        ))
-                    )}
-                </TableBody>
-            </Table>
+                        ) : (
+                            items.map((item) => (
+                                <TableRow key={item.id} className="group">
+                                    <TableCell>
+                                        <Tooltip>
+                                            <TooltipTrigger>
+                                                <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-muted">
+                                                    {getIcon(item.module)}
+                                                </div>
+                                            </TooltipTrigger>
+                                            <TooltipContent>
+                                                {getModuleLabel(item.module)}
+                                            </TooltipContent>
+                                        </Tooltip>
+                                    </TableCell>
+                                    <TableCell>
+                                        <div className="flex flex-col gap-1">
+                                            <span className="font-medium">{getDisplayName(item)}</span>
+                                            <Badge variant="secondary" className={`w-fit text-xs ${getModuleBadgeColor(item.module)}`}>
+                                                {getModuleLabel(item.module)}
+                                            </Badge>
+                                        </div>
+                                    </TableCell>
+                                    {/* Hidden on mobile: Deleted date */}
+                                    <TableCell className="hidden sm:table-cell">
+                                        <div className="flex flex-col">
+                                            <span className="text-sm">
+                                                {new Date(item.deletedAt).toLocaleDateString()}
+                                            </span>
+                                            <span className="text-xs text-muted-foreground">
+                                                {formatDistanceToNow(new Date(item.deletedAt), { addSuffix: true })}
+                                            </span>
+                                        </div>
+                                    </TableCell>
+                                    {isAdmin && (
+                                        <TableCell className="hidden md:table-cell text-sm text-muted-foreground">
+                                            {item.deletedBy || 'Unknown'}
+                                        </TableCell>
+                                    )}
+                                    <TableCell className="text-right">
+                                        <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => onRestore(item)}
+                                                disabled={!!isRestoring || !!isPurging}
+                                            >
+                                                {isRestoring === item.id ? (
+                                                    <div className="animate-spin h-3 w-3 border border-current border-t-transparent rounded-full mr-1" />
+                                                ) : (
+                                                    <RefreshCcw className="h-3 w-3 mr-1" />
+                                                )}
+                                                Restore
+                                            </Button>
+                                            {isAdmin && (
+                                                <Button
+                                                    variant="destructive"
+                                                    size="sm"
+                                                    onClick={() => onPurge(item)}
+                                                    disabled={!!isRestoring || !!isPurging}
+                                                >
+                                                    {isPurging === item.id ? (
+                                                        <div className="animate-spin h-3 w-3 border border-current border-t-transparent rounded-full mr-1" />
+                                                    ) : (
+                                                        <Trash2 className="h-3 w-3 mr-1" />
+                                                    )}
+                                                    Delete Forever
+                                                </Button>
+                                            )}
+                                        </div>
+                                    </TableCell>
+                                </TableRow>
+                            ))
+                        )}
+                    </TableBody>
+                </Table>
+            </div>
         </div>
     );
 }

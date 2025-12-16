@@ -20,6 +20,7 @@ const jwt_guard_1 = require("../auth/guards/jwt.guard");
 const rbac_guard_1 = require("../auth/guards/rbac.guard");
 const roles_decorator_1 = require("../auth/decorators/roles.decorator");
 const scheduled_report_dto_1 = require("./dto/scheduled-report.dto");
+const rate_limit_1 = require("../../common/rate-limit");
 let ReportsController = class ReportsController {
     svc;
     constructor(svc) {
@@ -186,6 +187,7 @@ exports.ReportsController = ReportsController = __decorate([
     (0, swagger_1.ApiBearerAuth)('JWT-auth'),
     (0, common_1.Controller)('api/v1/reports'),
     (0, common_1.UseGuards)(jwt_guard_1.JwtAuthGuard, rbac_guard_1.RbacGuard),
+    (0, rate_limit_1.RateLimited)(rate_limit_1.RateLimitProfile.REPORT),
     __metadata("design:paramtypes", [reports_service_1.ReportsService])
 ], ReportsController);
 //# sourceMappingURL=reports.controller.js.map

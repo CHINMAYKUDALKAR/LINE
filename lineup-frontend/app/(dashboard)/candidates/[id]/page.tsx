@@ -29,7 +29,7 @@ import {
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from '@/hooks/use-toast';
-import { uploadCandidateResume, getCandidate } from '@/lib/api/candidates';
+import { uploadCandidateResume, getCandidate, getCandidateDocuments, getCandidateNotes, addCandidateNote, API_BASE_URL } from '@/lib/api/candidates';
 import { getAuthToken } from '@/lib/auth';
 import { fadeInUp, fadeInRight, staggerContainer, staggerItem } from '@/lib/animations';
 import { useDeleteCandidate } from '@/lib/hooks/useCandidates';
@@ -106,12 +106,44 @@ export default function CandidateProfile() {
                 setCandidate(candidateProfile);
                 setTags(candidateProfile.tags);
 
-                // Load related data from API (using mock for now until endpoints exist)
-                // TODO: Add API calls for documents, interviews, communications, notes
-                setDocuments(apiData.documents || []);
+                // Fetch documents and notes from real API endpoints
+                try {
+                    const docsResponse = await getCandidateDocuments(id, token);
+                    const frontendDocs = (docsResponse.data || []).map((doc: any) => ({
+                        id: doc.id,
+                        type: doc.mimeType?.includes('pdf') ? 'resume' : 'other' as const,
+                        name: doc.filename,
+                        url: `${API_BASE_URL}/api/v1/storage/${doc.id}/download`,
+                        uploadedAt: doc.createdAt,
+                        uploadedBy: 'System',
+                    }));
+                    setDocuments(frontendDocs);
+                } catch (e) {
+                    console.error('Failed to fetch documents:', e);
+                    setDocuments([]);
+                    setErrors(prev => ({ ...prev, documents: 'Failed to load documents' }));
+                    toast({ title: 'Warning', description: 'Could not load documents', variant: 'destructive' });
+                }
+
+                try {
+                    const notesResponse = await getCandidateNotes(id, token);
+                    const frontendNotes = (notesResponse.data || []).map((note: any) => ({
+                        id: note.id,
+                        content: note.content,
+                        authorId: note.authorId,
+                        authorName: note.author?.name || 'Unknown',
+                        createdAt: note.createdAt,
+                    }));
+                    setNotes(frontendNotes);
+                } catch (e) {
+                    console.error('Failed to fetch notes:', e);
+                    setNotes([]);
+                    setErrors(prev => ({ ...prev, notes: 'Failed to load notes' }));
+                    toast({ title: 'Warning', description: 'Could not load notes', variant: 'destructive' });
+                }
+
                 setInterviews(apiData.interviews || mockInterviews);
                 setCommunications(apiData.communications || mockCommunications);
-                setNotes(apiData.notes_list || mockNotes);
             } else {
                 // No token - fall back to mock data
                 console.warn('No auth token, using mock data');
@@ -156,19 +188,28 @@ export default function CandidateProfile() {
         });
     };
 
-    const handleAddNote = (content: string) => {
-        const newNote: CandidateNote = {
-            id: `note-${Date.now()}`,
-            content,
-            authorId: 'current-user',
-            authorName: 'Current User',
-            createdAt: new Date().toISOString(),
-        };
-        setNotes([newNote, ...notes]);
-        toast({
-            title: 'Note Added',
-            description: 'Your note has been saved.',
-        });
+    const handleAddNote = async (content: string) => {
+        const token = getAuthToken();
+        if (!token) {
+            toast({ title: 'Error', description: 'Please log in to add notes.', variant: 'destructive' });
+            return;
+        }
+
+        try {
+            const newNote = await addCandidateNote(id, content, token);
+            const frontendNote: CandidateNote = {
+                id: newNote.id,
+                content: newNote.content,
+                authorId: newNote.authorId,
+                authorName: newNote.author?.name || 'Unknown',
+                createdAt: newNote.createdAt,
+            };
+            setNotes([frontendNote, ...notes]);
+            toast({ title: 'Note Added', description: 'Your note has been saved.' });
+        } catch (error) {
+            console.error('Failed to add note:', error);
+            toast({ title: 'Error', description: 'Failed to add note. Please try again.', variant: 'destructive' });
+        }
     };
 
     const handleEditCandidate = () => {

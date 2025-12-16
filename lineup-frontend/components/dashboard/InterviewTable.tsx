@@ -58,6 +58,7 @@ const statusLabels: Record<InterviewStatus, string> = {
 };
 
 const stageLabels: Record<InterviewStage, string> = {
+  'applied': 'Applied',
   'received': 'Received',
   'screening': 'Screening',
   'interview-1': 'Interview 1',

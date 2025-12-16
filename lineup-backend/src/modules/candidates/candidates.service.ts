@@ -220,13 +220,35 @@ export class CandidatesService {
             }
 
             try {
-                // Check for duplicates by email
+                // Check for duplicates by email first
                 if (row.email) {
                     const existing = await this.prisma.candidate.findFirst({
                         where: { tenantId, email: row.email },
                     });
                     if (existing) {
                         result.duplicates.push(row.email);
+                        continue;
+                    }
+                }
+
+                // Fallback: Check for duplicates by phone if no email
+                if (!row.email && row.phone) {
+                    const existing = await this.prisma.candidate.findFirst({
+                        where: { tenantId, phone: row.phone },
+                    });
+                    if (existing) {
+                        result.duplicates.push(row.phone);
+                        continue;
+                    }
+                }
+
+                // Fallback: Check for duplicates by name+phone if both provided but no email
+                if (!row.email && row.phone && row.name) {
+                    const existing = await this.prisma.candidate.findFirst({
+                        where: { tenantId, name: row.name, phone: row.phone },
+                    });
+                    if (existing) {
+                        result.duplicates.push(`${row.name} (${row.phone})`);
                         continue;
                     }
                 }
@@ -267,6 +289,173 @@ export class CandidatesService {
         });
 
         return result;
+    }
+
+    // =====================================================
+    // CANDIDATE DOCUMENTS
+    // =====================================================
+
+    /**
+     * List all documents attached to a candidate
+     * Uses FileObject with linkedType='candidate'
+     */
+    async listDocuments(tenantId: string, candidateId: string) {
+        await this.get(tenantId, candidateId); // Validate candidate exists
+
+        const files = await this.prisma.fileObject.findMany({
+            where: {
+                tenantId,
+                linkedType: 'candidate',
+                linkedId: candidateId,
+                status: 'active',
+            },
+            orderBy: { createdAt: 'desc' },
+            select: {
+                id: true,
+                filename: true,
+                mimeType: true,
+                size: true,
+                createdAt: true,
+                updatedAt: true,
+                metadata: true,
+            },
+        });
+
+        return { data: files };
+    }
+
+    // =====================================================
+    // CANDIDATE NOTES
+    // =====================================================
+
+    /**
+     * List all notes for a candidate with author details (paginated)
+     */
+    async listNotes(tenantId: string, candidateId: string, page = 1, perPage = 20) {
+        await this.get(tenantId, candidateId); // Validate candidate exists
+
+        const skip = (page - 1) * perPage;
+        const [notes, total] = await Promise.all([
+            this.prisma.candidateNote.findMany({
+                where: { tenantId, candidateId },
+                orderBy: { createdAt: 'desc' },
+                skip,
+                take: perPage,
+            }),
+            this.prisma.candidateNote.count({ where: { tenantId, candidateId } }),
+        ]);
+
+        // Batch fetch authors to avoid N+1
+        const authorIds = [...new Set(notes.map(n => n.authorId))];
+        const authors = authorIds.length > 0 ? await this.prisma.user.findMany({
+            where: { id: { in: authorIds } },
+            select: { id: true, name: true, email: true },
+        }) : [];
+        const authorMap = new Map(authors.map(a => [a.id, a]));
+
+        const enrichedNotes = notes.map(note => ({
+            ...note,
+            author: authorMap.get(note.authorId) || { id: note.authorId, name: 'Unknown', email: '' },
+        }));
+
+        return {
+            data: enrichedNotes,
+            meta: { total, page, perPage, totalPages: Math.ceil(total / perPage) },
+        };
+    }
+
+    /**
+     * Sanitize HTML to prevent XSS
+     */
+    private sanitizeContent(content: string): string {
+        return content
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#x27;')
+            .replace(/\//g, '&#x2F;');
+    }
+
+    /**
+     * Add a note to a candidate
+     */
+    async addNote(tenantId: string, candidateId: string, userId: string, content: string) {
+        await this.get(tenantId, candidateId); // Validate candidate exists
+
+        const sanitizedContent = this.sanitizeContent(content);
+
+        const note = await this.prisma.candidateNote.create({
+            data: {
+                tenantId,
+                candidateId,
+                authorId: userId,
+                content: sanitizedContent,
+            },
+        });
+
+        await this.prisma.auditLog.create({
+            data: { tenantId, userId, action: 'CANDIDATE_NOTE_ADD', metadata: { candidateId, noteId: note.id } },
+        });
+
+        // Fetch author details
+        const author = await this.prisma.user.findUnique({
+            where: { id: userId },
+            select: { id: true, name: true, email: true },
+        });
+
+        return { ...note, author: author || { id: userId, name: 'Unknown', email: '' } };
+    }
+
+    /**
+     * Update a candidate note (author or ADMIN can update)
+     */
+    async updateNote(tenantId: string, noteId: string, userId: string, userRole: string, content: string) {
+        const note = await this.prisma.candidateNote.findUnique({ where: { id: noteId } });
+
+        if (!note || note.tenantId !== tenantId) {
+            throw new NotFoundException('Note not found');
+        }
+
+        // Allow author or ADMIN to update
+        if (note.authorId !== userId && userRole !== 'ADMIN') {
+            throw new BadRequestException('Only the author or an admin can update this note');
+        }
+
+        const sanitizedContent = this.sanitizeContent(content);
+        const updated = await this.prisma.candidateNote.update({
+            where: { id: noteId },
+            data: { content: sanitizedContent },
+        });
+
+        await this.prisma.auditLog.create({
+            data: { tenantId, userId, action: 'CANDIDATE_NOTE_UPDATE', metadata: { noteId } },
+        });
+
+        return updated;
+    }
+
+    /**
+     * Delete a candidate note (author or ADMIN can delete)
+     */
+    async deleteNote(tenantId: string, noteId: string, userId: string, userRole: string) {
+        const note = await this.prisma.candidateNote.findUnique({ where: { id: noteId } });
+
+        if (!note || note.tenantId !== tenantId) {
+            throw new NotFoundException('Note not found');
+        }
+
+        // Allow author or ADMIN to delete
+        if (note.authorId !== userId && userRole !== 'ADMIN') {
+            throw new BadRequestException('Only the author or an admin can delete this note');
+        }
+
+        await this.prisma.candidateNote.delete({ where: { id: noteId } });
+
+        await this.prisma.auditLog.create({
+            data: { tenantId, userId, action: 'CANDIDATE_NOTE_DELETE', metadata: { noteId, candidateId: note.candidateId } },
+        });
+
+        return { success: true };
     }
 
     private parseSort(sort: string) {

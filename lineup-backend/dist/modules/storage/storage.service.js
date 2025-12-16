@@ -252,6 +252,9 @@ let StorageService = class StorageService {
         return `${tenantId}/files/${fileId}/${filename}`;
     }
     canAccessFile(user, file) {
+        if (file.tenantId !== user.tenantId) {
+            return false;
+        }
         if (user.role === 'ADMIN')
             return true;
         if (file.linkedType === 'candidate') {

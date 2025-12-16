@@ -1,10 +1,12 @@
-import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, BadRequestException, Logger } from '@nestjs/common';
 import { PrismaService } from '../../../common/prisma.service';
 import { CreateAutomationDto, UpdateAutomationDto } from '../dto';
-import { AutomationTrigger, Channel } from '@prisma/client';
+import { AutomationTrigger, Channel, RecipientType, ScheduleStatus } from '@prisma/client';
 
 @Injectable()
 export class AutomationService {
+    private readonly logger = new Logger(AutomationService.name);
+
     constructor(private prisma: PrismaService) { }
 
     /**
@@ -157,22 +159,63 @@ export class AutomationService {
         const rules = await this.getActiveRulesForTrigger(tenantId, trigger);
 
         if (rules.length === 0) {
-            return { processed: 0 };
+            return { processed: 0, queued: 0 };
         }
 
-        // TODO: Queue messages for each active rule
-        // For each rule:
-        // 1. Resolve recipient based on context
-        // 2. Render template with context data
-        // 3. Apply delay if configured
-        // 4. Queue message for sending
+        this.logger.log(`Processing trigger ${trigger} for tenant ${tenantId}: ${rules.length} rules`);
 
-        console.log(`Processing trigger ${trigger} for tenant ${tenantId}:`, {
-            rulesCount: rules.length,
-            context,
-        });
+        let queued = 0;
 
-        return { processed: rules.length };
+        for (const rule of rules) {
+            try {
+                // Resolve recipient based on context
+                let recipientId: string | null = null;
+                let recipientType: RecipientType = RecipientType.CANDIDATE;
+
+                if (context.candidateId) {
+                    recipientId = context.candidateId;
+                    recipientType = RecipientType.CANDIDATE;
+                } else if (context.userId) {
+                    recipientId = context.userId;
+                    recipientType = RecipientType.USER;
+                }
+
+                if (!recipientId) {
+                    this.logger.warn(`No recipient found for rule ${rule.id}, skipping`);
+                    continue;
+                }
+
+                // Calculate scheduled time (apply delay if configured)
+                const scheduledFor = new Date(Date.now() + (rule.delay || 0) * 60 * 1000);
+
+                // Ensure channel is not null
+                if (!rule.channel) {
+                    this.logger.warn(`Rule ${rule.id} has no channel, skipping`);
+                    continue;
+                }
+
+                // Create scheduled message
+                await this.prisma.scheduledMessage.create({
+                    data: {
+                        tenantId,
+                        channel: rule.channel,
+                        recipientType,
+                        recipientId,
+                        templateId: rule.templateId,
+                        payload: context.data || {},
+                        scheduledFor,
+                        status: ScheduleStatus.PENDING,
+                    },
+                });
+
+                queued++;
+                this.logger.log(`Queued message for rule ${rule.name} to ${recipientId}, scheduled for ${scheduledFor}`);
+            } catch (error) {
+                this.logger.error(`Failed to queue message for rule ${rule.id}:`, error);
+            }
+        }
+
+        return { processed: rules.length, queued };
     }
 
     /**

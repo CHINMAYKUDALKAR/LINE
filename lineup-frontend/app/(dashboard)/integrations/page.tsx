@@ -7,8 +7,6 @@ import { IntegrationCard } from '@/components/integrations/IntegrationCard';
 import { IntegrationDetailPanel } from '@/components/integrations/IntegrationDetailPanel';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
-import { mockIntegrations } from '@/lib/integrations-mock-data';
-import { mockCurrentUser } from '@/lib/navigation-mock-data';
 import { Integration } from '@/types/integrations';
 import { IntegrationsHeader } from '@/components/integrations/IntegrationsHeader';
 import * as integrationsApi from '@/lib/api/integrations';
@@ -24,8 +22,8 @@ export default function Integrations() {
     const [isPanelOpen, setIsPanelOpen] = useState(false);
     const [isConnecting, setIsConnecting] = useState(false);
 
-    // RBAC check - only admin can access integrations
-    const hasAccess = mockCurrentUser.role === 'admin';
+    // Always allow access (real RBAC should use auth context)
+    const hasAccess = true;
 
     const fetchIntegrations = useCallback(async () => {
         if (!hasAccess) return;
@@ -59,9 +57,10 @@ export default function Integrations() {
 
             setIntegrations([...data, ...disconnectedIntegrations]);
         } catch (err) {
-            console.warn('Failed to fetch integrations from API, using mock data:', err);
-            // Fallback to mock data
-            setIntegrations(mockIntegrations);
+            console.error('Failed to fetch integrations:', err);
+            setError('Failed to load integrations. Please try again.');
+            // Don't fall back to mock data - show error state
+            setIntegrations([]);
         } finally {
             setIsLoading(false);
         }

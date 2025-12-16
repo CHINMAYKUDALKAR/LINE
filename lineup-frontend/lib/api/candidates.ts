@@ -3,7 +3,7 @@
  * Handles all API calls related to candidates including resume uploads
  */
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 
 interface UploadUrlResponse {
     fileId: string;
@@ -149,6 +149,133 @@ export async function listCandidates(
 
     if (!response.ok) {
         throw new Error('Failed to fetch candidates');
+    }
+
+    return response.json();
+}
+
+// =====================================================
+// CANDIDATE DOCUMENTS API
+// =====================================================
+
+/**
+ * Get all documents for a candidate
+ */
+export async function getCandidateDocuments(candidateId: string, token: string) {
+    const response = await fetch(`${API_BASE_URL}/api/v1/candidates/${candidateId}/documents`, {
+        headers: {
+            Authorization: `Bearer ${token}`,
+        },
+    });
+
+    if (!response.ok) {
+        throw new Error('Failed to fetch documents');
+    }
+
+    return response.json();
+}
+
+// =====================================================
+// CANDIDATE NOTES API
+// =====================================================
+
+export interface CandidateNoteResponse {
+    id: string;
+    candidateId: string;
+    content: string;
+    authorId: string;
+    author: {
+        id: string;
+        name: string;
+        email: string;
+    };
+    createdAt: string;
+    updatedAt: string;
+}
+
+/**
+ * Get all notes for a candidate
+ */
+export async function getCandidateNotes(candidateId: string, token: string): Promise<{ data: CandidateNoteResponse[] }> {
+    const response = await fetch(`${API_BASE_URL}/api/v1/candidates/${candidateId}/notes`, {
+        headers: {
+            Authorization: `Bearer ${token}`,
+        },
+    });
+
+    if (!response.ok) {
+        throw new Error('Failed to fetch notes');
+    }
+
+    return response.json();
+}
+
+/**
+ * Add a note to a candidate
+ */
+export async function addCandidateNote(
+    candidateId: string,
+    content: string,
+    token: string
+): Promise<CandidateNoteResponse> {
+    const response = await fetch(`${API_BASE_URL}/api/v1/candidates/${candidateId}/notes`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ content }),
+    });
+
+    if (!response.ok) {
+        throw new Error('Failed to add note');
+    }
+
+    return response.json();
+}
+
+/**
+ * Update a candidate note
+ */
+export async function updateCandidateNote(
+    candidateId: string,
+    noteId: string,
+    content: string,
+    token: string
+): Promise<CandidateNoteResponse> {
+    const response = await fetch(`${API_BASE_URL}/api/v1/candidates/${candidateId}/notes/${noteId}`, {
+        method: 'PATCH',
+        headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ content }),
+    });
+
+    if (!response.ok) {
+        throw new Error('Failed to update note');
+    }
+
+    return response.json();
+}
+
+/**
+ * Delete a candidate note
+ */
+export async function deleteCandidateNote(
+    candidateId: string,
+    noteId: string,
+    token: string
+): Promise<{ success: boolean }> {
+    const response = await fetch(`${API_BASE_URL}/api/v1/candidates/${candidateId}/notes/${noteId}`, {
+        method: 'DELETE',
+        headers: {
+            Authorization: `Bearer ${token}`,
+        },
+    });
+
+    if (!response.ok) {
+        throw new Error('Failed to delete note');
     }
 
     return response.json();

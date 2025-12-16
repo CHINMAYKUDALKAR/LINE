@@ -8,13 +8,15 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
+var AutomationService_1;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AutomationService = void 0;
 const common_1 = require("@nestjs/common");
 const prisma_service_1 = require("../../../common/prisma.service");
 const client_1 = require("@prisma/client");
-let AutomationService = class AutomationService {
+let AutomationService = AutomationService_1 = class AutomationService {
     prisma;
+    logger = new common_1.Logger(AutomationService_1.name);
     constructor(prisma) {
         this.prisma = prisma;
     }
@@ -109,13 +111,51 @@ let AutomationService = class AutomationService {
     async processTrigger(tenantId, trigger, context) {
         const rules = await this.getActiveRulesForTrigger(tenantId, trigger);
         if (rules.length === 0) {
-            return { processed: 0 };
+            return { processed: 0, queued: 0 };
         }
-        console.log(`Processing trigger ${trigger} for tenant ${tenantId}:`, {
-            rulesCount: rules.length,
-            context,
-        });
-        return { processed: rules.length };
+        this.logger.log(`Processing trigger ${trigger} for tenant ${tenantId}: ${rules.length} rules`);
+        let queued = 0;
+        for (const rule of rules) {
+            try {
+                let recipientId = null;
+                let recipientType = client_1.RecipientType.CANDIDATE;
+                if (context.candidateId) {
+                    recipientId = context.candidateId;
+                    recipientType = client_1.RecipientType.CANDIDATE;
+                }
+                else if (context.userId) {
+                    recipientId = context.userId;
+                    recipientType = client_1.RecipientType.USER;
+                }
+                if (!recipientId) {
+                    this.logger.warn(`No recipient found for rule ${rule.id}, skipping`);
+                    continue;
+                }
+                const scheduledFor = new Date(Date.now() + (rule.delay || 0) * 60 * 1000);
+                if (!rule.channel) {
+                    this.logger.warn(`Rule ${rule.id} has no channel, skipping`);
+                    continue;
+                }
+                await this.prisma.scheduledMessage.create({
+                    data: {
+                        tenantId,
+                        channel: rule.channel,
+                        recipientType,
+                        recipientId,
+                        templateId: rule.templateId,
+                        payload: context.data || {},
+                        scheduledFor,
+                        status: client_1.ScheduleStatus.PENDING,
+                    },
+                });
+                queued++;
+                this.logger.log(`Queued message for rule ${rule.name} to ${recipientId}, scheduled for ${scheduledFor}`);
+            }
+            catch (error) {
+                this.logger.error(`Failed to queue message for rule ${rule.id}:`, error);
+            }
+        }
+        return { processed: rules.length, queued };
     }
     getAvailableTriggers() {
         return [
@@ -132,7 +172,7 @@ let AutomationService = class AutomationService {
     }
 };
 exports.AutomationService = AutomationService;
-exports.AutomationService = AutomationService = __decorate([
+exports.AutomationService = AutomationService = AutomationService_1 = __decorate([
     (0, common_1.Injectable)(),
     __metadata("design:paramtypes", [prisma_service_1.PrismaService])
 ], AutomationService);

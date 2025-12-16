@@ -5,6 +5,12 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { ArrowRight, Users } from 'lucide-react';
 
 const stageColors: Record<InterviewStage, { bg: string; border: string; text: string; activeBg: string }> = {
+  'applied': {
+    bg: 'bg-purple-50',
+    border: 'border-purple-200',
+    text: 'text-purple-700',
+    activeBg: 'bg-purple-100'
+  },
   'received': {
     bg: 'bg-slate-50',
     border: 'border-slate-200',

@@ -47,9 +47,72 @@ export class SyncProcessor extends WorkerHost {
                     `Pulled ${candidates.length} candidates from ${provider}`,
                 );
 
-                // TODO: Process and save candidates to database
-                // This would involve creating/updating Candidate records
-                // For now, just log the count
+                // Process and save candidates to database
+                let created = 0;
+                let updated = 0;
+                let skipped = 0;
+
+                for (const candidate of candidates) {
+                    try {
+                        // Check if candidate already exists by email (primary identifier)
+                        let existing = null;
+                        if (candidate.email) {
+                            existing = await this.prisma.candidate.findFirst({
+                                where: {
+                                    tenantId,
+                                    email: candidate.email,
+                                },
+                            });
+                        }
+
+                        // If no email match, try phone
+                        if (!existing && candidate.phone) {
+                            existing = await this.prisma.candidate.findFirst({
+                                where: {
+                                    tenantId,
+                                    phone: candidate.phone,
+                                },
+                            });
+                        }
+
+                        if (existing) {
+                            // Update existing candidate
+                            await this.prisma.candidate.update({
+                                where: { id: existing.id },
+                                data: {
+                                    name: candidate.name || existing.name,
+                                    email: candidate.email || existing.email,
+                                    phone: candidate.phone || existing.phone,
+                                    source: candidate.source || existing.source,
+                                    notes: candidate.notes ? `${existing.notes || ''}\n\n[Sync ${new Date().toISOString()}]: ${candidate.notes}` : existing.notes,
+                                },
+                            });
+                            updated++;
+                        } else {
+                            // Create new candidate
+                            await this.prisma.candidate.create({
+                                data: {
+                                    tenantId,
+                                    name: candidate.name || 'Unknown',
+                                    email: candidate.email,
+                                    phone: candidate.phone,
+                                    source: candidate.source || provider,
+                                    stage: 'applied',
+                                    notes: candidate.notes,
+                                    tags: [`sync:${provider}`],
+                                },
+                            });
+                            created++;
+                        }
+                    } catch (err) {
+                        this.logger.warn(`Failed to upsert candidate: ${err.message}`);
+                        skipped++;
+                    }
+                }
+
+                this.logger.log(
+                    `Sync complete: created=${created}, updated=${updated}, skipped=${skipped}`,
+                );
 
                 // Update integration status
                 await this.prisma.integration.update({
@@ -73,6 +136,9 @@ export class SyncProcessor extends WorkerHost {
                     metadata: {
                         provider,
                         candidatesCount: candidates.length,
+                        created,
+                        updated,
+                        skipped,
                         triggeredBy,
                     },
                 });
@@ -80,6 +146,9 @@ export class SyncProcessor extends WorkerHost {
                 return {
                     success: true,
                     candidatesCount: candidates.length,
+                    created,
+                    updated,
+                    skipped,
                 };
             }
 

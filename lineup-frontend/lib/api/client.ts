@@ -3,11 +3,16 @@ import { getAuthToken } from "@/lib/auth";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api/v1";
 
+// Retry configuration
+const MAX_RETRIES = 3;
+const INITIAL_RETRY_DELAY = 1000; // 1 second
+
 export class ApiError extends Error {
     constructor(
         public status: number,
         message: string,
         public data?: any,
+        public isRetryable: boolean = false,
     ) {
         super(message);
         this.name = "ApiError";
@@ -17,6 +22,8 @@ export class ApiError extends Error {
 export interface RequestOptions extends RequestInit {
     params?: Record<string, string | number | boolean | undefined | null>;
     _retry?: boolean; // Used for refresh token retry
+    _retryCount?: number; // Track retry attempts
+    skipRetry?: boolean; // Disable retry for specific requests
 }
 
 // Get active tenant ID from localStorage
@@ -55,12 +62,23 @@ async function attemptTokenRefresh(): Promise<string | null> {
     }
 }
 
+// Check if error is retryable (5xx or network error)
+function isRetryableError(status: number): boolean {
+    return status >= 500 && status < 600;
+}
+
+// Sleep with exponential backoff
+function sleep(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 async function request<T>(
     endpoint: string,
     options: RequestOptions = {},
 ): Promise<T> {
     const token = getAuthToken();
     const tenantId = getActiveTenantId();
+    const retryCount = options._retryCount || 0;
 
     const headers: Record<string, string> = {
         "Content-Type": "application/json",
@@ -90,47 +108,95 @@ async function request<T>(
         }
     }
 
-    const response = await fetch(url, {
-        ...options,
-        headers,
-        credentials: 'include', // For HTTPOnly cookies
-    });
+    try {
+        const response = await fetch(url, {
+            ...options,
+            headers,
+            credentials: 'include', // For HTTPOnly cookies
+        });
 
-    // Handle 401 - try to refresh token
-    if (response.status === 401 && !options._retry) {
-        const newToken = await attemptTokenRefresh();
-        if (newToken) {
-            // Retry with new token
-            return request<T>(endpoint, {
-                ...options,
-                _retry: true,
-                headers: {
-                    ...options.headers as Record<string, string>,
-                    "Authorization": `Bearer ${newToken}`,
-                },
-            });
+        // Handle 401 - try to refresh token
+        if (response.status === 401 && !options._retry) {
+            const newToken = await attemptTokenRefresh();
+            if (newToken) {
+                // Retry with new token
+                return request<T>(endpoint, {
+                    ...options,
+                    _retry: true,
+                    headers: {
+                        ...options.headers as Record<string, string>,
+                        "Authorization": `Bearer ${newToken}`,
+                    },
+                });
+            }
+
+            // Refresh failed - redirect to login
+            if (typeof window !== 'undefined') {
+                localStorage.removeItem('accessToken');
+                localStorage.removeItem('activeTenantId');
+                window.location.href = '/login';
+            }
         }
 
-        // Refresh failed - redirect to login
-        if (typeof window !== 'undefined') {
-            localStorage.removeItem('accessToken');
-            localStorage.removeItem('activeTenantId');
-            window.location.href = '/login';
+        // Handle 5xx errors with retry (only for GET requests by default)
+        if (isRetryableError(response.status) && !options.skipRetry && retryCount < MAX_RETRIES) {
+            const isGetRequest = !options.method || options.method.toUpperCase() === 'GET';
+
+            if (isGetRequest) {
+                const delay = INITIAL_RETRY_DELAY * Math.pow(2, retryCount);
+                console.log(`Request failed with ${response.status}, retrying in ${delay}ms (attempt ${retryCount + 1}/${MAX_RETRIES})`);
+                await sleep(delay);
+
+                return request<T>(endpoint, {
+                    ...options,
+                    _retryCount: retryCount + 1,
+                });
+            }
         }
-    }
 
-    if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new ApiError(
-            response.status,
-            errorData.message || `Request failed with status ${response.status}`,
-            errorData,
-        );
-    }
+        // Handle 429 rate limit errors with special handling
+        if (response.status === 429) {
+            const retryAfter = response.headers.get('Retry-After');
+            const retrySeconds = retryAfter ? parseInt(retryAfter, 10) : 60;
+            throw new ApiError(
+                429,
+                `Too many requests. Please wait ${retrySeconds} seconds before trying again.`,
+                { retryAfter: retrySeconds },
+                false, // Not auto-retryable
+            );
+        }
 
-    // Handle empty responses
-    const text = await response.text();
-    return text ? JSON.parse(text) : (null as unknown as T);
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new ApiError(
+                response.status,
+                errorData.message || `Request failed with status ${response.status}`,
+                errorData,
+                isRetryableError(response.status),
+            );
+        }
+
+        // Handle empty responses
+        const text = await response.text();
+        return text ? JSON.parse(text) : (null as unknown as T);
+    } catch (error) {
+        // Handle network errors with retry (only for GET requests)
+        if (error instanceof TypeError && error.message.includes('fetch') && !options.skipRetry && retryCount < MAX_RETRIES) {
+            const isGetRequest = !options.method || options.method.toUpperCase() === 'GET';
+
+            if (isGetRequest) {
+                const delay = INITIAL_RETRY_DELAY * Math.pow(2, retryCount);
+                console.log(`Network error, retrying in ${delay}ms (attempt ${retryCount + 1}/${MAX_RETRIES})`);
+                await sleep(delay);
+
+                return request<T>(endpoint, {
+                    ...options,
+                    _retryCount: retryCount + 1,
+                });
+            }
+        }
+        throw error;
+    }
 }
 
 export const client = {

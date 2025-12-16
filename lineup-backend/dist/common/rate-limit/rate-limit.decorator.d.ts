@@ -1,0 +1,11 @@
+import { RateLimitProfile } from './rate-limit.types';
+export declare const RateLimited: (profile: RateLimitProfile) => import("@nestjs/common").CustomDecorator<string>;
+export declare const SkipRateLimit: () => import("@nestjs/common").CustomDecorator<string>;
+export declare const AuthRateLimit: () => import("@nestjs/common").CustomDecorator<string>;
+export declare const AuthSensitiveRateLimit: () => import("@nestjs/common").CustomDecorator<string>;
+export declare const ReadRateLimit: () => import("@nestjs/common").CustomDecorator<string>;
+export declare const WriteRateLimit: () => import("@nestjs/common").CustomDecorator<string>;
+export declare const CalendarRateLimit: () => import("@nestjs/common").CustomDecorator<string>;
+export declare const BulkRateLimit: () => import("@nestjs/common").CustomDecorator<string>;
+export declare const ReportRateLimit: () => import("@nestjs/common").CustomDecorator<string>;
+export declare const WebhookRateLimit: () => import("@nestjs/common").CustomDecorator<string>;

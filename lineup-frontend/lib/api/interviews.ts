@@ -151,3 +151,100 @@ export async function completeInterview(id: string): Promise<Interview> {
         throw error;
     }
 }
+
+// =============================================================================
+// Interview Notes API
+// =============================================================================
+
+export interface InterviewNote {
+    id: string;
+    interviewId: string;
+    content: string;
+    authorId: string;
+    author: {
+        id: string;
+        name: string | null;
+        email: string;
+    };
+    createdAt: string;
+    updatedAt: string;
+}
+
+export interface TimelineItem {
+    type: 'note' | 'feedback' | 'activity';
+    id: string;
+    createdAt: string;
+    author?: {
+        id: string;
+        name: string | null;
+        email: string;
+    };
+    content?: string;
+    rating?: number;
+    action?: string;
+}
+
+/**
+ * Get all notes for an interview
+ */
+export async function getInterviewNotes(interviewId: string): Promise<{ data: InterviewNote[] }> {
+    try {
+        const response = await client.get<{ data: InterviewNote[] }>(`/interviews/${interviewId}/notes`);
+        return response;
+    } catch (error) {
+        console.error(`Failed to fetch interview notes:`, error);
+        throw error;
+    }
+}
+
+/**
+ * Add a note to an interview
+ */
+export async function addInterviewNote(interviewId: string, content: string): Promise<InterviewNote> {
+    try {
+        const response = await client.post<InterviewNote>(`/interviews/${interviewId}/notes`, { content });
+        return response;
+    } catch (error) {
+        console.error(`Failed to add interview note:`, error);
+        throw error;
+    }
+}
+
+/**
+ * Update an interview note
+ */
+export async function updateInterviewNote(interviewId: string, noteId: string, content: string): Promise<InterviewNote> {
+    try {
+        const response = await client.patch<InterviewNote>(`/interviews/${interviewId}/notes/${noteId}`, { content });
+        return response;
+    } catch (error) {
+        console.error(`Failed to update interview note:`, error);
+        throw error;
+    }
+}
+
+/**
+ * Delete an interview note
+ */
+export async function deleteInterviewNote(interviewId: string, noteId: string): Promise<{ success: boolean }> {
+    try {
+        const response = await client.delete<{ success: boolean }>(`/interviews/${interviewId}/notes/${noteId}`);
+        return response;
+    } catch (error) {
+        console.error(`Failed to delete interview note:`, error);
+        throw error;
+    }
+}
+
+/**
+ * Get interview timeline (notes, feedback, activity)
+ */
+export async function getInterviewTimeline(interviewId: string): Promise<{ data: TimelineItem[] }> {
+    try {
+        const response = await client.get<{ data: TimelineItem[] }>(`/interviews/${interviewId}/timeline`);
+        return response;
+    } catch (error) {
+        console.error(`Failed to fetch interview timeline:`, error);
+        throw error;
+    }
+}

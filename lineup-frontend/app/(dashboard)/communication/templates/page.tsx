@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, Suspense } from 'react';
+import { sanitizeHtml } from '@/lib/sanitize';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import {
@@ -290,7 +291,7 @@ function TemplatesContent() {
                             <label className="text-sm font-medium text-slate-600">Body</label>
                             <div
                                 className="mt-2 p-4 bg-slate-50 rounded-lg border border-slate-200 prose prose-sm max-w-none"
-                                dangerouslySetInnerHTML={{ __html: previewContent?.body || '' }}
+                                dangerouslySetInnerHTML={{ __html: sanitizeHtml(previewContent?.body || '') }}
                             />
                         </div>
                     </div>

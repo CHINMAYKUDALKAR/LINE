@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, use } from 'react';
+import { sanitizeHtml } from '@/lib/sanitize';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Save, Eye, Loader2 } from 'lucide-react';
@@ -222,7 +223,7 @@ export default function TemplateEditorPage({ params }: TemplateEditorPageProps) 
                         <Label>Body</Label>
                         <div
                             className="mt-2 p-4 bg-slate-50 rounded-lg border prose prose-sm max-w-none"
-                            dangerouslySetInnerHTML={{ __html: previewContent?.body || '' }}
+                            dangerouslySetInnerHTML={{ __html: sanitizeHtml(previewContent?.body || '') }}
                         />
                     </div>
                 </DialogContent>

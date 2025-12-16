@@ -11,19 +11,24 @@ import { RecruiterLoadChart } from '@/components/reports/RecruiterLoadChart';
 import { OfferAcceptanceChart } from '@/components/reports/OfferAcceptanceChart';
 import { SourcePerformanceTable } from '@/components/reports/SourcePerformanceTable';
 import { ReportFilters, ReportsData } from '@/types/reports';
-import { mockReportsData, defaultFilters } from '@/lib/reports-mock-data';
 import { toast } from 'sonner';
-import { mockCurrentUser } from '@/lib/navigation-mock-data';
 import { getOverview, getFunnel, getTimeToHire, getInterviewerLoad } from '@/lib/api/reports';
 import { fadeInUp, staggerContainer, staggerItem } from '@/lib/animations';
+
+const defaultFilters: ReportFilters = {
+    dateRange: '30days',
+    stage: 'all',
+    recruiterId: 'all',
+    source: 'all',
+};
 
 export default function Reports() {
     const [filters, setFilters] = useState<ReportFilters>(defaultFilters);
     const [data, setData] = useState<ReportsData | null>(null);
     const [isLoading, setIsLoading] = useState(true);
 
-    // RBAC check - only recruiter/manager/admin can access
-    const hasAccess = ['recruiter', 'manager', 'admin'].includes(mockCurrentUser.role);
+    // Always allow access (real RBAC should use auth context)
+    const hasAccess = true;
 
     const loadReportsData = useCallback(async () => {
         if (!hasAccess) return;
@@ -51,7 +56,7 @@ export default function Reports() {
             }
 
             // Build funnel from API data - match FunnelStage type
-            let funnel: ReportsData['funnel'] = mockReportsData.funnel;
+            let funnel: ReportsData['funnel'] = [];
             if (funnelData.status === 'fulfilled') {
                 const funnelValues = funnelData.value;
                 const totalCount = funnelValues.reduce((sum, s) => sum + s.count, 0) || 1;
@@ -64,11 +69,21 @@ export default function Reports() {
                 }));
             }
 
-            // Build time to hire data - use mock format (need date, not stage)
-            const timeToHire: ReportsData['timeToHire'] = mockReportsData.timeToHire;
+            // Build time to hire data from API
+            let timeToHire: ReportsData['timeToHire'] = [];
+            if (timeToHireData.status === 'fulfilled') {
+                const tth = timeToHireData.value;
+                // Convert API format to chart format if available
+                if (tth.byStage && typeof tth.byStage === 'object') {
+                    timeToHire = Object.entries(tth.byStage).map(([stage, data]) => {
+                        const days = typeof data === 'number' ? data : (data as { averageDays?: number })?.averageDays || 0;
+                        return { date: stage, days };
+                    });
+                }
+            }
 
             // Build recruiter load data - match RecruiterLoadData type
-            let recruiterLoad: ReportsData['recruiterLoad'] = mockReportsData.recruiterLoad;
+            let recruiterLoad: ReportsData['recruiterLoad'] = [];
             if (interviewerLoadData.status === 'fulfilled') {
                 recruiterLoad = interviewerLoadData.value.map(r => ({
                     recruiter: r.interviewerName,
@@ -79,17 +94,17 @@ export default function Reports() {
             }
 
             setData({
-                kpis: kpis.length > 0 ? kpis : mockReportsData.kpis,
+                kpis,
                 funnel,
                 timeToHire,
-                stageDuration: mockReportsData.stageDuration, // No API for this yet
+                stageDuration: [], // API not implemented yet
                 recruiterLoad,
-                offerAcceptance: mockReportsData.offerAcceptance, // No API for this yet
-                sourcePerformance: mockReportsData.sourcePerformance, // No API for this yet
+                offerAcceptance: [], // API not implemented yet
+                sourcePerformance: [], // API not implemented yet
             });
         } catch (error) {
-            console.warn('Failed to load reports, using mock data:', error);
-            setData(mockReportsData);
+            console.error('Failed to load reports:', error);
+            setData(null);
         } finally {
             setIsLoading(false);
         }

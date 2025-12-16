@@ -1,0 +1,26 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.WebhookRateLimit = exports.ReportRateLimit = exports.BulkRateLimit = exports.CalendarRateLimit = exports.WriteRateLimit = exports.ReadRateLimit = exports.AuthSensitiveRateLimit = exports.AuthRateLimit = exports.SkipRateLimit = exports.RateLimited = void 0;
+const common_1 = require("@nestjs/common");
+const rate_limit_types_1 = require("./rate-limit.types");
+const RateLimited = (profile) => (0, common_1.SetMetadata)(rate_limit_types_1.RATE_LIMIT_PROFILE_KEY, profile);
+exports.RateLimited = RateLimited;
+const SkipRateLimit = () => (0, common_1.SetMetadata)(rate_limit_types_1.RATE_LIMIT_SKIP_KEY, true);
+exports.SkipRateLimit = SkipRateLimit;
+const AuthRateLimit = () => (0, exports.RateLimited)(rate_limit_types_1.RateLimitProfile.AUTH);
+exports.AuthRateLimit = AuthRateLimit;
+const AuthSensitiveRateLimit = () => (0, exports.RateLimited)(rate_limit_types_1.RateLimitProfile.AUTH_SENSITIVE);
+exports.AuthSensitiveRateLimit = AuthSensitiveRateLimit;
+const ReadRateLimit = () => (0, exports.RateLimited)(rate_limit_types_1.RateLimitProfile.READ);
+exports.ReadRateLimit = ReadRateLimit;
+const WriteRateLimit = () => (0, exports.RateLimited)(rate_limit_types_1.RateLimitProfile.WRITE);
+exports.WriteRateLimit = WriteRateLimit;
+const CalendarRateLimit = () => (0, exports.RateLimited)(rate_limit_types_1.RateLimitProfile.CALENDAR);
+exports.CalendarRateLimit = CalendarRateLimit;
+const BulkRateLimit = () => (0, exports.RateLimited)(rate_limit_types_1.RateLimitProfile.BULK);
+exports.BulkRateLimit = BulkRateLimit;
+const ReportRateLimit = () => (0, exports.RateLimited)(rate_limit_types_1.RateLimitProfile.REPORT);
+exports.ReportRateLimit = ReportRateLimit;
+const WebhookRateLimit = () => (0, exports.RateLimited)(rate_limit_types_1.RateLimitProfile.WEBHOOK);
+exports.WebhookRateLimit = WebhookRateLimit;
+//# sourceMappingURL=rate-limit.decorator.js.map

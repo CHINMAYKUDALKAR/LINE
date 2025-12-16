@@ -1,6 +1,7 @@
 'use client';
 
 import { use } from 'react';
+import { sanitizeHtml } from '@/lib/sanitize';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import {
@@ -182,7 +183,7 @@ export default function MessageDetailPage({ params }: MessageDetailPageProps) {
                             <p className="text-sm font-medium text-slate-600 mb-2">Body</p>
                             <div
                                 className="p-4 bg-slate-50 rounded-lg border border-slate-200 prose prose-sm max-w-none"
-                                dangerouslySetInnerHTML={{ __html: message.body }}
+                                dangerouslySetInnerHTML={{ __html: sanitizeHtml(message.body) }}
                             />
                         </div>
                     </motion.div>

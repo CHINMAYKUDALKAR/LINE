@@ -36,6 +36,63 @@ let SyncProcessor = SyncProcessor_1 = class SyncProcessor extends bullmq_1.Worke
                 const sinceDate = since ? new Date(since) : undefined;
                 const candidates = await providerInstance.pullCandidates(tenantId, sinceDate);
                 this.logger.log(`Pulled ${candidates.length} candidates from ${provider}`);
+                let created = 0;
+                let updated = 0;
+                let skipped = 0;
+                for (const candidate of candidates) {
+                    try {
+                        let existing = null;
+                        if (candidate.email) {
+                            existing = await this.prisma.candidate.findFirst({
+                                where: {
+                                    tenantId,
+                                    email: candidate.email,
+                                },
+                            });
+                        }
+                        if (!existing && candidate.phone) {
+                            existing = await this.prisma.candidate.findFirst({
+                                where: {
+                                    tenantId,
+                                    phone: candidate.phone,
+                                },
+                            });
+                        }
+                        if (existing) {
+                            await this.prisma.candidate.update({
+                                where: { id: existing.id },
+                                data: {
+                                    name: candidate.name || existing.name,
+                                    email: candidate.email || existing.email,
+                                    phone: candidate.phone || existing.phone,
+                                    source: candidate.source || existing.source,
+                                    notes: candidate.notes ? `${existing.notes || ''}\n\n[Sync ${new Date().toISOString()}]: ${candidate.notes}` : existing.notes,
+                                },
+                            });
+                            updated++;
+                        }
+                        else {
+                            await this.prisma.candidate.create({
+                                data: {
+                                    tenantId,
+                                    name: candidate.name || 'Unknown',
+                                    email: candidate.email,
+                                    phone: candidate.phone,
+                                    source: candidate.source || provider,
+                                    stage: 'applied',
+                                    notes: candidate.notes,
+                                    tags: [`sync:${provider}`],
+                                },
+                            });
+                            created++;
+                        }
+                    }
+                    catch (err) {
+                        this.logger.warn(`Failed to upsert candidate: ${err.message}`);
+                        skipped++;
+                    }
+                }
+                this.logger.log(`Sync complete: created=${created}, updated=${updated}, skipped=${skipped}`);
                 await this.prisma.integration.update({
                     where: {
                         tenantId_provider: {
@@ -55,12 +112,18 @@ let SyncProcessor = SyncProcessor_1 = class SyncProcessor extends bullmq_1.Worke
                     metadata: {
                         provider,
                         candidatesCount: candidates.length,
+                        created,
+                        updated,
+                        skipped,
                         triggeredBy,
                     },
                 });
                 return {
                     success: true,
                     candidatesCount: candidates.length,
+                    created,
+                    updated,
+                    skipped,
                 };
             }
             return { success: true, message: 'No sync action available' };

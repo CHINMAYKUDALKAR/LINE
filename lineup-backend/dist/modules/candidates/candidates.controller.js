@@ -19,9 +19,11 @@ const candidates_service_1 = require("./candidates.service");
 const create_candidate_dto_1 = require("./dto/create-candidate.dto");
 const update_candidate_dto_1 = require("./dto/update-candidate.dto");
 const list_candidates_dto_1 = require("./dto/list-candidates.dto");
+const candidate_note_dto_1 = require("./dto/candidate-note.dto");
 const jwt_guard_1 = require("../auth/guards/jwt.guard");
 const rbac_guard_1 = require("../auth/guards/rbac.guard");
 const roles_decorator_1 = require("../auth/decorators/roles.decorator");
+const rate_limit_1 = require("../../common/rate-limit");
 let CandidatesController = class CandidatesController {
     svc;
     constructor(svc) {
@@ -54,10 +56,26 @@ let CandidatesController = class CandidatesController {
         }
         return this.svc.bulkImport(req.user.tenantId, req.user.sub, body);
     }
+    listDocuments(req, id) {
+        return this.svc.listDocuments(req.user.tenantId, id);
+    }
+    listNotes(req, id) {
+        return this.svc.listNotes(req.user.tenantId, id);
+    }
+    addNote(req, id, dto) {
+        return this.svc.addNote(req.user.tenantId, id, req.user.sub, dto.content);
+    }
+    updateNote(req, noteId, dto) {
+        return this.svc.updateNote(req.user.tenantId, noteId, req.user.sub, req.user.role, dto.content);
+    }
+    deleteNote(req, noteId) {
+        return this.svc.deleteNote(req.user.tenantId, noteId, req.user.sub, req.user.role);
+    }
 };
 exports.CandidatesController = CandidatesController;
 __decorate([
     (0, common_1.Post)(),
+    (0, rate_limit_1.RateLimited)(rate_limit_1.RateLimitProfile.WRITE),
     (0, roles_decorator_1.Roles)('ADMIN', 'MANAGER', 'RECRUITER'),
     (0, swagger_1.ApiOperation)({ summary: 'Create a new candidate' }),
     (0, swagger_1.ApiResponse)({ status: 201, description: 'Candidate created successfully' }),
@@ -72,6 +90,7 @@ __decorate([
 ], CandidatesController.prototype, "create", null);
 __decorate([
     (0, common_1.Get)(),
+    (0, rate_limit_1.RateLimited)(rate_limit_1.RateLimitProfile.READ),
     (0, roles_decorator_1.Roles)('ADMIN', 'MANAGER', 'RECRUITER'),
     (0, swagger_1.ApiOperation)({ summary: 'List all candidates with pagination and filters' }),
     (0, swagger_1.ApiResponse)({ status: 200, description: 'List of candidates' }),
@@ -83,6 +102,7 @@ __decorate([
 ], CandidatesController.prototype, "list", null);
 __decorate([
     (0, common_1.Get)(':id'),
+    (0, rate_limit_1.RateLimited)(rate_limit_1.RateLimitProfile.READ),
     (0, roles_decorator_1.Roles)('ADMIN', 'MANAGER', 'RECRUITER'),
     (0, swagger_1.ApiOperation)({ summary: 'Get candidate by ID' }),
     (0, swagger_1.ApiParam)({ name: 'id', description: 'Candidate ID' }),
@@ -96,6 +116,7 @@ __decorate([
 ], CandidatesController.prototype, "get", null);
 __decorate([
     (0, common_1.Patch)(':id'),
+    (0, rate_limit_1.RateLimited)(rate_limit_1.RateLimitProfile.WRITE),
     (0, roles_decorator_1.Roles)('ADMIN', 'MANAGER', 'RECRUITER'),
     __param(0, (0, common_1.Req)()),
     __param(1, (0, common_1.Param)('id')),
@@ -106,6 +127,7 @@ __decorate([
 ], CandidatesController.prototype, "update", null);
 __decorate([
     (0, common_1.Delete)(':id'),
+    (0, rate_limit_1.RateLimited)(rate_limit_1.RateLimitProfile.WRITE),
     (0, roles_decorator_1.Roles)('ADMIN', 'MANAGER'),
     __param(0, (0, common_1.Req)()),
     __param(1, (0, common_1.Param)('id')),
@@ -115,6 +137,7 @@ __decorate([
 ], CandidatesController.prototype, "delete", null);
 __decorate([
     (0, common_1.Post)(':id/resume/upload-url'),
+    (0, rate_limit_1.RateLimited)(rate_limit_1.RateLimitProfile.WRITE),
     (0, roles_decorator_1.Roles)('ADMIN', 'MANAGER', 'RECRUITER'),
     __param(0, (0, common_1.Req)()),
     __param(1, (0, common_1.Param)('id')),
@@ -125,6 +148,7 @@ __decorate([
 ], CandidatesController.prototype, "uploadUrl", null);
 __decorate([
     (0, common_1.Post)(':id/resume/attach'),
+    (0, rate_limit_1.RateLimited)(rate_limit_1.RateLimitProfile.WRITE),
     (0, roles_decorator_1.Roles)('ADMIN', 'MANAGER', 'RECRUITER'),
     __param(0, (0, common_1.Req)()),
     __param(1, (0, common_1.Param)('id')),
@@ -138,6 +162,7 @@ __decorate([
 ], CandidatesController.prototype, "attachResume", null);
 __decorate([
     (0, common_1.Post)('bulk-import'),
+    (0, rate_limit_1.RateLimited)(rate_limit_1.RateLimitProfile.BULK),
     (0, roles_decorator_1.Roles)('ADMIN', 'MANAGER'),
     __param(0, (0, common_1.Req)()),
     __param(1, (0, common_1.Body)()),
@@ -145,6 +170,77 @@ __decorate([
     __metadata("design:paramtypes", [Object, Object]),
     __metadata("design:returntype", void 0)
 ], CandidatesController.prototype, "bulkImport", null);
+__decorate([
+    (0, common_1.Get)(':id/documents'),
+    (0, rate_limit_1.RateLimited)(rate_limit_1.RateLimitProfile.READ),
+    (0, roles_decorator_1.Roles)('ADMIN', 'MANAGER', 'RECRUITER'),
+    (0, swagger_1.ApiOperation)({ summary: 'List all documents for a candidate' }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: 'Candidate ID' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'List of documents' }),
+    __param(0, (0, common_1.Req)()),
+    __param(1, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:returntype", void 0)
+], CandidatesController.prototype, "listDocuments", null);
+__decorate([
+    (0, common_1.Get)(':id/notes'),
+    (0, rate_limit_1.RateLimited)(rate_limit_1.RateLimitProfile.READ),
+    (0, roles_decorator_1.Roles)('ADMIN', 'MANAGER', 'RECRUITER'),
+    (0, swagger_1.ApiOperation)({ summary: 'List all notes for a candidate' }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: 'Candidate ID' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'List of notes with author details' }),
+    __param(0, (0, common_1.Req)()),
+    __param(1, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:returntype", void 0)
+], CandidatesController.prototype, "listNotes", null);
+__decorate([
+    (0, common_1.Post)(':id/notes'),
+    (0, rate_limit_1.RateLimited)(rate_limit_1.RateLimitProfile.WRITE),
+    (0, roles_decorator_1.Roles)('ADMIN', 'MANAGER', 'RECRUITER'),
+    (0, swagger_1.ApiOperation)({ summary: 'Add a note to a candidate' }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: 'Candidate ID' }),
+    (0, swagger_1.ApiBody)({ type: candidate_note_dto_1.CreateCandidateNoteDto }),
+    (0, swagger_1.ApiResponse)({ status: 201, description: 'Note created' }),
+    __param(0, (0, common_1.Req)()),
+    __param(1, (0, common_1.Param)('id')),
+    __param(2, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String, candidate_note_dto_1.CreateCandidateNoteDto]),
+    __metadata("design:returntype", void 0)
+], CandidatesController.prototype, "addNote", null);
+__decorate([
+    (0, common_1.Patch)(':id/notes/:noteId'),
+    (0, rate_limit_1.RateLimited)(rate_limit_1.RateLimitProfile.WRITE),
+    (0, roles_decorator_1.Roles)('ADMIN', 'MANAGER', 'RECRUITER'),
+    (0, swagger_1.ApiOperation)({ summary: 'Update a candidate note (author or admin)' }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: 'Candidate ID' }),
+    (0, swagger_1.ApiParam)({ name: 'noteId', description: 'Note ID' }),
+    (0, swagger_1.ApiBody)({ type: candidate_note_dto_1.UpdateCandidateNoteDto }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Note updated' }),
+    __param(0, (0, common_1.Req)()),
+    __param(1, (0, common_1.Param)('noteId')),
+    __param(2, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String, candidate_note_dto_1.UpdateCandidateNoteDto]),
+    __metadata("design:returntype", void 0)
+], CandidatesController.prototype, "updateNote", null);
+__decorate([
+    (0, common_1.Delete)(':id/notes/:noteId'),
+    (0, rate_limit_1.RateLimited)(rate_limit_1.RateLimitProfile.WRITE),
+    (0, roles_decorator_1.Roles)('ADMIN', 'MANAGER', 'RECRUITER'),
+    (0, swagger_1.ApiOperation)({ summary: 'Delete a candidate note (author or admin)' }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: 'Candidate ID' }),
+    (0, swagger_1.ApiParam)({ name: 'noteId', description: 'Note ID' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Note deleted' }),
+    __param(0, (0, common_1.Req)()),
+    __param(1, (0, common_1.Param)('noteId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:returntype", void 0)
+], CandidatesController.prototype, "deleteNote", null);
 exports.CandidatesController = CandidatesController = __decorate([
     (0, swagger_1.ApiTags)('candidates'),
     (0, swagger_1.ApiBearerAuth)('JWT-auth'),

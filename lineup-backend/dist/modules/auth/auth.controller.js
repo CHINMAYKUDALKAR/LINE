@@ -65,6 +65,7 @@ const resend_verification_dto_1 = require("./dto/resend-verification.dto");
 const jwt_guard_1 = require("./guards/jwt.guard");
 const rbac_guard_1 = require("./guards/rbac.guard");
 const roles_decorator_1 = require("./decorators/roles.decorator");
+const rate_limit_1 = require("../../common/rate-limit");
 let AuthController = class AuthController {
     svc;
     constructor(svc) {
@@ -87,8 +88,8 @@ let AuthController = class AuthController {
         return this.svc.checkPassword(dto.password);
     }
     async login(dto, req, res) {
-        const result = await this.svc.login(dto.email, dto.password, req);
-        this.setRefreshTokenCookie(res, result.refreshToken);
+        const result = await this.svc.login(dto.email, dto.password, req, dto.rememberMe);
+        this.setRefreshTokenCookie(res, result.refreshToken, dto.rememberMe);
         return {
             accessToken: result.accessToken,
             user: result.user,
@@ -167,8 +168,10 @@ let AuthController = class AuthController {
     resendVerification(dto) {
         return this.svc.resendVerification(dto.email);
     }
-    setRefreshTokenCookie(res, refreshToken) {
-        const maxAge = 14 * 24 * 60 * 60 * 1000;
+    setRefreshTokenCookie(res, refreshToken, rememberMe) {
+        const maxAge = rememberMe
+            ? 30 * 24 * 60 * 60 * 1000
+            : 7 * 24 * 60 * 60 * 1000;
         const isProduction = process.env.NODE_ENV === 'production';
         res.cookie('refreshToken', refreshToken, {
             httpOnly: true,
@@ -182,6 +185,7 @@ let AuthController = class AuthController {
 exports.AuthController = AuthController;
 __decorate([
     (0, common_1.Post)('signup'),
+    (0, rate_limit_1.RateLimited)(rate_limit_1.RateLimitProfile.AUTH),
     (0, swagger_1.ApiOperation)({ summary: 'Create a new tenant and admin user (Trial signup)' }),
     (0, swagger_1.ApiResponse)({ status: 201, description: 'Tenant and user created successfully' }),
     (0, swagger_1.ApiResponse)({ status: 400, description: 'Email already exists' }),
@@ -195,6 +199,7 @@ __decorate([
 ], AuthController.prototype, "signup", null);
 __decorate([
     (0, common_1.Post)('register'),
+    (0, rate_limit_1.RateLimited)(rate_limit_1.RateLimitProfile.AUTH),
     (0, swagger_1.ApiOperation)({ summary: 'Legacy register endpoint - use /signup instead' }),
     (0, swagger_1.ApiResponse)({ status: 201, description: 'User registered successfully' }),
     (0, swagger_1.ApiResponse)({ status: 400, description: 'Email already exists' }),
@@ -206,6 +211,7 @@ __decorate([
 ], AuthController.prototype, "register", null);
 __decorate([
     (0, common_1.Post)('password/check'),
+    (0, rate_limit_1.RateLimited)(rate_limit_1.RateLimitProfile.READ),
     (0, common_1.HttpCode)(common_1.HttpStatus.OK),
     (0, swagger_1.ApiOperation)({ summary: 'Check password strength against policy' }),
     (0, swagger_1.ApiResponse)({ status: 200, description: 'Password validation result' }),
@@ -217,6 +223,7 @@ __decorate([
 ], AuthController.prototype, "checkPassword", null);
 __decorate([
     (0, common_1.Post)('login'),
+    (0, rate_limit_1.RateLimited)(rate_limit_1.RateLimitProfile.AUTH),
     (0, common_1.HttpCode)(common_1.HttpStatus.OK),
     (0, swagger_1.ApiOperation)({ summary: 'Login with email and password' }),
     (0, swagger_1.ApiResponse)({ status: 200, description: 'Login successful, returns access token and tenant list' }),
@@ -231,6 +238,7 @@ __decorate([
 ], AuthController.prototype, "login", null);
 __decorate([
     (0, common_1.Post)('refresh'),
+    (0, rate_limit_1.RateLimited)(rate_limit_1.RateLimitProfile.AUTH),
     (0, common_1.HttpCode)(common_1.HttpStatus.OK),
     (0, swagger_1.ApiOperation)({ summary: 'Refresh access token using refresh token' }),
     (0, swagger_1.ApiResponse)({ status: 200, description: 'Token refreshed successfully' }),
@@ -275,6 +283,7 @@ __decorate([
 ], AuthController.prototype, "switchTenant", null);
 __decorate([
     (0, common_1.Get)('invite/:token'),
+    (0, rate_limit_1.RateLimited)(rate_limit_1.RateLimitProfile.READ),
     (0, swagger_1.ApiOperation)({ summary: 'Get invitation preview (tenant branding)' }),
     (0, swagger_1.ApiResponse)({ status: 200, description: 'Invitation details returned' }),
     (0, swagger_1.ApiResponse)({ status: 400, description: 'Invalid or expired token' }),
@@ -286,6 +295,7 @@ __decorate([
 ], AuthController.prototype, "getInvitePreview", null);
 __decorate([
     (0, common_1.Post)('accept-invite'),
+    (0, rate_limit_1.RateLimited)(rate_limit_1.RateLimitProfile.AUTH),
     (0, common_1.HttpCode)(common_1.HttpStatus.OK),
     (0, swagger_1.ApiOperation)({ summary: 'Accept invitation and create/link account' }),
     (0, swagger_1.ApiResponse)({ status: 200, description: 'Account created/linked, logged in' }),
@@ -326,6 +336,7 @@ __decorate([
 ], AuthController.prototype, "listInvitations", null);
 __decorate([
     (0, common_1.Post)('forgot-password'),
+    (0, rate_limit_1.RateLimited)(rate_limit_1.RateLimitProfile.AUTH_SENSITIVE),
     (0, common_1.HttpCode)(common_1.HttpStatus.OK),
     (0, swagger_1.ApiOperation)({ summary: 'Request password reset email' }),
     (0, swagger_1.ApiResponse)({ status: 200, description: 'Reset email sent if account exists' }),
@@ -337,6 +348,7 @@ __decorate([
 ], AuthController.prototype, "forgotPassword", null);
 __decorate([
     (0, common_1.Get)('reset-password/validate'),
+    (0, rate_limit_1.RateLimited)(rate_limit_1.RateLimitProfile.READ),
     (0, swagger_1.ApiOperation)({ summary: 'Validate password reset token' }),
     (0, swagger_1.ApiResponse)({ status: 200, description: 'Token validity status' }),
     __param(0, (0, common_1.Query)('token')),
@@ -346,6 +358,7 @@ __decorate([
 ], AuthController.prototype, "validateResetToken", null);
 __decorate([
     (0, common_1.Post)('reset-password'),
+    (0, rate_limit_1.RateLimited)(rate_limit_1.RateLimitProfile.AUTH_SENSITIVE),
     (0, common_1.HttpCode)(common_1.HttpStatus.OK),
     (0, swagger_1.ApiOperation)({ summary: 'Reset password with token' }),
     (0, swagger_1.ApiResponse)({ status: 200, description: 'Password reset successful' }),
@@ -371,6 +384,7 @@ __decorate([
 ], AuthController.prototype, "sendVerification", null);
 __decorate([
     (0, common_1.Get)('verify-email'),
+    (0, rate_limit_1.RateLimited)(rate_limit_1.RateLimitProfile.READ),
     (0, swagger_1.ApiOperation)({ summary: 'Verify email address with token' }),
     (0, swagger_1.ApiResponse)({ status: 200, description: 'Email verified successfully' }),
     (0, swagger_1.ApiResponse)({ status: 400, description: 'Invalid or expired token' }),
@@ -381,6 +395,7 @@ __decorate([
 ], AuthController.prototype, "verifyEmail", null);
 __decorate([
     (0, common_1.Post)('resend-verification'),
+    (0, rate_limit_1.RateLimited)(rate_limit_1.RateLimitProfile.AUTH_SENSITIVE),
     (0, common_1.HttpCode)(common_1.HttpStatus.OK),
     (0, swagger_1.ApiOperation)({ summary: 'Resend verification email' }),
     (0, swagger_1.ApiResponse)({ status: 200, description: 'Verification email resent' }),

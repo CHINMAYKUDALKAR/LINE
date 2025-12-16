@@ -29,7 +29,7 @@ interface AuthState {
 }
 
 interface AuthContextType extends AuthState {
-    login: (email: string, password: string) => Promise<void>;
+    login: (email: string, password: string, rememberMe?: boolean) => Promise<void>;
     logout: () => Promise<void>;
     signup: (data: SignupData) => Promise<void>;
     switchTenant: (tenantId: string) => Promise<void>;
@@ -227,12 +227,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }, [router]);
 
     // Login
-    const login = useCallback(async (email: string, password: string) => {
+    const login = useCallback(async (email: string, password: string, rememberMe?: boolean) => {
         const response = await fetch(`${API_URL}/api/v1/auth/login`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             credentials: 'include',
-            body: JSON.stringify({ email, password }),
+            body: JSON.stringify({ email, password, rememberMe }),
         });
 
         if (!response.ok) {

@@ -120,97 +120,104 @@ export function InterviewsTable({
             )}
 
             <div className="rounded-md border border-border bg-card overflow-hidden">
-                <Table>
-                    <TableHeader className="bg-muted/30">
-                        <TableRow>
-                            <TableHead className="w-[40px] pl-4">
-                                <Checkbox
-                                    checked={selectedIds.size === events.length && events.length > 0}
-                                    onCheckedChange={toggleSelectAll}
-                                    aria-label="Select all"
-                                />
-                            </TableHead>
-                            <TableHead>Candidate</TableHead>
-                            <TableHead>Interviewer</TableHead>
-                            <TableHead>Date & Time</TableHead>
-                            <TableHead>Stage</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead className="w-[50px]"></TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {events.map((event) => (
-                            <TableRow
-                                key={event.id}
-                                className={cn(
-                                    selectedIds.has(event.id) && "bg-primary/5 hover:bg-primary/10"
-                                )}
-                            >
-                                <TableCell className="pl-4">
+                {/* Responsive: horizontal scroll on mobile */}
+                <div className="overflow-x-auto">
+                    <Table className="min-w-[700px]">
+                        <TableHeader className="bg-muted/30">
+                            <TableRow>
+                                <TableHead className="w-[40px] pl-4">
                                     <Checkbox
-                                        checked={selectedIds.has(event.id)}
-                                        onCheckedChange={() => toggleSelect(event.id)}
-                                        aria-label={`Select ${event.candidateName}`}
+                                        checked={selectedIds.size === events.length && events.length > 0}
+                                        onCheckedChange={toggleSelectAll}
+                                        aria-label="Select all"
                                     />
-                                </TableCell>
-                                <TableCell>
-                                    <div className="flex items-center gap-3">
-                                        <Avatar className="h-9 w-9 bg-primary/10 text-primary">
-                                            <AvatarFallback>
-                                                {event.candidateName.split(' ').map(n => n[0]).join('').slice(0, 2)}
-                                            </AvatarFallback>
-                                        </Avatar>
-                                        <div>
-                                            <div className="font-medium text-sm">{event.candidateName}</div>
-                                            <div className="text-xs text-muted-foreground">{event.role}</div>
-                                        </div>
-                                    </div>
-                                </TableCell>
-                                <TableCell>
-                                    <div className="flex items-center gap-2">
-                                        <div className="w-6 h-6 rounded-full bg-secondary flex items-center justify-center text-[10px] font-medium text-muted-foreground">
-                                            {event.interviewerInitials}
-                                        </div>
-                                        <span className="text-sm text-muted-foreground">{event.interviewerName}</span>
-                                    </div>
-                                </TableCell>
-                                <TableCell>
-                                    <div className="flex flex-col">
-                                        <span className="text-sm font-medium">
-                                            {format(new Date(event.startTime), 'MMM d, yyyy')}
-                                        </span>
-                                        <span className="text-xs text-muted-foreground">
-                                            {format(new Date(event.startTime), 'h:mm a')} - {format(new Date(event.endTime), 'h:mm a')}
-                                        </span>
-                                    </div>
-                                </TableCell>
-                                <TableCell>
-                                    <Badge
-                                        variant="outline"
-                                        className={cn("font-normal capitalize", stageColors[event.stage])}
-                                    >
-                                        {event.stage.replace('-', ' ')}
-                                    </Badge>
-                                </TableCell>
-                                <TableCell>
-                                    <Badge
-                                        variant="secondary"
-                                        className={cn("font-normal capitalize", statusColors[event.status])}
-                                    >
-                                        {event.status}
-                                    </Badge>
-                                </TableCell>
-                                <TableCell>
-                                    <InterviewRowActions
-                                        event={event}
-                                        onAction={onAction}
-                                        disabled={userRole === 'interviewer'}
-                                    />
-                                </TableCell>
+                                </TableHead>
+                                <TableHead>Candidate</TableHead>
+                                {/* Hidden on mobile: Interviewer */}
+                                <TableHead className="hidden md:table-cell">Interviewer</TableHead>
+                                <TableHead>Date & Time</TableHead>
+                                {/* Hidden on smaller screens: Stage */}
+                                <TableHead className="hidden sm:table-cell">Stage</TableHead>
+                                <TableHead>Status</TableHead>
+                                <TableHead className="w-[50px]"></TableHead>
                             </TableRow>
-                        ))}
-                    </TableBody>
-                </Table>
+                        </TableHeader>
+                        <TableBody>
+                            {events.map((event) => (
+                                <TableRow
+                                    key={event.id}
+                                    className={cn(
+                                        selectedIds.has(event.id) && "bg-primary/5 hover:bg-primary/10"
+                                    )}
+                                >
+                                    <TableCell className="pl-4">
+                                        <Checkbox
+                                            checked={selectedIds.has(event.id)}
+                                            onCheckedChange={() => toggleSelect(event.id)}
+                                            aria-label={`Select ${event.candidateName}`}
+                                        />
+                                    </TableCell>
+                                    <TableCell>
+                                        <div className="flex items-center gap-3">
+                                            <Avatar className="h-9 w-9 bg-primary/10 text-primary">
+                                                <AvatarFallback>
+                                                    {event.candidateName.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                                                </AvatarFallback>
+                                            </Avatar>
+                                            <div>
+                                                <div className="font-medium text-sm">{event.candidateName}</div>
+                                                <div className="text-xs text-muted-foreground">{event.role}</div>
+                                            </div>
+                                        </div>
+                                    </TableCell>
+                                    {/* Hidden on mobile: Interviewer */}
+                                    <TableCell className="hidden md:table-cell">
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-6 h-6 rounded-full bg-secondary flex items-center justify-center text-[10px] font-medium text-muted-foreground">
+                                                {event.interviewerInitials}
+                                            </div>
+                                            <span className="text-sm text-muted-foreground">{event.interviewerName}</span>
+                                        </div>
+                                    </TableCell>
+                                    <TableCell>
+                                        <div className="flex flex-col">
+                                            <span className="text-sm font-medium">
+                                                {format(new Date(event.startTime), 'MMM d, yyyy')}
+                                            </span>
+                                            <span className="text-xs text-muted-foreground">
+                                                {format(new Date(event.startTime), 'h:mm a')} - {format(new Date(event.endTime), 'h:mm a')}
+                                            </span>
+                                        </div>
+                                    </TableCell>
+                                    {/* Hidden on smaller screens: Stage */}
+                                    <TableCell className="hidden sm:table-cell">
+                                        <Badge
+                                            variant="outline"
+                                            className={cn("font-normal capitalize", stageColors[event.stage])}
+                                        >
+                                            {event.stage.replace('-', ' ')}
+                                        </Badge>
+                                    </TableCell>
+                                    <TableCell>
+                                        <Badge
+                                            variant="secondary"
+                                            className={cn("font-normal capitalize", statusColors[event.status])}
+                                        >
+                                            {event.status}
+                                        </Badge>
+                                    </TableCell>
+                                    <TableCell>
+                                        <InterviewRowActions
+                                            event={event}
+                                            onAction={onAction}
+                                            disabled={userRole === 'interviewer'}
+                                        />
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </div>
             </div>
 
             {/* Pagination (Simple placeholder for now) */}

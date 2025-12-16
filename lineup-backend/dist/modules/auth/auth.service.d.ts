@@ -1,6 +1,7 @@
 import { PrismaService } from '../../common/prisma.service';
 import { InvitationService } from './invitation.service';
 import { PasswordResetService } from './password-reset.service';
+import { EmailService } from '../email/email.service';
 import { SignupDto } from './dto/signup.dto';
 import { AcceptInviteDto } from './dto/accept-invite.dto';
 import { Request } from 'express';
@@ -35,25 +36,22 @@ export declare class AuthService {
     private prisma;
     private invitationService;
     private passwordResetService;
+    private emailService;
     private bruteForceService;
     private passwordPolicyService;
-    constructor(prisma: PrismaService, invitationService: InvitationService, passwordResetService: PasswordResetService, bruteForceService: BruteForceService, passwordPolicyService: PasswordPolicyService);
+    constructor(prisma: PrismaService, invitationService: InvitationService, passwordResetService: PasswordResetService, emailService: EmailService, bruteForceService: BruteForceService, passwordPolicyService: PasswordPolicyService);
     signUpCreateTenant(dto: SignupDto, req?: Request): Promise<AuthResponse>;
     register(dto: {
         email: string;
         password: string;
         name?: string;
         tenantId?: string;
-    }): Promise<AuthResponse | {
-        id: string;
-        email: string;
-        name: string | null;
-    }>;
+    }): Promise<AuthResponse>;
     validateUser(email: string, password: string): Promise<{
         userTenants: ({
             tenant: {
-                name: string;
                 id: string;
+                name: string;
                 brandingLogoUrl: string | null;
             };
         } & {
@@ -146,8 +144,8 @@ export declare class AuthService {
         role: import(".prisma/client").$Enums.Role;
         expiresAt: Date;
         tenant: {
-            name: string;
             id: string;
+            name: string;
             brandingLogoUrl: string | null;
             brandingColors: import(".prisma/client").Prisma.JsonValue;
         };

@@ -77,7 +77,7 @@ export default function LoginPage() {
     const onSubmit = async (data: LoginFormData) => {
         setIsLoading(true);
         try {
-            await login(data.email, data.password);
+            await login(data.email, data.password, rememberMe);
             toast.success("Welcome back!");
             // Router push happens inside login
         } catch (error) {

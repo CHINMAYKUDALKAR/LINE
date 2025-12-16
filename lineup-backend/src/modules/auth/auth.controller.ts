@@ -17,6 +17,7 @@ import { ResendVerificationDto } from './dto/resend-verification.dto';
 import { JwtAuthGuard } from './guards/jwt.guard';
 import { RbacGuard } from './guards/rbac.guard';
 import { Roles } from './decorators/roles.decorator';
+import { RateLimited, RateLimitProfile, SkipRateLimit } from '../../common/rate-limit';
 
 @ApiTags('auth')
 @Controller('api/v1/auth')
@@ -28,6 +29,7 @@ export class AuthController {
     // ============================================
 
     @Post('signup')
+    @RateLimited(RateLimitProfile.AUTH)
     @ApiOperation({ summary: 'Create a new tenant and admin user (Trial signup)' })
     @ApiResponse({ status: 201, description: 'Tenant and user created successfully' })
     @ApiResponse({ status: 400, description: 'Email already exists' })
@@ -47,6 +49,7 @@ export class AuthController {
     }
 
     @Post('register')
+    @RateLimited(RateLimitProfile.AUTH)
     @ApiOperation({ summary: 'Legacy register endpoint - use /signup instead' })
     @ApiResponse({ status: 201, description: 'User registered successfully' })
     @ApiResponse({ status: 400, description: 'Email already exists' })
@@ -56,6 +59,7 @@ export class AuthController {
     }
 
     @Post('password/check')
+    @RateLimited(RateLimitProfile.READ)
     @HttpCode(HttpStatus.OK)
     @ApiOperation({ summary: 'Check password strength against policy' })
     @ApiResponse({ status: 200, description: 'Password validation result' })
@@ -65,16 +69,17 @@ export class AuthController {
     }
 
     @Post('login')
+    @RateLimited(RateLimitProfile.AUTH)
     @HttpCode(HttpStatus.OK)
     @ApiOperation({ summary: 'Login with email and password' })
     @ApiResponse({ status: 200, description: 'Login successful, returns access token and tenant list' })
     @ApiResponse({ status: 401, description: 'Invalid credentials' })
     @ApiBody({ type: LoginDto })
     async login(@Body() dto: LoginDto, @Req() req: express.Request, @Res({ passthrough: true }) res: express.Response) {
-        const result = await this.svc.login(dto.email, dto.password, req);
+        const result = await this.svc.login(dto.email, dto.password, req, dto.rememberMe);
 
-        // Set refresh token as HTTPOnly cookie
-        this.setRefreshTokenCookie(res, result.refreshToken);
+        // Set refresh token as HTTPOnly cookie (30 days if rememberMe, 7 days otherwise)
+        this.setRefreshTokenCookie(res, result.refreshToken, dto.rememberMe);
 
         return {
             accessToken: result.accessToken,
@@ -85,6 +90,7 @@ export class AuthController {
     }
 
     @Post('refresh')
+    @RateLimited(RateLimitProfile.AUTH)
     @HttpCode(HttpStatus.OK)
     @ApiOperation({ summary: 'Refresh access token using refresh token' })
     @ApiResponse({ status: 200, description: 'Token refreshed successfully' })
@@ -171,6 +177,7 @@ export class AuthController {
     // ============================================
 
     @Get('invite/:token')
+    @RateLimited(RateLimitProfile.READ)
     @ApiOperation({ summary: 'Get invitation preview (tenant branding)' })
     @ApiResponse({ status: 200, description: 'Invitation details returned' })
     @ApiResponse({ status: 400, description: 'Invalid or expired token' })
@@ -180,6 +187,7 @@ export class AuthController {
     }
 
     @Post('accept-invite')
+    @RateLimited(RateLimitProfile.AUTH)
     @HttpCode(HttpStatus.OK)
     @ApiOperation({ summary: 'Accept invitation and create/link account' })
     @ApiResponse({ status: 200, description: 'Account created/linked, logged in' })
@@ -234,6 +242,7 @@ export class AuthController {
     // ============================================
 
     @Post('forgot-password')
+    @RateLimited(RateLimitProfile.AUTH_SENSITIVE)
     @HttpCode(HttpStatus.OK)
     @ApiOperation({ summary: 'Request password reset email' })
     @ApiResponse({ status: 200, description: 'Reset email sent if account exists' })
@@ -243,6 +252,7 @@ export class AuthController {
     }
 
     @Get('reset-password/validate')
+    @RateLimited(RateLimitProfile.READ)
     @ApiOperation({ summary: 'Validate password reset token' })
     @ApiResponse({ status: 200, description: 'Token validity status' })
     validateResetToken(@Query('token') token: string) {
@@ -250,6 +260,7 @@ export class AuthController {
     }
 
     @Post('reset-password')
+    @RateLimited(RateLimitProfile.AUTH_SENSITIVE)
     @HttpCode(HttpStatus.OK)
     @ApiOperation({ summary: 'Reset password with token' })
     @ApiResponse({ status: 200, description: 'Password reset successful' })
@@ -275,6 +286,7 @@ export class AuthController {
     }
 
     @Get('verify-email')
+    @RateLimited(RateLimitProfile.READ)
     @ApiOperation({ summary: 'Verify email address with token' })
     @ApiResponse({ status: 200, description: 'Email verified successfully' })
     @ApiResponse({ status: 400, description: 'Invalid or expired token' })
@@ -283,6 +295,7 @@ export class AuthController {
     }
 
     @Post('resend-verification')
+    @RateLimited(RateLimitProfile.AUTH_SENSITIVE)
     @HttpCode(HttpStatus.OK)
     @ApiOperation({ summary: 'Resend verification email' })
     @ApiResponse({ status: 200, description: 'Verification email resent' })
@@ -296,8 +309,11 @@ export class AuthController {
     // HELPER METHODS
     // ============================================
 
-    private setRefreshTokenCookie(res: express.Response, refreshToken: string) {
-        const maxAge = 14 * 24 * 60 * 60 * 1000; // 14 days
+    private setRefreshTokenCookie(res: express.Response, refreshToken: string, rememberMe?: boolean) {
+        // 30 days if rememberMe, otherwise 7 days
+        const maxAge = rememberMe
+            ? 30 * 24 * 60 * 60 * 1000  // 30 days
+            : 7 * 24 * 60 * 60 * 1000;  // 7 days
         const isProduction = process.env.NODE_ENV === 'production';
 
         res.cookie('refreshToken', refreshToken, {

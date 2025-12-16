@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Search, X, Filter } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -37,23 +37,26 @@ const experienceOptions = [
 export function CandidateFilters({ filters, onFiltersChange }: CandidateFiltersProps) {
   const [searchValue, setSearchValue] = useState(filters.search);
 
-  // Debounce search update
+  // Use refs to store latest values to avoid stale closures
+  const filtersRef = useRef(filters);
+  const onFiltersChangeRef = useRef(onFiltersChange);
+
+  // Keep refs updated
+  useEffect(() => {
+    filtersRef.current = filters;
+    onFiltersChangeRef.current = onFiltersChange;
+  });
+
+  // Debounce search update - uses refs to avoid re-running on filter changes
   useEffect(() => {
     const timer = setTimeout(() => {
-      if (searchValue !== filters.search) {
-        onFiltersChange({ ...filters, search: searchValue });
+      if (searchValue !== filtersRef.current.search) {
+        onFiltersChangeRef.current({ ...filtersRef.current, search: searchValue });
       }
-    }, 300);
+    }, 500); // Increased debounce to 500ms for better UX
 
     return () => clearTimeout(timer);
-  }, [searchValue, filters, onFiltersChange]);
-
-  // Sync from props if changed externally
-  useEffect(() => {
-    if (filters.search !== searchValue) {
-      setSearchValue(filters.search);
-    }
-  }, [filters.search]);
+  }, [searchValue]); // Only re-run when searchValue changes
 
   const hasActiveFilters =
     filters.stage !== 'all' ||

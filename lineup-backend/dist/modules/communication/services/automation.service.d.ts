@@ -3,6 +3,7 @@ import { CreateAutomationDto, UpdateAutomationDto } from '../dto';
 import { AutomationTrigger } from '@prisma/client';
 export declare class AutomationService {
     private prisma;
+    private readonly logger;
     constructor(prisma: PrismaService);
     findAll(tenantId: string): Promise<({
         template: {
@@ -225,6 +226,7 @@ export declare class AutomationService {
         data?: Record<string, any>;
     }): Promise<{
         processed: number;
+        queued: number;
     }>;
     getAvailableTriggers(): ({
         trigger: "INTERVIEW_SCHEDULED";

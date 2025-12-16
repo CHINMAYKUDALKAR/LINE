@@ -18,6 +18,7 @@ const sso_service_1 = require("./sso.service");
 const initiate_sso_dto_1 = require("./dto/initiate-sso.dto");
 const sso_callback_dto_1 = require("./dto/sso-callback.dto");
 const swagger_1 = require("@nestjs/swagger");
+const rate_limit_1 = require("../../common/rate-limit");
 let SSOController = class SSOController {
     ssoService;
     constructor(ssoService) {
@@ -36,6 +37,7 @@ let SSOController = class SSOController {
 exports.SSOController = SSOController;
 __decorate([
     (0, common_1.Get)(':tenantId/providers'),
+    (0, rate_limit_1.RateLimited)(rate_limit_1.RateLimitProfile.READ),
     (0, swagger_1.ApiOperation)({ summary: 'Get available SSO providers for a tenant (public)' }),
     (0, swagger_1.ApiParam)({ name: 'tenantId', description: 'Tenant ID' }),
     __param(0, (0, common_1.Param)('tenantId')),
@@ -45,6 +47,7 @@ __decorate([
 ], SSOController.prototype, "getProviders", null);
 __decorate([
     (0, common_1.Post)(':tenantId/initiate'),
+    (0, rate_limit_1.RateLimited)(rate_limit_1.RateLimitProfile.AUTH),
     (0, swagger_1.ApiOperation)({ summary: 'Initiate SSO flow (returns mock redirect URL)' }),
     (0, swagger_1.ApiParam)({ name: 'tenantId', description: 'Tenant ID' }),
     __param(0, (0, common_1.Param)('tenantId')),
@@ -55,6 +58,7 @@ __decorate([
 ], SSOController.prototype, "initiate", null);
 __decorate([
     (0, common_1.Post)(':tenantId/callback'),
+    (0, rate_limit_1.RateLimited)(rate_limit_1.RateLimitProfile.AUTH),
     (0, swagger_1.ApiOperation)({ summary: 'Handle SSO callback (mock implementation)' }),
     (0, swagger_1.ApiParam)({ name: 'tenantId', description: 'Tenant ID' }),
     __param(0, (0, common_1.Param)('tenantId')),

@@ -2,6 +2,7 @@ import { Injectable, UnauthorizedException, BadRequestException, ForbiddenExcept
 import { PrismaService } from '../../common/prisma.service';
 import { InvitationService } from './invitation.service';
 import { PasswordResetService } from './password-reset.service';
+import { EmailService } from '../email/email.service';
 import { BusinessException } from '../../common/exceptions';
 import * as bcrypt from 'bcrypt';
 import { signAccessToken, signRefreshToken, verifyRefreshToken } from './utils/token.util';
@@ -46,6 +47,7 @@ export class AuthService {
         private prisma: PrismaService,
         private invitationService: InvitationService,
         private passwordResetService: PasswordResetService,
+        private emailService: EmailService,
         private bruteForceService: BruteForceService,
         private passwordPolicyService: PasswordPolicyService,
     ) { }
@@ -138,39 +140,16 @@ export class AuthService {
 
     /**
      * Legacy register - kept for backward compatibility
-     * Redirects to signUpCreateTenant with a default company name
+     * Note: Can ONLY create new tenants (trial signup), NOT join existing tenants
+     * To join an existing tenant, users MUST use the invitation flow
      */
     async register(dto: { email: string; password: string; name?: string; tenantId?: string }) {
+        // SECURITY: Reject any attempt to directly join a tenant
+        // Users MUST use the invitation flow (/auth/accept-invite) to join existing tenants
         if (dto.tenantId) {
-            // Joining an existing tenant (legacy flow)
-            const existing = await this.prisma.user.findUnique({ where: { email: dto.email.toLowerCase() } });
-            if (existing) throw new BadRequestException('Email already exists');
-
-            const saltRounds = Number(process.env.BCRYPT_SALT_ROUNDS || 12);
-            const hashed = await bcrypt.hash(dto.password, saltRounds);
-
-            const user = await this.prisma.user.create({
-                data: {
-                    email: dto.email.toLowerCase(),
-                    password: hashed,
-                    name: dto.name || null,
-                    tenantId: dto.tenantId,
-                    role: 'RECRUITER',
-                    status: 'ACTIVE',
-                },
-            });
-
-            // Also create UserTenant entry
-            await this.prisma.userTenant.create({
-                data: {
-                    userId: user.id,
-                    tenantId: dto.tenantId,
-                    role: 'RECRUITER',
-                    status: 'ACTIVE',
-                },
-            });
-
-            return { id: user.id, email: user.email, name: user.name };
+            throw new BadRequestException(
+                'Direct tenant registration is not allowed. Please use an invitation link to join an existing organization.',
+            );
         }
 
         // No tenantId - treat as trial signup with placeholder company name
@@ -385,15 +364,17 @@ export class AuthService {
                 throw new BadRequestException('You are already a member of this tenant');
             }
 
-            // Update password if they're accepting with a new one
-            await this.prisma.user.update({
-                where: { id: user.id },
-                data: {
-                    password: hashedPassword,
-                    name: dto.name || user.name,
-                    status: 'ACTIVE',
-                },
-            });
+            // DON'T overwrite existing user's password when they join a new tenant
+            // They keep their existing password, only update name if provided
+            if (dto.name) {
+                await this.prisma.user.update({
+                    where: { id: user.id },
+                    data: {
+                        name: dto.name,
+                        status: 'ACTIVE',
+                    },
+                });
+            }
         } else {
             // New user - create account
             user = await this.prisma.user.create({
@@ -654,8 +635,21 @@ export class AuthService {
 
         const verificationUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/verify-email?token=${token}`;
 
-        // TODO: Send email via EmailService
-        console.log(`Verification URL for ${user.email}: ${verificationUrl}`);
+        // Send verification email via EmailService
+        try {
+            await this.emailService.sendMail(null, {
+                to: user.email,
+                template: 'verification',
+                context: {
+                    name: user.name || 'User',
+                    verificationUrl,
+                    expiryHours: 24,
+                },
+            });
+        } catch (error) {
+            console.error('Failed to send verification email:', error);
+            // Log but don't fail - email might not be configured
+        }
 
         return { success: true, message: 'Verification email sent' };
     }

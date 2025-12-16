@@ -294,6 +294,12 @@ export class StorageService {
     }
 
     private canAccessFile(user: any, file: any): boolean {
+        // CRITICAL: Must always check tenant first to prevent cross-tenant access
+        if (file.tenantId !== user.tenantId) {
+            return false;
+        }
+
+        // ADMINs can access all files within their tenant
         if (user.role === 'ADMIN') return true;
 
         if (file.linkedType === 'candidate') {

@@ -6,11 +6,13 @@ import { JwtAuthGuard } from '../auth/guards/jwt.guard';
 import { RbacGuard } from '../auth/guards/rbac.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { CreateScheduledReportDto, ReportType } from './dto/scheduled-report.dto';
+import { RateLimited, RateLimitProfile } from '../../common/rate-limit';
 
 @ApiTags('reports')
 @ApiBearerAuth('JWT-auth')
 @Controller('api/v1/reports')
 @UseGuards(JwtAuthGuard, RbacGuard)
+@RateLimited(RateLimitProfile.REPORT)
 export class ReportsController {
     constructor(private svc: ReportsService) { }
 

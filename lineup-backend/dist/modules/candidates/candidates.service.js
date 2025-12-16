@@ -186,6 +186,24 @@ let CandidatesService = class CandidatesService {
                         continue;
                     }
                 }
+                if (!row.email && row.phone) {
+                    const existing = await this.prisma.candidate.findFirst({
+                        where: { tenantId, phone: row.phone },
+                    });
+                    if (existing) {
+                        result.duplicates.push(row.phone);
+                        continue;
+                    }
+                }
+                if (!row.email && row.phone && row.name) {
+                    const existing = await this.prisma.candidate.findFirst({
+                        where: { tenantId, name: row.name, phone: row.phone },
+                    });
+                    if (existing) {
+                        result.duplicates.push(`${row.name} (${row.phone})`);
+                        continue;
+                    }
+                }
                 const tags = row.tags ? row.tags.split(',').map(t => t.trim()).filter(Boolean) : [];
                 await this.prisma.candidate.create({
                     data: {
@@ -218,6 +236,115 @@ let CandidatesService = class CandidatesService {
             },
         });
         return result;
+    }
+    async listDocuments(tenantId, candidateId) {
+        await this.get(tenantId, candidateId);
+        const files = await this.prisma.fileObject.findMany({
+            where: {
+                tenantId,
+                linkedType: 'candidate',
+                linkedId: candidateId,
+                status: 'active',
+            },
+            orderBy: { createdAt: 'desc' },
+            select: {
+                id: true,
+                filename: true,
+                mimeType: true,
+                size: true,
+                createdAt: true,
+                updatedAt: true,
+                metadata: true,
+            },
+        });
+        return { data: files };
+    }
+    async listNotes(tenantId, candidateId, page = 1, perPage = 20) {
+        await this.get(tenantId, candidateId);
+        const skip = (page - 1) * perPage;
+        const [notes, total] = await Promise.all([
+            this.prisma.candidateNote.findMany({
+                where: { tenantId, candidateId },
+                orderBy: { createdAt: 'desc' },
+                skip,
+                take: perPage,
+            }),
+            this.prisma.candidateNote.count({ where: { tenantId, candidateId } }),
+        ]);
+        const authorIds = [...new Set(notes.map(n => n.authorId))];
+        const authors = authorIds.length > 0 ? await this.prisma.user.findMany({
+            where: { id: { in: authorIds } },
+            select: { id: true, name: true, email: true },
+        }) : [];
+        const authorMap = new Map(authors.map(a => [a.id, a]));
+        const enrichedNotes = notes.map(note => ({
+            ...note,
+            author: authorMap.get(note.authorId) || { id: note.authorId, name: 'Unknown', email: '' },
+        }));
+        return {
+            data: enrichedNotes,
+            meta: { total, page, perPage, totalPages: Math.ceil(total / perPage) },
+        };
+    }
+    sanitizeContent(content) {
+        return content
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#x27;')
+            .replace(/\//g, '&#x2F;');
+    }
+    async addNote(tenantId, candidateId, userId, content) {
+        await this.get(tenantId, candidateId);
+        const sanitizedContent = this.sanitizeContent(content);
+        const note = await this.prisma.candidateNote.create({
+            data: {
+                tenantId,
+                candidateId,
+                authorId: userId,
+                content: sanitizedContent,
+            },
+        });
+        await this.prisma.auditLog.create({
+            data: { tenantId, userId, action: 'CANDIDATE_NOTE_ADD', metadata: { candidateId, noteId: note.id } },
+        });
+        const author = await this.prisma.user.findUnique({
+            where: { id: userId },
+            select: { id: true, name: true, email: true },
+        });
+        return { ...note, author: author || { id: userId, name: 'Unknown', email: '' } };
+    }
+    async updateNote(tenantId, noteId, userId, userRole, content) {
+        const note = await this.prisma.candidateNote.findUnique({ where: { id: noteId } });
+        if (!note || note.tenantId !== tenantId) {
+            throw new common_1.NotFoundException('Note not found');
+        }
+        if (note.authorId !== userId && userRole !== 'ADMIN') {
+            throw new common_1.BadRequestException('Only the author or an admin can update this note');
+        }
+        const sanitizedContent = this.sanitizeContent(content);
+        const updated = await this.prisma.candidateNote.update({
+            where: { id: noteId },
+            data: { content: sanitizedContent },
+        });
+        await this.prisma.auditLog.create({
+            data: { tenantId, userId, action: 'CANDIDATE_NOTE_UPDATE', metadata: { noteId } },
+        });
+        return updated;
+    }
+    async deleteNote(tenantId, noteId, userId, userRole) {
+        const note = await this.prisma.candidateNote.findUnique({ where: { id: noteId } });
+        if (!note || note.tenantId !== tenantId) {
+            throw new common_1.NotFoundException('Note not found');
+        }
+        if (note.authorId !== userId && userRole !== 'ADMIN') {
+            throw new common_1.BadRequestException('Only the author or an admin can delete this note');
+        }
+        await this.prisma.candidateNote.delete({ where: { id: noteId } });
+        await this.prisma.auditLog.create({
+            data: { tenantId, userId, action: 'CANDIDATE_NOTE_DELETE', metadata: { noteId, candidateId: note.candidateId } },
+        });
+        return { success: true };
     }
     parseSort(sort) {
         const [field, dir] = sort.split(':');

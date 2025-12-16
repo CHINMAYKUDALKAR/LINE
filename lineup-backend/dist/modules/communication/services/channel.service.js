@@ -47,6 +47,7 @@ const common_1 = require("@nestjs/common");
 const prisma_service_1 = require("../../../common/prisma.service");
 const client_1 = require("@prisma/client");
 const nodemailer = __importStar(require("nodemailer"));
+const crypto_util_1 = require("../../integrations/utils/crypto.util");
 let ChannelService = class ChannelService {
     prisma;
     constructor(prisma) {
@@ -74,20 +75,52 @@ let ChannelService = class ChannelService {
         };
     }
     async getConfigForSending(tenantId, channel) {
-        return this.prisma.channelConfig.findFirst({
+        const config = await this.prisma.channelConfig.findFirst({
             where: { tenantId, channel, isActive: true },
         });
+        if (!config)
+            return null;
+        const rawCreds = config.credentials;
+        let decryptedCredentials;
+        if (rawCreds?.encrypted) {
+            try {
+                decryptedCredentials = (0, crypto_util_1.decryptObject)(rawCreds.encrypted);
+            }
+            catch (error) {
+                try {
+                    decryptedCredentials = JSON.parse(rawCreds.encrypted);
+                }
+                catch {
+                    console.error('Failed to decrypt credentials for channel:', channel);
+                    decryptedCredentials = rawCreds;
+                }
+            }
+        }
+        else {
+            decryptedCredentials = rawCreds;
+        }
+        return {
+            ...config,
+            credentials: decryptedCredentials,
+        };
     }
     async upsert(tenantId, dto) {
         const provider = this.getProvider(dto);
-        const credentials = dto.credentials;
+        let encryptedCredentials;
+        try {
+            encryptedCredentials = (0, crypto_util_1.encryptObject)(dto.credentials);
+        }
+        catch (error) {
+            console.warn('Credential encryption failed, storing as plain JSON:', error.message);
+            encryptedCredentials = JSON.stringify(dto.credentials);
+        }
         return this.prisma.channelConfig.upsert({
             where: {
                 tenantId_channel: { tenantId, channel: dto.channel },
             },
             update: {
                 provider,
-                credentials: credentials,
+                credentials: { encrypted: encryptedCredentials },
                 settings: dto.settings,
                 isVerified: false,
             },
@@ -95,7 +128,7 @@ let ChannelService = class ChannelService {
                 tenantId,
                 channel: dto.channel,
                 provider,
-                credentials: credentials,
+                credentials: { encrypted: encryptedCredentials },
                 settings: dto.settings,
             },
         });
@@ -171,7 +204,27 @@ let ChannelService = class ChannelService {
     }
     async testEmail(creds) {
         if (creds.provider === 'ses') {
-            return { success: true, message: 'SES configuration looks valid (full test requires sending)' };
+            if (!creds.accessKeyId || !creds.secretAccessKey || !creds.region) {
+                throw new common_1.BadRequestException('SES requires accessKeyId, secretAccessKey, and region');
+            }
+            try {
+                const { SESClient, GetSendQuotaCommand } = await import('@aws-sdk/client-ses');
+                const sesClient = new SESClient({
+                    region: creds.region,
+                    credentials: {
+                        accessKeyId: creds.accessKeyId,
+                        secretAccessKey: creds.secretAccessKey,
+                    },
+                });
+                const result = await sesClient.send(new GetSendQuotaCommand({}));
+                return {
+                    success: true,
+                    message: `SES connected. Daily quota: ${result.Max24HourSend}, Used: ${result.SentLast24Hours}`,
+                };
+            }
+            catch (error) {
+                throw new common_1.BadRequestException(`SES connection failed: ${error.message}`);
+            }
         }
         if (!creds.host) {
             throw new common_1.BadRequestException('SMTP host is required');
@@ -192,13 +245,53 @@ let ChannelService = class ChannelService {
         if (!creds.businessId || !creds.phoneNumberId || !creds.accessToken) {
             throw new common_1.BadRequestException('Missing required WhatsApp credentials');
         }
-        return { success: true, message: 'WhatsApp credentials configured (sending test required)' };
+        try {
+            const response = await fetch(`https://graph.facebook.com/v18.0/${creds.phoneNumberId}`, {
+                headers: {
+                    Authorization: `Bearer ${creds.accessToken}`,
+                },
+            });
+            if (!response.ok) {
+                const error = await response.json();
+                throw new common_1.BadRequestException(`WhatsApp API error: ${error.error?.message || 'Unknown error'}`);
+            }
+            const data = await response.json();
+            return {
+                success: true,
+                message: `WhatsApp connected. Phone: ${data.display_phone_number || creds.phoneNumberId}`,
+            };
+        }
+        catch (error) {
+            if (error instanceof common_1.BadRequestException)
+                throw error;
+            throw new common_1.BadRequestException(`WhatsApp connection failed: ${error.message}`);
+        }
     }
     async testSms(creds) {
         if (!creds.accountSid || !creds.authToken || !creds.fromNumber) {
             throw new common_1.BadRequestException('Missing required SMS credentials');
         }
-        return { success: true, message: 'SMS credentials configured (sending test required)' };
+        try {
+            const authString = Buffer.from(`${creds.accountSid}:${creds.authToken}`).toString('base64');
+            const response = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${creds.accountSid}.json`, {
+                headers: {
+                    Authorization: `Basic ${authString}`,
+                },
+            });
+            if (!response.ok) {
+                throw new common_1.BadRequestException('Invalid Twilio credentials');
+            }
+            const data = await response.json();
+            return {
+                success: true,
+                message: `Twilio connected. Account: ${data.friendly_name}, Status: ${data.status}`,
+            };
+        }
+        catch (error) {
+            if (error instanceof common_1.BadRequestException)
+                throw error;
+            throw new common_1.BadRequestException(`Twilio connection failed: ${error.message}`);
+        }
     }
 };
 exports.ChannelService = ChannelService;

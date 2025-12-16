@@ -31,11 +31,11 @@ export declare class ChannelService {
         updatedAt: Date;
     }>;
     getConfigForSending(tenantId: string, channel: Channel): Promise<{
+        credentials: any;
         id: string;
         tenantId: string;
         channel: import(".prisma/client").$Enums.Channel;
         provider: string;
-        credentials: import(".prisma/client").Prisma.JsonValue;
         settings: import(".prisma/client").Prisma.JsonValue | null;
         isActive: boolean;
         isVerified: boolean;

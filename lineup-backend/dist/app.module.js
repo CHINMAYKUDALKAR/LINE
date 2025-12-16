@@ -37,7 +37,7 @@ const integrations_module_1 = require("./modules/integrations/integrations.modul
 const health_controller_1 = require("./common/health.controller");
 const exceptions_filter_1 = require("./common/exceptions.filter");
 const app_common_module_1 = require("./common/app-common.module");
-const rate_limiter_guard_1 = require("./common/rate-limiter.guard");
+const rate_limit_1 = require("./common/rate-limit");
 const ip_allowlist_guard_1 = require("./common/ip-allowlist.guard");
 let AppModule = class AppModule {
     configure(consumer) {
@@ -79,7 +79,7 @@ exports.AppModule = AppModule = __decorate([
         ],
         controllers: [health_controller_1.HealthController],
         providers: [
-            { provide: core_1.APP_GUARD, useClass: rate_limiter_guard_1.RateLimiterGuard },
+            { provide: core_1.APP_GUARD, useClass: rate_limit_1.RateLimitGuard },
             { provide: core_1.APP_GUARD, useClass: ip_allowlist_guard_1.IPAllowlistGuard },
             { provide: core_1.APP_INTERCEPTOR, useClass: logging_interceptor_1.LoggingInterceptor },
             { provide: core_1.APP_INTERCEPTOR, useClass: metrics_interceptor_1.MetricsInterceptor },

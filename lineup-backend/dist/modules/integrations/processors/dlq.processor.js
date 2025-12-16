@@ -52,7 +52,36 @@ let DlqProcessor = DlqProcessor_1 = class DlqProcessor extends bullmq_1.WorkerHo
                     error: job.failedReason,
                 },
             });
-            return { success: true, logged: true };
+            const admins = await this.prisma.user.findMany({
+                where: {
+                    tenantId,
+                    role: 'ADMIN',
+                },
+                select: {
+                    id: true,
+                    email: true,
+                    name: true,
+                },
+            });
+            if (admins.length > 0) {
+                this.logger.log(`Notifying ${admins.length} admin(s) about integration failure: ${admins.map(a => a.email).join(', ')}`);
+                for (const admin of admins) {
+                    await this.prisma.auditLog.create({
+                        data: {
+                            tenantId,
+                            userId: admin.id,
+                            action: 'SYSTEM_NOTIFICATION',
+                            metadata: {
+                                type: 'integration_failure',
+                                title: `${provider} Integration Sync Failed`,
+                                message: `The ${provider} integration has permanently failed after ${job.attemptsMade} attempts. Please check the integration settings.`,
+                                severity: 'error',
+                            },
+                        },
+                    });
+                }
+            }
+            return { success: true, logged: true, adminsNotified: admins.length };
         }
         catch (error) {
             this.logger.error(`Failed to process DLQ job ${job.id}`, error);

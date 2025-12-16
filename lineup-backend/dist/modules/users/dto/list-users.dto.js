@@ -17,6 +17,7 @@ const client_1 = require("@prisma/client");
 class ListUsersDto {
     q;
     role;
+    roles;
     status;
     page = 1;
     perPage = 20;
@@ -34,6 +35,12 @@ __decorate([
     (0, class_validator_1.IsEnum)(client_1.Role),
     __metadata("design:type", String)
 ], ListUsersDto.prototype, "role", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: 'Filter by multiple roles (comma-separated)', required: false, example: 'ADMIN,MANAGER,INTERVIEWER' }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], ListUsersDto.prototype, "roles", void 0);
 __decorate([
     (0, swagger_1.ApiProperty)({ description: 'Filter by status', enum: client_1.UserStatus, required: false }),
     (0, class_validator_1.IsOptional)(),

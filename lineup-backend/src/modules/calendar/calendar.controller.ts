@@ -14,6 +14,7 @@ import {
 import { JwtAuthGuard } from '../auth/guards/jwt.guard';
 import { RbacGuard } from '../auth/guards/rbac.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { RateLimited, RateLimitProfile } from '../../common/rate-limit';
 import {
     AvailabilityService,
     BusyBlockService,
@@ -63,6 +64,7 @@ export class CalendarController {
     // ==================== Availability ====================
 
     @Get('availability')
+    @RateLimited(RateLimitProfile.CALENDAR)
     async getAvailability(@Req() req: any, @Query() query: AvailabilityQueryDto) {
         const tenantId = req.tenantId;
         const userIds = Array.isArray(query.userIds)
@@ -85,11 +87,13 @@ export class CalendarController {
     // ==================== Suggestions & Team Availability ====================
 
     @Post('suggestions')
+    @RateLimited(RateLimitProfile.CALENDAR)
     async getSuggestions(@Req() req: any, @Body() dto: SuggestionQueryDto) {
         return this.suggestionService.getSuggestions(req.tenantId, dto);
     }
 
     @Get('team-availability')
+    @RateLimited(RateLimitProfile.CALENDAR)
     async getTeamAvailability(@Req() req: any, @Query() query: TeamAvailabilityQueryDto) {
         return this.suggestionService.getTeamAvailability(req.tenantId, query);
     }

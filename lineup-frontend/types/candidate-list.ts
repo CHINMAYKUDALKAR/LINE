@@ -29,4 +29,4 @@ export interface CandidateListFilters {
   dateAddedTo: Date | null;
 }
 
-export type CandidateBulkAction = 'change-stage' | 'send-email' | 'add-tag' | 'assign-recruiter' | 'delete';
+export type CandidateBulkAction = 'change-stage' | 'send-email' | 'add-tag' | 'assign-recruiter' | 'delete' | 'email' | 'schedule' | 'sms';

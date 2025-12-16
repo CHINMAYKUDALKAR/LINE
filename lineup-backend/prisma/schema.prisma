@@ -116,6 +116,8 @@ model User {
   refreshTokens   RefreshToken[]
   userTenants     UserTenant[]
   passwordResets  PasswordReset[]
+  candidateNotes  CandidateNote[] @relation("CandidateNoteAuthor")
+  interviewNotes  InterviewNote[] @relation("InterviewNoteAuthor")
 
   @@index([tenantId, status])
   @@index([email])
@@ -175,7 +177,8 @@ model Candidate {
   updatedAt DateTime @updatedAt
   deletedAt DateTime?
 
-  interviews Interview[]
+  interviews     Interview[]
+  candidateNotes CandidateNote[]
 
   @@index([tenantId, createdAt], name: "idx_candidate_tenant_created")
 }
@@ -203,7 +206,8 @@ model Interview {
   updatedAt DateTime @updatedAt
   deletedAt DateTime?
 
-  feedbacks Feedback[]
+  feedbacks      Feedback[]
+  interviewNotes InterviewNote[]
 
   @@index([tenantId, date], name: "idx_interview_tenant_date")
   @@index([candidateId], name: "idx_interview_candidate")
@@ -744,4 +748,44 @@ model IdentityProvider {
   @@unique([tenantId, providerType])
   @@index([tenantId])
   @@index([providerType])
+}
+
+// ============================================
+// NOTES MODULE MODELS
+// ============================================
+
+// Candidate notes - multiple notes per candidate with author tracking
+model CandidateNote {
+  id          String    @id @default(cuid())
+  tenantId    String
+  candidateId String
+  authorId    String
+  content     String    @db.Text
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // Foreign key relations with cascade delete
+  candidate   Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  author      User      @relation("CandidateNoteAuthor", fields: [authorId], references: [id])
+
+  @@index([tenantId, candidateId])
+  @@index([authorId])
+}
+
+// Interview notes - notes/comments on interviews with author tracking
+model InterviewNote {
+  id          String    @id @default(cuid())
+  tenantId    String
+  interviewId String
+  authorId    String
+  content     String    @db.Text
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // Foreign key relations with cascade delete
+  interview   Interview @relation(fields: [interviewId], references: [id], onDelete: Cascade)
+  author      User      @relation("InterviewNoteAuthor", fields: [authorId], references: [id])
+
+  @@index([tenantId, interviewId])
+  @@index([authorId])
 }
