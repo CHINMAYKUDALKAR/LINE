@@ -90,8 +90,8 @@ export declare class AuthController {
         role: import(".prisma/client").$Enums.Role;
         expiresAt: Date;
         tenant: {
-            id: string;
             name: string;
+            id: string;
             brandingLogoUrl: string | null;
             brandingColors: import(".prisma/client").Prisma.JsonValue;
         };

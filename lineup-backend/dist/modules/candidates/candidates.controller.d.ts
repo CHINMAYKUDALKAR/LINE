@@ -27,13 +27,13 @@ export declare class CandidatesController {
     }>;
     list(req: any, dto: ListCandidatesDto): Promise<{
         data: {
-            id: string;
             name: string;
+            id: string;
             email: string | null;
+            createdAt: Date;
             roleTitle: string | null;
             stage: string;
             source: string | null;
-            createdAt: Date;
         }[];
         meta: {
             total: number;
@@ -108,17 +108,17 @@ export declare class CandidatesController {
             id: string;
             createdAt: Date;
             updatedAt: Date;
+            metadata: import(".prisma/client").Prisma.JsonValue;
             filename: string;
             mimeType: string | null;
             size: number | null;
-            metadata: import(".prisma/client").Prisma.JsonValue;
         }[];
     }>;
     listNotes(req: any, id: string): Promise<{
         data: {
             author: {
-                id: string;
                 name: string | null;
+                id: string;
                 email: string;
             };
             id: string;
@@ -138,8 +138,8 @@ export declare class CandidatesController {
     }>;
     addNote(req: any, id: string, dto: CreateCandidateNoteDto): Promise<{
         author: {
-            id: string;
             name: string | null;
+            id: string;
             email: string;
         };
         id: string;

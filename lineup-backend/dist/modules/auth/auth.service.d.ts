@@ -50,8 +50,8 @@ export declare class AuthService {
     validateUser(email: string, password: string): Promise<{
         userTenants: ({
             tenant: {
-                id: string;
                 name: string;
+                id: string;
                 brandingLogoUrl: string | null;
             };
         } & {
@@ -144,8 +144,8 @@ export declare class AuthService {
         role: import(".prisma/client").$Enums.Role;
         expiresAt: Date;
         tenant: {
-            id: string;
             name: string;
+            id: string;
             brandingLogoUrl: string | null;
             brandingColors: import(".prisma/client").Prisma.JsonValue;
         };
