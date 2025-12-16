@@ -54,7 +54,7 @@ export function AppShell({ children }: AppShellProps) {
           onTenantChange={handleTenantChange}
           onLogout={handleLogout}
         />
-        <main className="flex-1 overflow-y-auto bg-slate-50 dark:bg-slate-950 transition-colors">
+        <main className="flex-1 overflow-y-auto bg-slate-50 transition-colors">
           {children}
         </main>
       </div>

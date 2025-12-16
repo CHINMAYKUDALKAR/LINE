@@ -6,40 +6,40 @@ import { ArrowRight, Users } from 'lucide-react';
 
 const stageColors: Record<InterviewStage, { bg: string; border: string; text: string; activeBg: string }> = {
   'received': {
-    bg: 'bg-slate-50 dark:bg-slate-900/20',
-    border: 'border-slate-200 dark:border-slate-800',
-    text: 'text-slate-700 dark:text-slate-300',
-    activeBg: 'bg-slate-100 dark:bg-slate-800/40'
+    bg: 'bg-slate-50',
+    border: 'border-slate-200',
+    text: 'text-slate-700',
+    activeBg: 'bg-slate-100'
   },
   'screening': {
-    bg: 'bg-blue-50 dark:bg-blue-950/20',
-    border: 'border-blue-200 dark:border-blue-900',
-    text: 'text-blue-700 dark:text-blue-400',
-    activeBg: 'bg-blue-100 dark:bg-blue-900/40'
+    bg: 'bg-blue-50',
+    border: 'border-blue-200',
+    text: 'text-blue-700',
+    activeBg: 'bg-blue-100'
   },
   'interview-1': {
-    bg: 'bg-cyan-50 dark:bg-cyan-950/20',
-    border: 'border-cyan-200 dark:border-cyan-900',
-    text: 'text-cyan-700 dark:text-cyan-400',
-    activeBg: 'bg-cyan-100 dark:bg-cyan-900/40'
+    bg: 'bg-cyan-50',
+    border: 'border-cyan-200',
+    text: 'text-cyan-700',
+    activeBg: 'bg-cyan-100'
   },
   'interview-2': {
-    bg: 'bg-indigo-50 dark:bg-indigo-950/20',
-    border: 'border-indigo-200 dark:border-indigo-900',
-    text: 'text-indigo-700 dark:text-indigo-400',
-    activeBg: 'bg-indigo-100 dark:bg-indigo-900/40'
+    bg: 'bg-indigo-50',
+    border: 'border-indigo-200',
+    text: 'text-indigo-700',
+    activeBg: 'bg-indigo-100'
   },
   'hr-round': {
-    bg: 'bg-violet-50 dark:bg-violet-950/20',
-    border: 'border-violet-200 dark:border-violet-900',
-    text: 'text-violet-700 dark:text-violet-400',
-    activeBg: 'bg-violet-100 dark:bg-violet-900/40'
+    bg: 'bg-violet-50',
+    border: 'border-violet-200',
+    text: 'text-violet-700',
+    activeBg: 'bg-violet-100'
   },
   'offer': {
-    bg: 'bg-emerald-50 dark:bg-emerald-950/20',
-    border: 'border-emerald-200 dark:border-emerald-900',
-    text: 'text-emerald-700 dark:text-emerald-400',
-    activeBg: 'bg-emerald-100 dark:bg-emerald-900/40'
+    bg: 'bg-emerald-50',
+    border: 'border-emerald-200',
+    text: 'text-emerald-700',
+    activeBg: 'bg-emerald-100'
   },
 };
 

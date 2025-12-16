@@ -33,10 +33,10 @@ export default function SystemMetricsPage() {
     return (
         <div className="px-8 py-6 h-full space-y-6">
             {/* Admin Access Badge */}
-            <Alert className="mb-6 bg-blue-50 border-blue-200 dark:bg-blue-500/10 dark:border-blue-500/20">
-                <ShieldCheck className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                <AlertTitle className="text-blue-900 dark:text-blue-100 font-semibold">Admin Access</AlertTitle>
-                <AlertDescription className="text-blue-700 dark:text-blue-300">
+            <Alert className="mb-6 bg-blue-50 border-blue-200">
+                <ShieldCheck className="h-4 w-4 text-blue-600" />
+                <AlertTitle className="text-blue-900 font-semibold">Admin Access</AlertTitle>
+                <AlertDescription className="text-blue-700">
                     You have full system visibility.
                 </AlertDescription>
             </Alert>

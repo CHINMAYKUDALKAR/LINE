@@ -42,10 +42,10 @@ export default function SystemMetricsPage() {
         >
             {/* Admin Access Badge */}
             <motion.div variants={fadeInUp}>
-                <Alert className="border-blue-200 bg-blue-50 dark:border-blue-900 dark:bg-blue-950/30">
+                <Alert className="border-blue-200 bg-blue-50">
                     <ShieldCheck className="h-4 w-4 text-blue-600" />
-                    <AlertTitle className="text-blue-800 dark:text-blue-300">Admin Access</AlertTitle>
-                    <AlertDescription className="text-blue-700 dark:text-blue-400">
+                    <AlertTitle className="text-blue-800">Admin Access</AlertTitle>
+                    <AlertDescription className="text-blue-700">
                         This page displays system-wide metrics. Only administrators can view this data.
                     </AlertDescription>
                 </Alert>

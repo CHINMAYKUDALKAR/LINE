@@ -1,6 +1,5 @@
 import Link from 'next/link';
 import { Settings, LogOut, PanelLeftClose, PanelLeft } from 'lucide-react';
-import { ModeToggle } from '@/components/ui/mode-toggle';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -42,8 +41,7 @@ export function SidebarUserFooter({
   return (
     <div className="mt-auto border-t border-border">
       {/* Collapse Button */}
-      <div className={cn('px-3 py-2 flex items-center gap-2', collapsed ? 'justify-center flex-col' : 'justify-between')}>
-        <ModeToggle />
+      <div className={cn('px-3 py-2', collapsed ? 'flex justify-center' : '')}>
         <Tooltip delayDuration={0}>
           <TooltipTrigger asChild>
             <Button
@@ -52,13 +50,16 @@ export function SidebarUserFooter({
               onClick={onToggleCollapse}
               className={cn(
                 'h-9 text-muted-foreground hover:text-foreground',
-                collapsed ? 'w-9 p-0' : 'w-auto'
+                collapsed ? 'w-9 p-0' : 'w-full justify-start gap-2'
               )}
             >
               {collapsed ? (
                 <PanelLeft className="w-4 h-4" />
               ) : (
-                <PanelLeftClose className="w-4 h-4" />
+                <>
+                  <PanelLeftClose className="w-4 h-4" />
+                  <span className="text-sm">Collapse</span>
+                </>
               )}
             </Button>
           </TooltipTrigger>

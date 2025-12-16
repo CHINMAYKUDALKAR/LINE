@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { Search, X, Filter } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -34,6 +35,26 @@ const experienceOptions = [
 ];
 
 export function CandidateFilters({ filters, onFiltersChange }: CandidateFiltersProps) {
+  const [searchValue, setSearchValue] = useState(filters.search);
+
+  // Debounce search update
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (searchValue !== filters.search) {
+        onFiltersChange({ ...filters, search: searchValue });
+      }
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchValue, filters, onFiltersChange]);
+
+  // Sync from props if changed externally
+  useEffect(() => {
+    if (filters.search !== searchValue) {
+      setSearchValue(filters.search);
+    }
+  }, [filters.search]);
+
   const hasActiveFilters =
     filters.stage !== 'all' ||
     filters.source !== 'all' ||
@@ -44,6 +65,7 @@ export function CandidateFilters({ filters, onFiltersChange }: CandidateFiltersP
   const clearFilters = () => {
     onFiltersChange({
       ...filters,
+      search: '', // Also clear search
       stage: 'all',
       source: 'all',
       recruiterId: 'all',
@@ -52,6 +74,7 @@ export function CandidateFilters({ filters, onFiltersChange }: CandidateFiltersP
       dateAddedFrom: null,
       dateAddedTo: null,
     });
+    setSearchValue(''); // Clear local state immediately
   };
 
   const handleExperienceChange = (value: string) => {
@@ -72,6 +95,16 @@ export function CandidateFilters({ filters, onFiltersChange }: CandidateFiltersP
   };
 
   const activeFilterChips = [];
+  if (filters.search) {
+    activeFilterChips.push({
+      key: 'search',
+      label: `Search: ${filters.search}`,
+      onRemove: () => {
+        setSearchValue('');
+        onFiltersChange({ ...filters, search: '' });
+      },
+    });
+  }
   if (filters.stage !== 'all') {
     activeFilterChips.push({
       key: 'stage',
@@ -116,8 +149,8 @@ export function CandidateFilters({ filters, onFiltersChange }: CandidateFiltersP
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Search by name, email, phone, or skills..."
-            value={filters.search}
-            onChange={(e) => onFiltersChange({ ...filters, search: e.target.value })}
+            value={searchValue}
+            onChange={(e) => setSearchValue(e.target.value)}
             className="pl-10 bg-background"
           />
         </div>

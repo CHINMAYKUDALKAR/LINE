@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Menu, X } from 'lucide-react';
+import { Menu, X, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { TenantSelector } from './TenantSelector';
@@ -50,6 +50,15 @@ export function AppSidebar({
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  // Platform detection for shortcut hint
+  const [shortcutKey, setShortcutKey] = useState<string>('Ctrl');
+
+  useEffect(() => {
+    if (typeof navigator !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.platform)) {
+      setShortcutKey('⌘');
+    }
+  }, []);
+
   const SidebarContent = ({ isMobile = false }: { isMobile?: boolean }) => (
     <div className="flex flex-col h-full">
       {/* Tenant Selector */}
@@ -63,6 +72,34 @@ export function AppSidebar({
             if (isMobile) setMobileOpen(false);
           }}
         />
+      </div>
+
+      {/* Search Button */}
+      <div className="px-3 py-2">
+        {!collapsed ? (
+          <Button
+            variant="outline"
+            className="relative w-full justify-start text-sm text-muted-foreground shadow-sm bg-background/50 h-9"
+            onClick={() => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true }))}
+          >
+            <Search className="mr-2 h-4 w-4" />
+            <span>Search...</span>
+            <kbd className="pointer-events-none absolute right-1.5 top-1.5 hidden h-6 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium opacity-100 sm:flex">
+              <span className="text-xs">{shortcutKey}</span>K
+            </kbd>
+          </Button>
+        ) : (
+          <div className="flex justify-center">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-9 w-9"
+              onClick={() => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true }))}
+            >
+              <Search className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* Navigation */}

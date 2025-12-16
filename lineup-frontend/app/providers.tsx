@@ -4,7 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { AuthProvider } from '@/lib/auth-context';
 import { useState } from 'react';
-import { ThemeProvider } from 'next-themes';
+import { CommandPalette } from '@/components/CommandPalette';
 
 export default function Providers({ children }: { children: React.ReactNode }) {
     const [queryClient] = useState(() => new QueryClient({
@@ -18,14 +18,12 @@ export default function Providers({ children }: { children: React.ReactNode }) {
 
     return (
         <QueryClientProvider client={queryClient}>
-            <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
-                <AuthProvider>
-                    <TooltipProvider>
-                        {children}
-                    </TooltipProvider>
-                </AuthProvider>
-            </ThemeProvider>
+            <AuthProvider>
+                <TooltipProvider>
+                    {children}
+                    <CommandPalette />
+                </TooltipProvider>
+            </AuthProvider>
         </QueryClientProvider>
     );
 }
-

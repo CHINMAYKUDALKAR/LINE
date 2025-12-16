@@ -38,7 +38,7 @@ export function KPICard({ title, value, trend, icon: Icon, description, isLoadin
           className={cn(
             "group w-full text-left bg-card rounded-lg border border-border p-5 shadow-sm",
             "transition-all duration-200",
-            "hover:shadow-lg hover:border-primary/30 dark:hover:border-primary/50 dark:hover:shadow-blue-900/10 hover:-translate-y-0.5",
+            "hover:shadow-lg hover:border-primary/30 hover:-translate-y-0.5",
             "focus:outline-none focus:ring-2 focus:ring-primary/20 focus:ring-offset-2",
             "active:translate-y-0 active:shadow-md"
           )}
@@ -47,13 +47,13 @@ export function KPICard({ title, value, trend, icon: Icon, description, isLoadin
             <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{title}</span>
             <div className={cn(
               "p-2.5 rounded-lg transition-colors duration-200",
-              "bg-primary/5 group-hover:bg-primary/10 dark:bg-primary/10 dark:group-hover:bg-primary/20"
+              "bg-primary/5 group-hover:bg-primary/10"
             )}>
-              <Icon className="h-4 w-4 text-primary dark:text-blue-400" />
+              <Icon className="h-4 w-4 text-primary" />
             </div>
           </div>
           <div className="mt-4">
-            <span className="text-3xl font-bold text-foreground dark:text-white tracking-tight">{value}</span>
+            <span className="text-3xl font-bold text-foreground tracking-tight">{value}</span>
           </div>
           <p className="mt-1 text-xs text-muted-foreground line-clamp-1">{description}</p>
           <div className="mt-3 flex items-center justify-between">

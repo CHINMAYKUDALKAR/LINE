@@ -73,68 +73,7 @@
         --sidebar-ring: 221 83% 53%;
     }
 
-    .dark {
-        /* 
-         * PROFESSIONAL DARK MODE - Tailwind Slate Palette
-         * All colors use consistent 215-220° hue for natural blending
-         */
 
-        /* Background: Slate-950 #020617 */
-        --background: 222 47% 2%;
-        /* Foreground Text: Slate-50 #F8FAFC */
-        --foreground: 210 40% 98%;
-
-        /* Card: Slate-900 #0F172A - slightly lifted from background */
-        --card: 222 47% 11%;
-        --card-foreground: 210 40% 98%;
-
-        /* Popover: Same as card */
-        --popover: 222 47% 11%;
-        --popover-foreground: 210 40% 98%;
-
-        /* Primary: Blue-600 (unchanged brand color) */
-        --primary: 221 83% 53%;
-        --primary-foreground: 0 0% 100%;
-
-        /* Secondary: Slate-800 #1E293B */
-        --secondary: 217 33% 17%;
-        --secondary-foreground: 210 40% 98%;
-
-        /* Muted: Slate-800 for backgrounds, Slate-400 for text */
-        --muted: 217 33% 17%;
-        --muted-foreground: 215 20% 65%;
-
-        /* Accent: Slate-800 for hover states */
-        --accent: 217 33% 17%;
-        --accent-foreground: 210 40% 98%;
-
-        /* Destructive: Red-500 */
-        --destructive: 0 84% 60%;
-        --destructive-foreground: 0 0% 100%;
-
-        /* Border: Slate-700 #334155 - visible but subtle */
-        --border: 215 25% 27%;
-        --input: 215 25% 27%;
-        --ring: 221 83% 53%;
-
-        /* Sidebar: Slate-950 #020617 (matches background for seamless look) */
-        --sidebar-background: 222 47% 2%;
-        --sidebar-foreground: 215 20% 65%;
-        --sidebar-primary: 221 83% 53%;
-        --sidebar-primary-foreground: 0 0% 100%;
-        /* Active state: Blue with transparency simulation */
-        --sidebar-accent: 217 33% 17%;
-        --sidebar-accent-foreground: 217 91% 60%;
-        --sidebar-border: 215 25% 27%;
-        --sidebar-ring: 221 83% 53%;
-
-        /* Charts: Brighter colors for dark mode visibility */
-        --chart-1: 217 91% 60%;
-        --chart-2: 142 71% 45%;
-        --chart-3: 38 92% 50%;
-        --chart-4: 263 70% 70%;
-        --chart-5: 215 20% 65%;
-    }
 }
 
 @layer base {

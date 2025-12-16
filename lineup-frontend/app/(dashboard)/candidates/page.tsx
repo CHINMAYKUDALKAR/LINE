@@ -2,9 +2,10 @@
 
 import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { CandidateListHeader } from '@/components/candidates/CandidateListHeader';
+import { CandidateListHeader, ViewType } from '@/components/candidates/CandidateListHeader';
 import { CandidateFilters } from '@/components/candidates/CandidateFilters';
 import { CandidateTable } from '@/components/candidates/CandidateTable';
+import { CandidateBoard } from '@/components/candidates/CandidateBoard';
 import { BulkActionsBar } from '@/components/candidates/BulkActionsBar';
 import { SendMessageDialog, MessageChannel } from '@/components/candidates/SendMessageDialog';
 import { ScheduleInterviewModal } from '@/components/scheduling/ScheduleInterviewModal';
@@ -12,7 +13,7 @@ import { CandidateListFilters, CandidateBulkAction, CandidateListItem } from '@/
 import { currentUserRole } from '@/lib/navigation-mock-data';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from '@/hooks/use-toast';
-import { useCandidates, useDeleteCandidate } from '@/lib/hooks/useCandidates';
+import { useCandidates, useDeleteCandidate, useUpdateCandidate } from '@/lib/hooks/useCandidates';
 import { InterviewStage } from '@/types/interview';
 import { fadeInUp, staggerContainer, staggerItem } from '@/lib/animations';
 import {
@@ -37,11 +38,13 @@ export default function Candidates() {
         dateAddedFrom: null,
         dateAddedTo: null,
     });
+    const [view, setView] = useState<ViewType>('list');
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
     const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
     const [deleteCandidate, setDeleteCandidate] = useState<CandidateListItem | null>(null);
     const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false);
     const deleteCandidateMutation = useDeleteCandidate();
+    const updateCandidateMutation = useUpdateCandidate();
 
     // Message dialog state
     const [messageDialogOpen, setMessageDialogOpen] = useState(false);
@@ -66,7 +69,7 @@ export default function Candidates() {
             email: c.email || '',
             phone: c.phone || '',
             role: c.roleTitle || '',
-            stage: (c.stage || 'applied') as InterviewStage,
+            stage: (c.stage || 'received') as InterviewStage,
             source: c.source || 'Unknown',
             recruiterName: 'Unassigned',
             recruiterId: c.createdById || '',
@@ -233,6 +236,27 @@ export default function Candidates() {
         setShowBulkDeleteDialog(false);
     };
 
+    const handleStageChange = (candidateId: string, newStage: InterviewStage) => {
+        updateCandidateMutation.mutate(
+            { id: candidateId, data: { stage: newStage } },
+            {
+                onSuccess: () => {
+                    toast({
+                        title: 'Stage Updated',
+                        description: `Candidate moved to ${newStage.replace('-', ' ')}.`,
+                    });
+                },
+                onError: () => {
+                    toast({
+                        title: 'Update Failed',
+                        description: 'Failed to update candidate stage.',
+                        variant: 'destructive',
+                    });
+                }
+            }
+        );
+    };
+
     if (isLoading) {
         return (
             <div className="space-y-6">
@@ -259,6 +283,8 @@ export default function Candidates() {
                 <motion.div variants={fadeInUp} className="space-y-6">
                     <CandidateListHeader
                         userRole={currentUserRole}
+                        view={view}
+                        onViewChange={setView}
                         onAddCandidate={handleAddCandidate}
                         onUploadSpreadsheet={handleUploadSpreadsheet}
                         onUploadResume={handleUploadResume}
@@ -266,18 +292,31 @@ export default function Candidates() {
 
                     <CandidateFilters filters={filters} onFiltersChange={setFilters} />
 
-                    <CandidateTable
-                        candidates={filteredCandidates}
-                        selectedIds={selectedIds}
-                        userRole={currentUserRole}
-                        onSelectionChange={setSelectedIds}
-                        onChangeStage={handleChangeStage}
-                        onScheduleInterview={handleScheduleInterview}
-                        onSendEmail={handleSendEmail}
-                        onSendWhatsApp={handleSendWhatsApp}
-                        onSendSMS={handleSendSMS}
-                        onDelete={handleDelete}
-                    />
+                    {view === 'list' ? (
+                        <CandidateTable
+                            candidates={filteredCandidates}
+                            selectedIds={selectedIds}
+                            userRole={currentUserRole}
+                            onSelectionChange={setSelectedIds}
+                            onChangeStage={handleChangeStage}
+                            onScheduleInterview={handleScheduleInterview}
+                            onSendEmail={handleSendEmail}
+                            onSendWhatsApp={handleSendWhatsApp}
+                            onSendSMS={handleSendSMS}
+                            onDelete={handleDelete}
+                        />
+                    ) : (
+                        <div className="h-[calc(100vh-280px)]">
+                            <CandidateBoard
+                                candidates={filteredCandidates}
+                                onStageChange={handleStageChange}
+                                onCandidateClick={(c) => {
+                                    // Could open a detail modal or side panel
+                                    toast({ title: "View Candidate", description: c.name });
+                                }}
+                            />
+                        </div>
+                    )}
 
                     <BulkActionsBar
                         selectedCount={selectedIds.length}
