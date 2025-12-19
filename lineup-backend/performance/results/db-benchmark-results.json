@@ -1,0 +1,42 @@
+{
+  "timestamp": "2025-12-10T09:08:11.230Z",
+  "testType": "Database Query Benchmark",
+  "target": "p95 < 100ms",
+  "iterations": 50,
+  "results": [
+    {
+      "name": "Candidate List",
+      "avg": 0.76,
+      "p95": 0.96,
+      "passed": true
+    },
+    {
+      "name": "Interview Scheduling",
+      "avg": 0.77,
+      "p95": 1.19,
+      "passed": true
+    },
+    {
+      "name": "Message Log Retrieval",
+      "avg": 0.27,
+      "p95": 0.38,
+      "passed": true
+    },
+    {
+      "name": "Tenant Usage Aggregation",
+      "avg": 0.36,
+      "p95": 0.68,
+      "passed": true
+    },
+    {
+      "name": "Calendar Availability",
+      "avg": 0.27,
+      "p95": 0.53,
+      "passed": true
+    }
+  ],
+  "overall": {
+    "passed": true,
+    "totalQueries": 551
+  }
+}

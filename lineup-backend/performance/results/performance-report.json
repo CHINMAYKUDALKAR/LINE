@@ -1,0 +1,147 @@
+{
+  "timestamp": "2025-12-10T09:09:53.383Z",
+  "summary": {
+    "totalKPIs": 5,
+    "passedKPIs": 2,
+    "failedKPIs": 3,
+    "overallStatus": "FAILED"
+  },
+  "kpis": [
+    {
+      "name": "API Response Time (p95)",
+      "target": "< 200ms",
+      "actual": "NOT TESTED",
+      "passed": false
+    },
+    {
+      "name": "Page Load Time (p95)",
+      "target": "< 2000ms",
+      "actual": "0ms",
+      "passed": true
+    },
+    {
+      "name": "Database Query Time (p95)",
+      "target": "< 100ms",
+      "actual": "1.19ms",
+      "passed": true
+    },
+    {
+      "name": "Concurrency Error Rate",
+      "target": "< 5%",
+      "actual": "NOT TESTED",
+      "passed": false
+    },
+    {
+      "name": "System Uptime",
+      "target": "> 99.5%",
+      "actual": "NOT TESTED",
+      "passed": false
+    }
+  ],
+  "details": {
+    "apiLoadTest": null,
+    "pageLoadTest": {
+      "timestamp": "2025-12-10T09:08:36.563Z",
+      "testType": "Page Load Performance",
+      "target": "p95 < 2000ms",
+      "frontendUrl": "http://localhost:3000",
+      "iterations": 10,
+      "results": [
+        {
+          "page": "Login",
+          "avgLoadTime": 0,
+          "p95LoadTime": 0,
+          "avgFcp": 0,
+          "avgLcp": 0,
+          "passed": false
+        },
+        {
+          "page": "Dashboard",
+          "avgLoadTime": 0,
+          "p95LoadTime": 0,
+          "avgFcp": 0,
+          "avgLcp": 0,
+          "passed": false
+        },
+        {
+          "page": "Candidates",
+          "avgLoadTime": 0,
+          "p95LoadTime": 0,
+          "avgFcp": 0,
+          "avgLcp": 0,
+          "passed": false
+        },
+        {
+          "page": "Interviews",
+          "avgLoadTime": 0,
+          "p95LoadTime": 0,
+          "avgFcp": 0,
+          "avgLcp": 0,
+          "passed": false
+        },
+        {
+          "page": "Calendar",
+          "avgLoadTime": 0,
+          "p95LoadTime": 0,
+          "avgFcp": 0,
+          "avgLcp": 0,
+          "passed": false
+        },
+        {
+          "page": "Communication",
+          "avgLoadTime": 0,
+          "p95LoadTime": 0,
+          "avgFcp": 0,
+          "avgLcp": 0,
+          "passed": false
+        }
+      ],
+      "overall": {
+        "passed": false
+      }
+    },
+    "dbBenchmark": {
+      "timestamp": "2025-12-10T09:08:11.230Z",
+      "testType": "Database Query Benchmark",
+      "target": "p95 < 100ms",
+      "iterations": 50,
+      "results": [
+        {
+          "name": "Candidate List",
+          "avg": 0.76,
+          "p95": 0.96,
+          "passed": true
+        },
+        {
+          "name": "Interview Scheduling",
+          "avg": 0.77,
+          "p95": 1.19,
+          "passed": true
+        },
+        {
+          "name": "Message Log Retrieval",
+          "avg": 0.27,
+          "p95": 0.38,
+          "passed": true
+        },
+        {
+          "name": "Tenant Usage Aggregation",
+          "avg": 0.36,
+          "p95": 0.68,
+          "passed": true
+        },
+        {
+          "name": "Calendar Availability",
+          "avg": 0.27,
+          "p95": 0.53,
+          "passed": true
+        }
+      ],
+      "overall": {
+        "passed": true,
+        "totalQueries": 551
+      }
+    },
+    "uptimeMonitor": null
+  }
+}
