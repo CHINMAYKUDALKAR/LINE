@@ -4,9 +4,11 @@ import {
     Post,
     Body,
     Query,
+    Param,
     UseGuards,
     Req,
 } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam, ApiBody, ApiQuery } from '@nestjs/swagger';
 import { IntegrationsService } from './integrations.service';
 import { ConnectDto } from './dto/connect.dto';
 import { UpdateMappingDto } from './dto/mapping.dto';
@@ -16,37 +18,39 @@ import { RbacGuard } from '../auth/guards/rbac.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { Role } from '@prisma/client';
 
+@ApiTags('integrations')
+@ApiBearerAuth('JWT-auth')
 @Controller('api/v1/integrations')
 @UseGuards(JwtAuthGuard, RbacGuard)
 export class IntegrationsController {
     constructor(private integrationsService: IntegrationsService) { }
 
-    /**
-     * List all integrations for the tenant
-     */
     @Get()
     @Roles(Role.ADMIN, Role.MANAGER)
+    @ApiOperation({ summary: 'List all integrations for the tenant' })
+    @ApiResponse({ status: 200, description: 'List of configured integrations with their status' })
     async listIntegrations(@Req() req: any) {
         const tenantId = req.user.tenantId;
         return this.integrationsService.listIntegrations(tenantId);
     }
 
-    /**
-     * Get a specific integration
-     */
     @Get(':provider')
     @Roles(Role.ADMIN, Role.MANAGER)
-    async getIntegration(@Req() req: any, @Query('provider') provider: string) {
+    @ApiOperation({ summary: 'Get a specific integration details' })
+    @ApiParam({ name: 'provider', description: 'Integration provider (e.g., zoho, google, outlook)' })
+    @ApiResponse({ status: 200, description: 'Integration details and configuration' })
+    @ApiResponse({ status: 404, description: 'Integration not found' })
+    async getIntegration(@Req() req: any, @Param('provider') provider: string) {
         const tenantId = req.user.tenantId;
         return this.integrationsService.getIntegration(tenantId, provider);
     }
 
-    /**
-     * Initiate OAuth connection flow
-     * Returns authorization URL for the provider
-     */
     @Post('connect')
     @Roles(Role.ADMIN)
+    @ApiOperation({ summary: 'Initiate OAuth connection flow for a provider' })
+    @ApiBody({ type: ConnectDto })
+    @ApiResponse({ status: 200, description: 'Authorization URL for OAuth flow', schema: { example: { authUrl: 'https://...' } } })
+    @ApiResponse({ status: 400, description: 'Invalid provider' })
     async connect(@Req() req: any, @Body() connectDto: ConnectDto) {
         const tenantId = req.user.tenantId;
         const userId = req.user.id;
@@ -57,11 +61,13 @@ export class IntegrationsController {
         );
     }
 
-    /**
-     * Handle OAuth callback
-     * This endpoint receives the authorization code from the provider
-     */
     @Get('callback')
+    @ApiOperation({ summary: 'Handle OAuth callback from provider' })
+    @ApiQuery({ name: 'provider', description: 'Integration provider' })
+    @ApiQuery({ name: 'code', description: 'Authorization code from provider' })
+    @ApiQuery({ name: 'state', description: 'State parameter for CSRF protection' })
+    @ApiResponse({ status: 200, description: 'Integration connected successfully' })
+    @ApiResponse({ status: 400, description: 'Invalid code or state' })
     async callback(
         @Query('provider') provider: string,
         @Query('code') code: string,
@@ -72,11 +78,12 @@ export class IntegrationsController {
         return this.integrationsService.callback(provider, code, state, userId);
     }
 
-    /**
-     * Update field mapping configuration
-     */
     @Post('mapping')
     @Roles(Role.ADMIN)
+    @ApiOperation({ summary: 'Update field mapping configuration for an integration' })
+    @ApiBody({ type: UpdateMappingDto })
+    @ApiResponse({ status: 200, description: 'Mapping updated successfully' })
+    @ApiResponse({ status: 404, description: 'Integration not found' })
     async updateMapping(@Req() req: any, @Body() mappingDto: UpdateMappingDto) {
         const tenantId = req.user.tenantId;
         const userId = req.user.id;
@@ -88,11 +95,12 @@ export class IntegrationsController {
         );
     }
 
-    /**
-     * Trigger manual sync
-     */
     @Post('sync')
     @Roles(Role.ADMIN, Role.MANAGER)
+    @ApiOperation({ summary: 'Trigger manual sync with external system' })
+    @ApiBody({ type: TriggerSyncDto })
+    @ApiResponse({ status: 200, description: 'Sync triggered successfully', schema: { example: { synced: 25, errors: 0 } } })
+    @ApiResponse({ status: 404, description: 'Integration not connected' })
     async triggerSync(@Req() req: any, @Body() syncDto: TriggerSyncDto) {
         const tenantId = req.user.tenantId;
         const userId = req.user.id;
@@ -105,54 +113,57 @@ export class IntegrationsController {
         );
     }
 
-    /**
-     * Disconnect an integration
-     */
     @Post('disconnect')
     @Roles(Role.ADMIN)
+    @ApiOperation({ summary: 'Disconnect an integration' })
+    @ApiBody({ schema: { example: { provider: 'zoho' } } })
+    @ApiResponse({ status: 200, description: 'Integration disconnected' })
+    @ApiResponse({ status: 404, description: 'Integration not found' })
     async disconnect(@Req() req: any, @Body() body: { provider: string }) {
         const tenantId = req.user.tenantId;
         const userId = req.user.id;
         return this.integrationsService.disconnect(tenantId, body.provider, userId);
     }
 
-    /**
-     * Get webhook events for an integration
-     */
     @Get(':provider/webhooks')
     @Roles(Role.ADMIN, Role.MANAGER)
+    @ApiOperation({ summary: 'Get webhook events for an integration' })
+    @ApiParam({ name: 'provider', description: 'Integration provider' })
+    @ApiQuery({ name: 'limit', required: false, description: 'Number of events to return (default: 50)' })
+    @ApiResponse({ status: 200, description: 'List of recent webhook events' })
     async getWebhooks(
         @Req() req: any,
-        @Query('provider') provider: string,
+        @Param('provider') provider: string,
         @Query('limit') limit?: string,
     ) {
         const tenantId = req.user.tenantId;
         return this.integrationsService.getWebhookEvents(tenantId, provider, parseInt(limit || '50'));
     }
 
-    /**
-     * Get sync metrics for an integration
-     */
     @Get(':provider/metrics')
     @Roles(Role.ADMIN, Role.MANAGER)
+    @ApiOperation({ summary: 'Get sync metrics and statistics for an integration' })
+    @ApiParam({ name: 'provider', description: 'Integration provider' })
+    @ApiResponse({ status: 200, description: 'Sync metrics including success rate, last sync time, etc.' })
     async getMetrics(
         @Req() req: any,
-        @Query('provider') provider: string,
+        @Param('provider') provider: string,
     ) {
         const tenantId = req.user.tenantId;
         return this.integrationsService.getMetrics(tenantId, provider);
     }
 
-    /**
-     * Get field schemas for mapping
-     */
     @Get(':provider/fields')
     @Roles(Role.ADMIN, Role.MANAGER)
+    @ApiOperation({ summary: 'Get field schemas for mapping configuration' })
+    @ApiParam({ name: 'provider', description: 'Integration provider' })
+    @ApiResponse({ status: 200, description: 'Available fields from both Lineup and external system for mapping' })
     async getFields(
         @Req() req: any,
-        @Query('provider') provider: string,
+        @Param('provider') provider: string,
     ) {
         const tenantId = req.user.tenantId;
         return this.integrationsService.getFieldSchemas(tenantId, provider);
     }
 }
+
