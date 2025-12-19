@@ -7,22 +7,22 @@ export declare class IntegrationsController {
     constructor(integrationsService: IntegrationsService);
     listIntegrations(req: any): Promise<{
         id: string;
-        createdAt: Date;
-        updatedAt: Date;
-        status: string | null;
         provider: string;
+        status: string | null;
         lastSyncedAt: Date | null;
         lastError: string | null;
+        createdAt: Date;
+        updatedAt: Date;
     }[]>;
     getIntegration(req: any, provider: string): Promise<{
         id: string;
-        settings: import(".prisma/client").Prisma.JsonValue;
-        createdAt: Date;
-        updatedAt: Date;
-        status: string | null;
         provider: string;
+        settings: import(".prisma/client").Prisma.JsonValue;
+        status: string | null;
         lastSyncedAt: Date | null;
         lastError: string | null;
+        createdAt: Date;
+        updatedAt: Date;
     }>;
     connect(req: any, connectDto: ConnectDto): Promise<{
         authUrl: string;
@@ -85,5 +85,45 @@ export declare class IntegrationsController {
             required: boolean;
         }[];
         mappings: any;
+    }>;
+    getStatus(req: any, provider: string): Promise<{
+        connected: boolean;
+        provider: string;
+        lastSyncAt: Date | null;
+        lastError: string | null;
+        capabilities: {
+            candidateSync: string;
+            jobSync: string;
+            interviewSync: string;
+            supportsWebhooks: boolean;
+        };
+        stats: {
+            total: number;
+            success: number;
+            failed: number;
+            pending: number;
+            successRate: number;
+        };
+    }>;
+    getSyncLogs(req: any, provider: string, limit?: string, status?: string): Promise<{
+        id: string;
+        status: import(".prisma/client").$Enums.SyncLogStatus;
+        createdAt: Date;
+        eventType: string;
+        direction: import(".prisma/client").$Enums.SyncDirection;
+        entityType: string;
+        entityId: string | null;
+        externalId: string | null;
+        errorMessage: string | null;
+        retryCount: number;
+        completedAt: Date | null;
+    }[]>;
+    getFailureSummary(req: any, provider: string): Promise<{
+        recentErrors: {
+            count: number;
+            lastOccurred: Date;
+            message: string;
+        }[];
+        totalFailures24h: number;
     }>;
 }

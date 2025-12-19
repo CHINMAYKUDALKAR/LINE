@@ -10,6 +10,7 @@ import { AvailabilityUtil } from './utils/availability.util';
 import { InterviewAutomationService } from './services/interview-automation.service';
 import { InterviewEventPayload } from './events/interview-events';
 import { RecycleBinService } from '../recycle-bin/recycle-bin.service';
+import { IntegrationEventsService } from '../integrations/services/integration-events.service';
 
 @Injectable()
 export class InterviewsService {
@@ -18,7 +19,8 @@ export class InterviewsService {
         @InjectQueue('interview-reminder') private reminderQueue: Queue,
         @InjectQueue('calendar-sync') private syncQueue: Queue,
         private automationService: InterviewAutomationService,
-        private recycleBinService: RecycleBinService
+        private recycleBinService: RecycleBinService,
+        private integrationEvents: IntegrationEventsService
     ) { }
 
     async create(tenantId: string, userId: string, dto: CreateInterviewDto) {
@@ -68,8 +70,16 @@ export class InterviewsService {
             duration: interview.durationMins,
             stage: interview.stage,
             meetingLink: interview.meetingLink || undefined,
+            // Pass custom email overrides if provided
+            candidateEmailSubject: dto.candidateEmailSubject,
+            candidateEmailBody: dto.candidateEmailBody,
+            interviewerEmailSubject: dto.interviewerEmailSubject,
+            interviewerEmailBody: dto.interviewerEmailBody,
         };
         await this.automationService.onInterviewCreated(eventPayload);
+
+        // Trigger integration sync for interview scheduled (async, non-blocking)
+        this.integrationEvents.onInterviewScheduled(tenantId, interview.id, userId).catch(() => { });
 
         return interview;
     }
@@ -142,6 +152,9 @@ export class InterviewsService {
             meetingLink: updated.meetingLink || undefined,
         };
         await this.automationService.onInterviewRescheduled(eventPayload);
+
+        // Trigger integration sync for interview rescheduled (async, non-blocking)
+        this.integrationEvents.onInterviewRescheduled(tenantId, id, userId).catch(() => { });
 
         // Return enhanced response with conflict warnings
         return {
@@ -291,6 +304,9 @@ export class InterviewsService {
             stage: interview.stage,
         };
         await this.automationService.onInterviewCompleted(eventPayload);
+
+        // Trigger integration sync for interview completed (async, non-blocking)
+        this.integrationEvents.onInterviewCompleted(tenantId, id, userId).catch(() => { });
 
         return updated;
     }

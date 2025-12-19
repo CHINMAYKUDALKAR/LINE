@@ -95,6 +95,10 @@ export async function createInterview(data: {
     meetingLink?: string;
     interviewerIds?: string[];
     notes?: string;
+    candidateEmailSubject?: string;
+    candidateEmailBody?: string;
+    interviewerEmailSubject?: string;
+    interviewerEmailBody?: string;
 }): Promise<Interview> {
     try {
         // Transform date + startTime to startAt ISO format
@@ -119,6 +123,10 @@ export async function createInterview(data: {
             startAt,
             durationMins,
             stage: rest.stage,
+            candidateEmailSubject: rest.candidateEmailSubject,
+            candidateEmailBody: rest.candidateEmailBody,
+            interviewerEmailSubject: rest.interviewerEmailSubject,
+            interviewerEmailBody: rest.interviewerEmailBody,
             location: rest.location,
             meetingLink: rest.meetingLink,
             notes: rest.notes,

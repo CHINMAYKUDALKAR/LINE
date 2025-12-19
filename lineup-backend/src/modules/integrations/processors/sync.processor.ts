@@ -4,12 +4,35 @@ import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../../common/prisma.service';
 import { ProviderFactory } from '../provider.factory';
 import { AuditService } from '../../audit/audit.service';
+import { IntegrationEventType, SyncEntityType } from '../types/standard-entities';
+
+/**
+ * Provider interface for sync operations
+ * Used by sync processor to call provider-specific sync methods
+ */
+interface SyncableProvider {
+    syncCandidate?(tenantId: string, candidateId: string, eventType: 'created' | 'updated' | 'stage_changed', data?: { newStage?: string }): Promise<void>;
+    syncInterview?(tenantId: string, interviewId: string, eventType: 'scheduled' | 'completed'): Promise<void>;
+    pushCandidate?(tenantId: string, candidate: any): Promise<any>;
+    pushInterview?(tenantId: string, interview: any): Promise<any>;
+}
 
 interface SyncJobData {
     tenantId: string;
     provider: string;
     since?: string;
     triggeredBy?: string;
+}
+
+interface EventJobData {
+    tenantId: string;
+    provider: string;
+    eventType: IntegrationEventType;
+    entityType: SyncEntityType;
+    entityId: string;
+    data?: Record<string, unknown>;
+    triggeredBy?: string;
+    direction: 'OUTBOUND' | 'INBOUND';
 }
 
 @Processor('integration-sync')
@@ -25,17 +48,191 @@ export class SyncProcessor extends WorkerHost {
         super();
     }
 
-    async process(job: Job<SyncJobData>): Promise<any> {
-        const { tenantId, provider, since, triggeredBy } = job.data;
+    async process(job: Job<SyncJobData | EventJobData>): Promise<any> {
+        // Handle event-driven jobs (from IntegrationEventsService)
+        if (job.name === 'integration-event') {
+            return this.processEventJob(job.data as EventJobData);
+        }
+
+        // Handle legacy full sync jobs
+        return this.processFullSyncJob(job.data as SyncJobData);
+    }
+
+    /**
+     * Process event-driven sync jobs
+     * Routes events to provider-specific sync handlers
+     */
+    private async processEventJob(data: EventJobData): Promise<any> {
+        const { tenantId, provider, eventType, entityType, entityId, triggeredBy } = data;
 
         this.logger.log(
-            `Processing sync job for tenant ${tenantId}, provider ${provider}`,
+            `Processing integration event: ${eventType} for ${entityType}/${entityId} to ${provider}`,
         );
 
         try {
             const providerInstance = this.providerFactory.getProvider(provider);
 
-            // Pull candidates from provider
+            // Route to provider-specific handlers based on entity type
+            switch (entityType) {
+                case SyncEntityType.CANDIDATE:
+                    await this.syncCandidateEvent(providerInstance, tenantId, entityId, eventType, data.data);
+                    break;
+
+                case SyncEntityType.INTERVIEW:
+                    await this.syncInterviewEvent(providerInstance, tenantId, entityId, eventType);
+                    break;
+
+                case SyncEntityType.JOB:
+                    // Job sync not yet implemented in v1
+                    this.logger.debug(`Job sync not yet implemented for ${provider}`);
+                    break;
+
+                default:
+                    this.logger.warn(`Unknown entity type: ${entityType}`);
+            }
+
+            // Update last synced timestamp
+            await this.prisma.integration.update({
+                where: {
+                    tenantId_provider: { tenantId, provider },
+                },
+                data: {
+                    lastSyncedAt: new Date(),
+                    lastError: null,
+                },
+            });
+
+            return { success: true, eventType, entityType, entityId };
+
+        } catch (error: unknown) {
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            this.logger.error(
+                `Event sync failed for ${eventType}/${entityId} to ${provider}: ${errorMessage}`,
+            );
+
+            // Update integration with error (but don't fail the whole integration)
+            await this.prisma.integration.update({
+                where: {
+                    tenantId_provider: { tenantId, provider },
+                },
+                data: {
+                    lastError: `Event sync failed: ${errorMessage}`,
+                },
+            });
+
+            throw error; // Re-throw to trigger BullMQ retry
+        }
+    }
+
+    /**
+     * Sync candidate events to external provider
+     */
+    private async syncCandidateEvent(
+        provider: any,
+        tenantId: string,
+        candidateId: string,
+        eventType: IntegrationEventType,
+        data?: Record<string, unknown>,
+    ): Promise<void> {
+        // Check if provider supports candidate sync via the syncCandidate method
+        if (typeof provider.syncCandidate === 'function') {
+            const syncableProvider = provider as SyncableProvider;
+
+            switch (eventType) {
+                case IntegrationEventType.CANDIDATE_CREATED:
+                    await syncableProvider.syncCandidate!(tenantId, candidateId, 'created');
+                    break;
+
+                case IntegrationEventType.CANDIDATE_UPDATED:
+                    await syncableProvider.syncCandidate!(tenantId, candidateId, 'updated');
+                    break;
+
+                case IntegrationEventType.CANDIDATE_STAGE_CHANGED:
+                    const newStage = data?.newStage as string | undefined;
+                    await syncableProvider.syncCandidate!(tenantId, candidateId, 'stage_changed', { newStage });
+                    break;
+
+                default:
+                    this.logger.debug(`Unhandled candidate event type: ${eventType}`);
+            }
+        } else if (provider.pushCandidate) {
+            // Fallback to legacy pushCandidate method
+            const candidate = await this.prisma.candidate.findUnique({
+                where: { id: candidateId },
+            });
+            if (candidate) {
+                await provider.pushCandidate(tenantId, candidate);
+            }
+        }
+    }
+
+    /**
+     * Sync interview events to external provider
+     */
+    private async syncInterviewEvent(
+        provider: any,
+        tenantId: string,
+        interviewId: string,
+        eventType: IntegrationEventType,
+    ): Promise<void> {
+        // Check if provider supports interview sync via the syncInterview method
+        if (typeof provider.syncInterview === 'function') {
+            const syncableProvider = provider as SyncableProvider;
+
+            switch (eventType) {
+                case IntegrationEventType.INTERVIEW_SCHEDULED:
+                case IntegrationEventType.INTERVIEW_RESCHEDULED:
+                    await syncableProvider.syncInterview!(tenantId, interviewId, 'scheduled');
+                    break;
+
+                case IntegrationEventType.INTERVIEW_COMPLETED:
+                    await syncableProvider.syncInterview!(tenantId, interviewId, 'completed');
+                    break;
+
+                case IntegrationEventType.INTERVIEW_CANCELLED:
+                    // Cancelled interviews - could update activity status
+                    this.logger.debug(`Interview cancelled sync not yet implemented`);
+                    break;
+
+                default:
+                    this.logger.debug(`Unhandled interview event type: ${eventType}`);
+            }
+        } else if (provider.pushInterview) {
+            // Fallback to legacy pushInterview method
+            const interview = await this.prisma.interview.findUnique({
+                where: { id: interviewId },
+                include: { candidate: true },
+            });
+            if (interview) {
+                await provider.pushInterview(tenantId, {
+                    internalId: interview.id,
+                    candidateId: interview.candidateId,
+                    interviewerIds: interview.interviewerIds,
+                    startAt: interview.date,
+                    durationMins: interview.durationMins,
+                    stage: interview.stage,
+                    status: interview.status,
+                    meetingLink: interview.meetingLink || undefined,
+                    notes: interview.notes || undefined,
+                });
+            }
+        }
+    }
+
+    /**
+     * Process full sync jobs (legacy - for manual sync triggers)
+     */
+    private async processFullSyncJob(data: SyncJobData): Promise<any> {
+        const { tenantId, provider, since, triggeredBy } = data;
+
+        this.logger.log(
+            `Processing full sync job for tenant ${tenantId}, provider ${provider}`,
+        );
+
+        try {
+            const providerInstance = this.providerFactory.getProvider(provider);
+
+            // Pull candidates from provider (inbound sync - not enabled in v1 for Zoho)
             if (providerInstance.pullCandidates) {
                 const sinceDate = since ? new Date(since) : undefined;
                 const candidates = await providerInstance.pullCandidates(
@@ -104,8 +301,9 @@ export class SyncProcessor extends WorkerHost {
                             });
                             created++;
                         }
-                    } catch (err) {
-                        this.logger.warn(`Failed to upsert candidate: ${err.message}`);
+                    } catch (err: unknown) {
+                        const errMessage = err instanceof Error ? err.message : 'Unknown error';
+                        this.logger.warn(`Failed to upsert candidate: ${errMessage}`);
                         skipped++;
                     }
                 }
@@ -153,7 +351,8 @@ export class SyncProcessor extends WorkerHost {
             }
 
             return { success: true, message: 'No sync action available' };
-        } catch (error) {
+        } catch (error: unknown) {
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
             this.logger.error(
                 `Sync job failed for tenant ${tenantId}, provider ${provider}`,
                 error,
@@ -168,7 +367,7 @@ export class SyncProcessor extends WorkerHost {
                     },
                 },
                 data: {
-                    lastError: error.message,
+                    lastError: errorMessage,
                 },
             });
 
@@ -179,7 +378,7 @@ export class SyncProcessor extends WorkerHost {
                 action: 'integration.sync.failed',
                 metadata: {
                     provider,
-                    error: error.message,
+                    error: errorMessage,
                     triggeredBy,
                 },
             });

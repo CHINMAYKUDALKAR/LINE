@@ -7,4 +7,8 @@ export declare class CreateInterviewDto {
     location?: string;
     meetingLink?: string;
     notes?: string;
+    candidateEmailSubject?: string;
+    candidateEmailBody?: string;
+    interviewerEmailSubject?: string;
+    interviewerEmailBody?: string;
 }

@@ -23,6 +23,14 @@ let OutlookCalendarProvider = class OutlookCalendarProvider {
         this.outlookOAuth = outlookOAuth;
         this.outlookCalendar = outlookCalendar;
     }
+    getCapabilities() {
+        return {
+            candidateSync: 'none',
+            jobSync: 'none',
+            interviewSync: 'write',
+            supportsWebhooks: true,
+        };
+    }
     async getAuthUrl(tenantId, state) {
         return this.outlookOAuth.getAuthUrl(tenantId);
     }

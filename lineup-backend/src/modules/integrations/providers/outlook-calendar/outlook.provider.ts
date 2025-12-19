@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../../common/prisma.service';
 import { IntegrationProvider } from '../../types/provider.interface';
+import { ProviderCapabilities } from '../../types/standard-entities';
 import { OutlookOAuthService } from './outlook.oauth';
 import { OutlookCalendarApiService } from './outlook.api';
 
@@ -11,6 +12,18 @@ export class OutlookCalendarProvider implements IntegrationProvider {
         private outlookOAuth: OutlookOAuthService,
         private outlookCalendar: OutlookCalendarApiService,
     ) { }
+
+    /**
+     * Get provider capabilities
+     */
+    getCapabilities(): ProviderCapabilities {
+        return {
+            candidateSync: 'none',
+            jobSync: 'none',
+            interviewSync: 'write',
+            supportsWebhooks: true,
+        };
+    }
 
     async getAuthUrl(tenantId: string, state?: string): Promise<string> {
         return this.outlookOAuth.getAuthUrl(tenantId);

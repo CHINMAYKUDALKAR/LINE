@@ -370,6 +370,7 @@ export default function Calendar() {
                     <ScheduleInterviewModal
                         open={isCreateSlotOpen}
                         onOpenChange={setIsCreateSlotOpen}
+                        initialDate={selectedSlotDate}
                         onSuccess={() => {
                             // Invalidate calendar and interview queries to refetch and show new interview
                             queryClient.invalidateQueries({ queryKey: calendarKeys.slots() });

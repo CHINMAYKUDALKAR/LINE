@@ -19,18 +19,21 @@ const queue_metrics_service_1 = require("./services/queue-metrics.service");
 const communication_metrics_service_1 = require("./services/communication-metrics.service");
 const scheduling_metrics_service_1 = require("./services/scheduling-metrics.service");
 const tenant_usage_service_1 = require("./services/tenant-usage.service");
+const integration_metrics_service_1 = require("./services/integration-metrics.service");
 let SystemMetricsController = class SystemMetricsController {
     platformMetrics;
     queueMetrics;
     communicationMetrics;
     schedulingMetrics;
     tenantUsage;
-    constructor(platformMetrics, queueMetrics, communicationMetrics, schedulingMetrics, tenantUsage) {
+    integrationMetrics;
+    constructor(platformMetrics, queueMetrics, communicationMetrics, schedulingMetrics, tenantUsage, integrationMetrics) {
         this.platformMetrics = platformMetrics;
         this.queueMetrics = queueMetrics;
         this.communicationMetrics = communicationMetrics;
         this.schedulingMetrics = schedulingMetrics;
         this.tenantUsage = tenantUsage;
+        this.integrationMetrics = integrationMetrics;
     }
     async getPlatformMetrics() {
         return this.platformMetrics.getMetrics();
@@ -46,6 +49,46 @@ let SystemMetricsController = class SystemMetricsController {
     }
     async getTenantUsageMetrics() {
         return this.tenantUsage.getMetrics();
+    }
+    async getIntegrationMetrics() {
+        return this.integrationMetrics.getMetrics();
+    }
+    async getSummary() {
+        const [platform, queues, communication, scheduling, integrations] = await Promise.all([
+            this.platformMetrics.getMetrics(),
+            this.queueMetrics.getMetrics(),
+            this.communicationMetrics.getMetrics(),
+            this.schedulingMetrics.getMetrics(),
+            this.integrationMetrics.getMetrics(),
+        ]);
+        const queueBacklog = queues.reduce((sum, q) => sum + q.waiting + q.active, 0);
+        const queueFailures = queues.reduce((sum, q) => sum + q.failed24h, 0);
+        return {
+            status: platform.errorRate < 5 ? 'healthy' : platform.errorRate < 15 ? 'degraded' : 'unhealthy',
+            timestamp: new Date().toISOString(),
+            api: {
+                requests24h: platform.apiRequests24h,
+                errorRate: platform.errorRate,
+                p95LatencyMs: platform.p95Latency,
+            },
+            queues: {
+                backlog: queueBacklog,
+                failures24h: queueFailures,
+            },
+            integrations: {
+                connected: integrations.connectedProviders,
+                syncs24h: integrations.totalSyncs24h,
+                successRate: integrations.overallSuccessRate,
+            },
+            communication: {
+                sent24h: communication.messagesToday || 0,
+                failed24h: communication.failedCount || 0,
+            },
+            users: {
+                activeTenants7d: platform.activeTenants7d,
+                activeUsers7d: platform.activeUsers7d,
+            },
+        };
     }
 };
 exports.SystemMetricsController = SystemMetricsController;
@@ -79,6 +122,18 @@ __decorate([
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", Promise)
 ], SystemMetricsController.prototype, "getTenantUsageMetrics", null);
+__decorate([
+    (0, common_1.Get)('integrations'),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], SystemMetricsController.prototype, "getIntegrationMetrics", null);
+__decorate([
+    (0, common_1.Get)('summary'),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], SystemMetricsController.prototype, "getSummary", null);
 exports.SystemMetricsController = SystemMetricsController = __decorate([
     (0, common_1.Controller)('api/v1/system-metrics'),
     (0, common_1.UseGuards)(jwt_guard_1.JwtAuthGuard, rbac_guard_1.RbacGuard),
@@ -87,6 +142,7 @@ exports.SystemMetricsController = SystemMetricsController = __decorate([
         queue_metrics_service_1.QueueMetricsService,
         communication_metrics_service_1.CommunicationMetricsService,
         scheduling_metrics_service_1.SchedulingMetricsService,
-        tenant_usage_service_1.TenantUsageService])
+        tenant_usage_service_1.TenantUsageService,
+        integration_metrics_service_1.IntegrationMetricsService])
 ], SystemMetricsController);
 //# sourceMappingURL=system-metrics.controller.js.map

@@ -20,6 +20,7 @@ const channel_service_1 = require("./services/channel.service");
 const scheduler_service_1 = require("./services/scheduler.service");
 const variable_resolver_service_1 = require("./services/variable-resolver.service");
 const twilio_service_1 = require("./services/twilio.service");
+const whatsapp_service_1 = require("./services/whatsapp.service");
 const email_processor_1 = require("./processors/email.processor");
 const whatsapp_processor_1 = require("./processors/whatsapp.processor");
 const sms_processor_1 = require("./processors/sms.processor");
@@ -83,6 +84,7 @@ exports.CommunicationModule = CommunicationModule = __decorate([
             scheduler_service_1.SchedulerService,
             variable_resolver_service_1.VariableResolverService,
             twilio_service_1.TwilioService,
+            whatsapp_service_1.WhatsAppService,
             email_processor_1.EmailProcessor,
             whatsapp_processor_1.WhatsAppProcessor,
             sms_processor_1.SmsProcessor,
@@ -96,6 +98,7 @@ exports.CommunicationModule = CommunicationModule = __decorate([
             channel_service_1.ChannelService,
             variable_resolver_service_1.VariableResolverService,
             twilio_service_1.TwilioService,
+            whatsapp_service_1.WhatsAppService,
         ],
     })
 ], CommunicationModule);

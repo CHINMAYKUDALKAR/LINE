@@ -16,6 +16,7 @@ const common_1 = require("@nestjs/common");
 const prisma_service_1 = require("../../../common/prisma.service");
 const provider_factory_1 = require("../provider.factory");
 const audit_service_1 = require("../../audit/audit.service");
+const standard_entities_1 = require("../types/standard-entities");
 let SyncProcessor = SyncProcessor_1 = class SyncProcessor extends bullmq_1.WorkerHost {
     prisma;
     providerFactory;
@@ -28,8 +29,122 @@ let SyncProcessor = SyncProcessor_1 = class SyncProcessor extends bullmq_1.Worke
         this.auditService = auditService;
     }
     async process(job) {
-        const { tenantId, provider, since, triggeredBy } = job.data;
-        this.logger.log(`Processing sync job for tenant ${tenantId}, provider ${provider}`);
+        if (job.name === 'integration-event') {
+            return this.processEventJob(job.data);
+        }
+        return this.processFullSyncJob(job.data);
+    }
+    async processEventJob(data) {
+        const { tenantId, provider, eventType, entityType, entityId, triggeredBy } = data;
+        this.logger.log(`Processing integration event: ${eventType} for ${entityType}/${entityId} to ${provider}`);
+        try {
+            const providerInstance = this.providerFactory.getProvider(provider);
+            switch (entityType) {
+                case standard_entities_1.SyncEntityType.CANDIDATE:
+                    await this.syncCandidateEvent(providerInstance, tenantId, entityId, eventType, data.data);
+                    break;
+                case standard_entities_1.SyncEntityType.INTERVIEW:
+                    await this.syncInterviewEvent(providerInstance, tenantId, entityId, eventType);
+                    break;
+                case standard_entities_1.SyncEntityType.JOB:
+                    this.logger.debug(`Job sync not yet implemented for ${provider}`);
+                    break;
+                default:
+                    this.logger.warn(`Unknown entity type: ${entityType}`);
+            }
+            await this.prisma.integration.update({
+                where: {
+                    tenantId_provider: { tenantId, provider },
+                },
+                data: {
+                    lastSyncedAt: new Date(),
+                    lastError: null,
+                },
+            });
+            return { success: true, eventType, entityType, entityId };
+        }
+        catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            this.logger.error(`Event sync failed for ${eventType}/${entityId} to ${provider}: ${errorMessage}`);
+            await this.prisma.integration.update({
+                where: {
+                    tenantId_provider: { tenantId, provider },
+                },
+                data: {
+                    lastError: `Event sync failed: ${errorMessage}`,
+                },
+            });
+            throw error;
+        }
+    }
+    async syncCandidateEvent(provider, tenantId, candidateId, eventType, data) {
+        if (typeof provider.syncCandidate === 'function') {
+            const syncableProvider = provider;
+            switch (eventType) {
+                case standard_entities_1.IntegrationEventType.CANDIDATE_CREATED:
+                    await syncableProvider.syncCandidate(tenantId, candidateId, 'created');
+                    break;
+                case standard_entities_1.IntegrationEventType.CANDIDATE_UPDATED:
+                    await syncableProvider.syncCandidate(tenantId, candidateId, 'updated');
+                    break;
+                case standard_entities_1.IntegrationEventType.CANDIDATE_STAGE_CHANGED:
+                    const newStage = data?.newStage;
+                    await syncableProvider.syncCandidate(tenantId, candidateId, 'stage_changed', { newStage });
+                    break;
+                default:
+                    this.logger.debug(`Unhandled candidate event type: ${eventType}`);
+            }
+        }
+        else if (provider.pushCandidate) {
+            const candidate = await this.prisma.candidate.findUnique({
+                where: { id: candidateId },
+            });
+            if (candidate) {
+                await provider.pushCandidate(tenantId, candidate);
+            }
+        }
+    }
+    async syncInterviewEvent(provider, tenantId, interviewId, eventType) {
+        if (typeof provider.syncInterview === 'function') {
+            const syncableProvider = provider;
+            switch (eventType) {
+                case standard_entities_1.IntegrationEventType.INTERVIEW_SCHEDULED:
+                case standard_entities_1.IntegrationEventType.INTERVIEW_RESCHEDULED:
+                    await syncableProvider.syncInterview(tenantId, interviewId, 'scheduled');
+                    break;
+                case standard_entities_1.IntegrationEventType.INTERVIEW_COMPLETED:
+                    await syncableProvider.syncInterview(tenantId, interviewId, 'completed');
+                    break;
+                case standard_entities_1.IntegrationEventType.INTERVIEW_CANCELLED:
+                    this.logger.debug(`Interview cancelled sync not yet implemented`);
+                    break;
+                default:
+                    this.logger.debug(`Unhandled interview event type: ${eventType}`);
+            }
+        }
+        else if (provider.pushInterview) {
+            const interview = await this.prisma.interview.findUnique({
+                where: { id: interviewId },
+                include: { candidate: true },
+            });
+            if (interview) {
+                await provider.pushInterview(tenantId, {
+                    internalId: interview.id,
+                    candidateId: interview.candidateId,
+                    interviewerIds: interview.interviewerIds,
+                    startAt: interview.date,
+                    durationMins: interview.durationMins,
+                    stage: interview.stage,
+                    status: interview.status,
+                    meetingLink: interview.meetingLink || undefined,
+                    notes: interview.notes || undefined,
+                });
+            }
+        }
+    }
+    async processFullSyncJob(data) {
+        const { tenantId, provider, since, triggeredBy } = data;
+        this.logger.log(`Processing full sync job for tenant ${tenantId}, provider ${provider}`);
         try {
             const providerInstance = this.providerFactory.getProvider(provider);
             if (providerInstance.pullCandidates) {
@@ -88,7 +203,8 @@ let SyncProcessor = SyncProcessor_1 = class SyncProcessor extends bullmq_1.Worke
                         }
                     }
                     catch (err) {
-                        this.logger.warn(`Failed to upsert candidate: ${err.message}`);
+                        const errMessage = err instanceof Error ? err.message : 'Unknown error';
+                        this.logger.warn(`Failed to upsert candidate: ${errMessage}`);
                         skipped++;
                     }
                 }
@@ -129,6 +245,7 @@ let SyncProcessor = SyncProcessor_1 = class SyncProcessor extends bullmq_1.Worke
             return { success: true, message: 'No sync action available' };
         }
         catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
             this.logger.error(`Sync job failed for tenant ${tenantId}, provider ${provider}`, error);
             await this.prisma.integration.update({
                 where: {
@@ -138,7 +255,7 @@ let SyncProcessor = SyncProcessor_1 = class SyncProcessor extends bullmq_1.Worke
                     },
                 },
                 data: {
-                    lastError: error.message,
+                    lastError: errorMessage,
                 },
             });
             await this.auditService.log({
@@ -147,7 +264,7 @@ let SyncProcessor = SyncProcessor_1 = class SyncProcessor extends bullmq_1.Worke
                 action: 'integration.sync.failed',
                 metadata: {
                     provider,
-                    error: error.message,
+                    error: errorMessage,
                     triggeredBy,
                 },
             });

@@ -27,6 +27,7 @@ const interview_reminder_processor_1 = require("./processors/interview-reminder.
 const no_show_check_processor_1 = require("./processors/no-show-check.processor");
 const bullmq_2 = require("bullmq");
 const recycle_bin_module_1 = require("../recycle-bin/recycle-bin.module");
+const integrations_module_1 = require("../integrations/integrations.module");
 let InterviewsModule = class InterviewsModule {
     interviewsQueue;
     constructor(interviewsQueue) {
@@ -52,6 +53,7 @@ exports.InterviewsModule = InterviewsModule = __decorate([
             bullmq_1.BullModule.registerQueue({ name: 'interviews-queue' }),
             email_module_1.EmailModule,
             recycle_bin_module_1.RecycleBinModule,
+            integrations_module_1.IntegrationsModule,
         ],
         controllers: [interviews_controller_1.InterviewsController],
         providers: [

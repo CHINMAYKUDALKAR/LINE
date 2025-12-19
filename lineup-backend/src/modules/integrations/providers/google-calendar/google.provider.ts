@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../../common/prisma.service';
 import { IntegrationProvider } from '../../types/provider.interface';
+import { ProviderCapabilities } from '../../types/standard-entities';
 import { GoogleOAuthService } from './google.oauth';
 import { GoogleCalendarApiService } from './google.calendar.api';
 
@@ -11,6 +12,18 @@ export class GoogleCalendarProvider implements IntegrationProvider {
         private googleOAuth: GoogleOAuthService,
         private googleCalendar: GoogleCalendarApiService,
     ) { }
+
+    /**
+     * Get provider capabilities
+     */
+    getCapabilities(): ProviderCapabilities {
+        return {
+            candidateSync: 'none',
+            jobSync: 'none',
+            interviewSync: 'write',
+            supportsWebhooks: true,
+        };
+    }
 
     async getAuthUrl(tenantId: string, state?: string): Promise<string> {
         return this.googleOAuth.getAuthUrl(tenantId);

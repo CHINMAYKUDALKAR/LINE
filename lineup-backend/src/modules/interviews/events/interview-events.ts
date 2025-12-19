@@ -14,6 +14,11 @@ export interface InterviewEventPayload {
     stage: string;
     meetingLink?: string;
     notes?: string;
+    // Custom email overrides
+    candidateEmailSubject?: string;
+    candidateEmailBody?: string;
+    interviewerEmailSubject?: string;
+    interviewerEmailBody?: string;
 }
 
 export interface InterviewRescheduledPayload extends InterviewEventPayload {

@@ -34,11 +34,35 @@ let AdminConsoleController = class AdminConsoleController {
     listTenants() {
         return this.svc.listTenants();
     }
+    getTenantDetails(id) {
+        return this.svc.getTenantDetails(id);
+    }
     tenantStatus(id) {
         return this.svc.tenantStatus(id);
     }
+    updateTenantStatus(req, id, body) {
+        return this.svc.updateTenantStatus(id, body.enabled, req.user.sub);
+    }
     createTenantAdmin(id, email) {
         return this.svc.createTenantAdmin(id, email);
+    }
+    listTenantUsers(id) {
+        return this.svc.listTenantUsers(id);
+    }
+    updateUserStatus(req, id, body) {
+        return this.svc.updateUserStatus(id, body.status, req.user.sub);
+    }
+    listAllIntegrations() {
+        return this.svc.listAllIntegrations();
+    }
+    getIntegrationSummary() {
+        return this.svc.getIntegrationSummary();
+    }
+    updateIntegrationStatus(req, tenantId, provider, body) {
+        return this.svc.updateIntegrationStatus(tenantId, provider, body.enabled, req.user.sub);
+    }
+    getSystemHealth() {
+        return this.svc.getSystemHealth();
     }
 };
 exports.AdminConsoleController = AdminConsoleController;
@@ -66,12 +90,29 @@ __decorate([
     __metadata("design:returntype", void 0)
 ], AdminConsoleController.prototype, "listTenants", null);
 __decorate([
+    (0, common_1.Get)('tenants/:id'),
+    __param(0, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", void 0)
+], AdminConsoleController.prototype, "getTenantDetails", null);
+__decorate([
     (0, common_1.Get)('tenants/:id/status'),
     __param(0, (0, common_1.Param)('id')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String]),
     __metadata("design:returntype", void 0)
 ], AdminConsoleController.prototype, "tenantStatus", null);
+__decorate([
+    (0, common_1.Patch)('tenants/:id/status'),
+    (0, roles_decorator_1.Roles)('SUPERADMIN'),
+    __param(0, (0, common_1.Req)()),
+    __param(1, (0, common_1.Param)('id')),
+    __param(2, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String, Object]),
+    __metadata("design:returntype", void 0)
+], AdminConsoleController.prototype, "updateTenantStatus", null);
 __decorate([
     (0, common_1.Post)('tenants/:id/create-admin'),
     __param(0, (0, common_1.Param)('id')),
@@ -80,6 +121,52 @@ __decorate([
     __metadata("design:paramtypes", [String, String]),
     __metadata("design:returntype", void 0)
 ], AdminConsoleController.prototype, "createTenantAdmin", null);
+__decorate([
+    (0, common_1.Get)('tenants/:id/users'),
+    __param(0, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", void 0)
+], AdminConsoleController.prototype, "listTenantUsers", null);
+__decorate([
+    (0, common_1.Patch)('users/:id/status'),
+    (0, roles_decorator_1.Roles)('SUPERADMIN'),
+    __param(0, (0, common_1.Req)()),
+    __param(1, (0, common_1.Param)('id')),
+    __param(2, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String, Object]),
+    __metadata("design:returntype", void 0)
+], AdminConsoleController.prototype, "updateUserStatus", null);
+__decorate([
+    (0, common_1.Get)('integrations'),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", void 0)
+], AdminConsoleController.prototype, "listAllIntegrations", null);
+__decorate([
+    (0, common_1.Get)('integrations/summary'),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", void 0)
+], AdminConsoleController.prototype, "getIntegrationSummary", null);
+__decorate([
+    (0, common_1.Patch)('tenants/:tenantId/integrations/:provider'),
+    (0, roles_decorator_1.Roles)('SUPERADMIN'),
+    __param(0, (0, common_1.Req)()),
+    __param(1, (0, common_1.Param)('tenantId')),
+    __param(2, (0, common_1.Param)('provider')),
+    __param(3, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String, String, Object]),
+    __metadata("design:returntype", void 0)
+], AdminConsoleController.prototype, "updateIntegrationStatus", null);
+__decorate([
+    (0, common_1.Get)('system-health'),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", void 0)
+], AdminConsoleController.prototype, "getSystemHealth", null);
 exports.AdminConsoleController = AdminConsoleController = __decorate([
     (0, common_1.Controller)('api/v1/admin'),
     (0, common_1.UseGuards)(auth_guard_1.AuthGuard, platform_rbac_guard_1.PlatformRbacGuard),

@@ -299,6 +299,127 @@ let IntegrationsService = class IntegrationsService {
         const mappings = integration.mappingConfig?.mappings || [];
         return { sourceFields, targetFields, mappings };
     }
+    async getIntegrationStatus(tenantId, provider) {
+        const integration = await this.prisma.integration.findUnique({
+            where: {
+                tenantId_provider: { tenantId, provider },
+            },
+        });
+        if (!integration) {
+            throw new common_1.NotFoundException(`Integration ${provider} not found`);
+        }
+        const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
+        const logs = await this.prisma.integrationSyncLog.groupBy({
+            by: ['status'],
+            where: {
+                tenantId,
+                provider,
+                createdAt: { gte: since },
+            },
+            _count: true,
+        });
+        let total = 0, success = 0, failed = 0, pending = 0;
+        for (const log of logs) {
+            total += log._count;
+            if (log.status === 'SUCCESS')
+                success = log._count;
+            if (log.status === 'FAILED')
+                failed = log._count;
+            if (log.status === 'PENDING' || log.status === 'IN_PROGRESS') {
+                pending += log._count;
+            }
+        }
+        let capabilities = {
+            candidateSync: 'none',
+            jobSync: 'none',
+            interviewSync: 'none',
+            supportsWebhooks: false,
+        };
+        try {
+            const providerInstance = this.providerFactory.getProvider(provider);
+            if (providerInstance.getCapabilities) {
+                capabilities = providerInstance.getCapabilities();
+            }
+        }
+        catch {
+        }
+        return {
+            connected: integration.status === 'connected',
+            provider,
+            lastSyncAt: integration.lastSyncedAt,
+            lastError: integration.lastError,
+            capabilities,
+            stats: {
+                total,
+                success,
+                failed,
+                pending,
+                successRate: total > 0 ? Math.round((success / total) * 100) : 0,
+            },
+        };
+    }
+    async getSyncLogs(tenantId, provider, limit = 50, status) {
+        const where = { tenantId, provider };
+        if (status) {
+            where.status = status;
+        }
+        return this.prisma.integrationSyncLog.findMany({
+            where,
+            orderBy: { createdAt: 'desc' },
+            take: limit,
+            select: {
+                id: true,
+                eventType: true,
+                direction: true,
+                entityType: true,
+                entityId: true,
+                externalId: true,
+                status: true,
+                errorMessage: true,
+                retryCount: true,
+                createdAt: true,
+                completedAt: true,
+            },
+        });
+    }
+    async getFailureSummary(tenantId, provider) {
+        const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
+        const errors = await this.prisma.integrationSyncLog.findMany({
+            where: {
+                tenantId,
+                provider,
+                status: 'FAILED',
+                createdAt: { gte: since },
+            },
+            select: {
+                errorMessage: true,
+                createdAt: true,
+            },
+            orderBy: { createdAt: 'desc' },
+        });
+        const errorMap = new Map();
+        for (const error of errors) {
+            const message = error.errorMessage || 'Unknown error';
+            const existing = errorMap.get(message);
+            if (existing) {
+                existing.count++;
+                if (error.createdAt > existing.lastOccurred) {
+                    existing.lastOccurred = error.createdAt;
+                }
+            }
+            else {
+                errorMap.set(message, { count: 1, lastOccurred: error.createdAt });
+            }
+        }
+        const recentErrors = Array.from(errorMap.entries())
+            .map(([message, data]) => ({ message, ...data }))
+            .sort((a, b) => b.count - a.count)
+            .slice(0, 10);
+        return {
+            recentErrors,
+            totalFailures24h: errors.length,
+        };
+    }
 };
 exports.IntegrationsService = IntegrationsService;
 exports.IntegrationsService = IntegrationsService = __decorate([

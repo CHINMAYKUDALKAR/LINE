@@ -12,6 +12,7 @@ import { EmailModule } from '../email/email.module';
 import { StorageModule } from '../storage/storage.module';
 import { BullModule } from '@nestjs/bullmq';
 import { RecycleBinModule } from '../recycle-bin/recycle-bin.module';
+import { IntegrationsModule } from '../integrations/integrations.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { RecycleBinModule } from '../recycle-bin/recycle-bin.module';
     RecycleBinModule,
     EmailModule,
     StorageModule,
+    IntegrationsModule,
   ],
   controllers: [CandidatesController],
   providers: [CandidatesService, StageTransitionService, ResumeParserService, PrismaService, S3Service, CandidateImportProcessor],

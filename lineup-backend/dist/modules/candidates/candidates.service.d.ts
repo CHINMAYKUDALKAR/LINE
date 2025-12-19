@@ -7,13 +7,15 @@ import { ListCandidatesDto } from './dto/list-candidates.dto';
 import { BulkImportDto } from './dto/bulk-import.dto';
 import { StorageService } from '../storage/storage.service';
 import { Queue } from 'bullmq';
+import { IntegrationEventsService } from '../integrations/services/integration-events.service';
 export declare class CandidatesService {
     private prisma;
     private storageService;
     private importQueue;
     private eventEmitter;
     private recycleBinService;
-    constructor(prisma: PrismaService, storageService: StorageService, importQueue: Queue, eventEmitter: EventEmitter2, recycleBinService: RecycleBinService);
+    private integrationEvents;
+    constructor(prisma: PrismaService, storageService: StorageService, importQueue: Queue, eventEmitter: EventEmitter2, recycleBinService: RecycleBinService, integrationEvents: IntegrationEventsService);
     create(tenantId: string, userId: string, dto: CreateCandidateDto): Promise<{
         id: string;
         tenantId: string;

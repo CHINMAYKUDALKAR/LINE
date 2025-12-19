@@ -18,6 +18,7 @@ interface ScheduleInterviewModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess?: () => void;
+  initialDate?: Date;
 }
 
 type Step = 1 | 2 | 3;
@@ -43,7 +44,7 @@ const generateTimeSlots = (): TimeSlot[] => {
   return slots;
 };
 
-export function ScheduleInterviewModal({ open, onOpenChange, onSuccess }: ScheduleInterviewModalProps) {
+export function ScheduleInterviewModal({ open, onOpenChange, onSuccess, initialDate }: ScheduleInterviewModalProps) {
   const [currentStep, setCurrentStep] = useState<Step>(1);
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -59,7 +60,7 @@ export function ScheduleInterviewModal({ open, onOpenChange, onSuccess }: Schedu
   // Step 2: Interview Details
   const [selectedInterviewerIds, setSelectedInterviewerIds] = useState<string[]>([]);
   const [interviewMode, setInterviewMode] = useState<'online' | 'offline' | 'phone'>('online');
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(initialDate);
   const [selectedTime, setSelectedTime] = useState('');
   const [duration, setDuration] = useState(60);
   const [location, setLocation] = useState('');
@@ -70,6 +71,12 @@ export function ScheduleInterviewModal({ open, onOpenChange, onSuccess }: Schedu
   const [emailInterviewers, setEmailInterviewers] = useState(true);
   const [smsReminder, setSmsReminder] = useState(false);
   const [notes, setNotes] = useState('');
+
+  // Custom Email State
+  const [candidateEmailSubject, setCandidateEmailSubject] = useState('');
+  const [candidateEmailBody, setCandidateEmailBody] = useState('');
+  const [interviewerEmailSubject, setInterviewerEmailSubject] = useState('');
+  const [interviewerEmailBody, setInterviewerEmailBody] = useState('');
 
   // Load real data when modal opens
   useEffect(() => {
@@ -119,6 +126,13 @@ export function ScheduleInterviewModal({ open, onOpenChange, onSuccess }: Schedu
     }
   }, [open]);
 
+  // Update selectedDate when initialDate changes (when modal opens from calendar click)
+  useEffect(() => {
+    if (open && initialDate) {
+      setSelectedDate(initialDate);
+    }
+  }, [open, initialDate]);
+
   // Reset on close
   useEffect(() => {
     if (!open) {
@@ -136,6 +150,10 @@ export function ScheduleInterviewModal({ open, onOpenChange, onSuccess }: Schedu
         setEmailInterviewers(true);
         setSmsReminder(false);
         setNotes('');
+        setCandidateEmailSubject('');
+        setCandidateEmailBody('');
+        setInterviewerEmailSubject('');
+        setInterviewerEmailBody('');
       }, 200);
     }
   }, [open]);
@@ -180,6 +198,10 @@ export function ScheduleInterviewModal({ open, onOpenChange, onSuccess }: Schedu
           meetingLink: interviewMode === 'online' ? meetingLink : undefined,
           interviewerIds: selectedInterviewerIds,
           notes,
+          candidateEmailSubject: emailCandidate ? candidateEmailSubject : undefined,
+          candidateEmailBody: emailCandidate ? candidateEmailBody : undefined,
+          interviewerEmailSubject: emailInterviewers ? interviewerEmailSubject : undefined,
+          interviewerEmailBody: emailInterviewers ? interviewerEmailBody : undefined,
         })
       );
 
@@ -367,6 +389,14 @@ export function ScheduleInterviewModal({ open, onOpenChange, onSuccess }: Schedu
                   onSmsReminderChange={setSmsReminder}
                   notes={notes}
                   onNotesChange={setNotes}
+                  candidateEmailSubject={candidateEmailSubject}
+                  onCandidateEmailSubjectChange={setCandidateEmailSubject}
+                  candidateEmailBody={candidateEmailBody}
+                  onCandidateEmailBodyChange={setCandidateEmailBody}
+                  interviewerEmailSubject={interviewerEmailSubject}
+                  onInterviewerEmailSubjectChange={setInterviewerEmailSubject}
+                  interviewerEmailBody={interviewerEmailBody}
+                  onInterviewerEmailBodyChange={setInterviewerEmailBody}
                 />
               )}
             </div>

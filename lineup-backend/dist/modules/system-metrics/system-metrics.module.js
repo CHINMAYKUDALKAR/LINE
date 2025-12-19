@@ -15,6 +15,7 @@ const queue_metrics_service_1 = require("./services/queue-metrics.service");
 const communication_metrics_service_1 = require("./services/communication-metrics.service");
 const scheduling_metrics_service_1 = require("./services/scheduling-metrics.service");
 const tenant_usage_service_1 = require("./services/tenant-usage.service");
+const integration_metrics_service_1 = require("./services/integration-metrics.service");
 const prisma_service_1 = require("../../common/prisma.service");
 const queues_1 = require("../communication/queues");
 let SystemMetricsModule = class SystemMetricsModule {
@@ -33,6 +34,7 @@ exports.SystemMetricsModule = SystemMetricsModule = __decorate([
             communication_metrics_service_1.CommunicationMetricsService,
             scheduling_metrics_service_1.SchedulingMetricsService,
             tenant_usage_service_1.TenantUsageService,
+            integration_metrics_service_1.IntegrationMetricsService,
         ],
         exports: [platform_metrics_service_1.PlatformMetricsService],
     })

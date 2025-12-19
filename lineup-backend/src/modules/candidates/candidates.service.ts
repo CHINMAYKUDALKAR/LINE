@@ -10,6 +10,7 @@ import { BulkImportDto } from './dto/bulk-import.dto';
 import { StorageService } from '../storage/storage.service';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
+import { IntegrationEventsService } from '../integrations/services/integration-events.service';
 
 @Injectable()
 export class CandidatesService {
@@ -18,7 +19,8 @@ export class CandidatesService {
         private storageService: StorageService,
         @InjectQueue('candidate-import') private importQueue: Queue,
         private eventEmitter: EventEmitter2,
-        private recycleBinService: RecycleBinService
+        private recycleBinService: RecycleBinService,
+        private integrationEvents: IntegrationEventsService
     ) { }
 
     async create(tenantId: string, userId: string, dto: CreateCandidateDto) {
@@ -43,6 +45,9 @@ export class CandidatesService {
 
         await invalidateCache(`reports:${tenantId}:*`);
 
+        // Trigger integration sync (async, non-blocking)
+        this.integrationEvents.onCandidateCreated(tenantId, candidate.id, userId).catch(() => { });
+
         return candidate;
     }
 
@@ -65,6 +70,11 @@ export class CandidatesService {
                 stage: dto.stage,
                 previousStage: candidate.stage
             });
+            // Trigger integration sync for stage change (async, non-blocking)
+            this.integrationEvents.onCandidateStageChanged(tenantId, id, dto.stage, userId || undefined).catch(() => { });
+        } else {
+            // Trigger integration sync for general update (async, non-blocking)
+            this.integrationEvents.onCandidateUpdated(tenantId, id, userId || undefined).catch(() => { });
         }
 
         await invalidateCache(`reports:${tenantId}:*`);

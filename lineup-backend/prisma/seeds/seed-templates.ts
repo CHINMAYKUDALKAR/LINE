@@ -341,10 +341,11 @@ export async function seedCommunicationTemplates(tenantId: string) {
     for (const template of templates) {
         await prisma.messageTemplate.upsert({
             where: {
-                tenantId_name_channel: {
+                tenantId_name_channel_version: {
                     tenantId,
                     name: template.name,
                     channel: template.channel,
+                    version: 1,
                 },
             },
             update: {

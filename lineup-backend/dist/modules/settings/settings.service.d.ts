@@ -45,6 +45,8 @@ export declare class SettingsService {
         passwordMaxAgeDays: number | null;
         maxConcurrentSessions: number | null;
         sessionTimeoutMinutes: number | null;
+        enforce2FA: boolean;
+        enforce2FAForAdmins: boolean;
         createdAt: Date;
         updatedAt: Date;
     } | null>;
@@ -61,6 +63,8 @@ export declare class SettingsService {
         passwordMaxAgeDays: number | null;
         maxConcurrentSessions: number | null;
         sessionTimeoutMinutes: number | null;
+        enforce2FA: boolean;
+        enforce2FAForAdmins: boolean;
         createdAt: Date;
         updatedAt: Date;
     }>;

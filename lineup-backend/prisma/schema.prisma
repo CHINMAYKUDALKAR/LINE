@@ -104,6 +104,10 @@ model TenantSecurityPolicy {
   maxConcurrentSessions Int? // null = unlimited
   sessionTimeoutMinutes Int? // null = use default
 
+  // Two-Factor Authentication
+  enforce2FA          Boolean @default(false) // Require 2FA for all users
+  enforce2FAForAdmins Boolean @default(false) // Require 2FA for admins only
+
   // Audit
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -130,6 +134,11 @@ model User {
 
   // Team integration
   teamIds String[] @default([])
+
+  // Two-Factor Authentication
+  twoFactorEnabled Boolean  @default(false)
+  twoFactorSecret  String?  // Encrypted TOTP secret
+  recoveryCodes    String[] @default([]) // Hashed one-time recovery codes
 
   lastLogin DateTime?
   createdAt DateTime  @default(now())
@@ -363,9 +372,12 @@ model RefreshToken {
   tokenHash      String
   activeTenantId String? // Track which tenant was active when token was issued
   revoked        Boolean  @default(false)
+  revokedReason  String?  // 'password_change', 'role_change', 'logout', 'admin_revoke', 'user_deactivated'
   expiresAt      DateTime
   userAgent      String? // For session tracking
   ipAddress      String? // For session tracking
+  deviceName     String? // User-friendly device name
+  lastUsedAt     DateTime? // Last time this token was used for refresh
   createdAt      DateTime @default(now())
 
   @@index([userId, revoked])
@@ -835,3 +847,66 @@ model InterviewNote {
   @@index([tenantId, interviewId])
   @@index([authorId])
 }
+
+// ============================================
+// INTEGRATION SYNC LOGS
+// ============================================
+
+// Tracks individual sync attempts for auditability
+model IntegrationSyncLog {
+  id            String              @id @default(cuid())
+  tenantId      String
+  provider      String              // zoho, google_calendar, etc.
+  eventType     String              // CANDIDATE_CREATED, INTERVIEW_SCHEDULED, etc.
+  direction     SyncDirection       // OUTBOUND (Lineup→External) or INBOUND
+  entityType    String              // CANDIDATE, INTERVIEW, JOB
+  entityId      String?             // ID of the entity being synced
+  externalId    String?             // ID in the external system
+  payload       Json?               // Request payload sent
+  response      Json?               // Response received
+  status        SyncLogStatus       @default(PENDING)
+  errorMessage  String?             @db.Text
+  retryCount    Int                 @default(0)
+  createdAt     DateTime            @default(now())
+  completedAt   DateTime?
+
+  @@index([tenantId, provider])
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt])
+  @@index([entityType, entityId])
+}
+
+enum SyncDirection {
+  OUTBOUND    // Lineup → External system
+  INBOUND     // External system → Lineup
+}
+
+enum SyncLogStatus {
+  PENDING
+  IN_PROGRESS
+  SUCCESS
+  FAILED
+  RETRYING
+}
+
+// ============================================
+// INTEGRATION ENTITY MAPPINGS
+// ============================================
+
+// Maps Lineup entities to external system IDs
+model IntegrationMapping {
+  id          String   @id @default(cuid())
+  tenantId    String
+  provider    String   // zoho, salesforce, hubspot
+  entityType  String   // candidate, interview, job
+  entityId    String   // Lineup entity ID
+  externalId  String   // External system ID
+  metadata    Json?    // Additional mapping data
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([tenantId, provider, entityType, entityId])
+  @@index([tenantId, provider])
+  @@index([externalId])
+}
+

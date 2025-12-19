@@ -124,6 +124,139 @@ let AdminConsoleService = class AdminConsoleService {
         await this.prisma.auditLog.create({ data: { tenantId, action: 'provision.tenantAdmin.created', metadata: { email } } });
         return { id: user.id, password: pwd };
     }
+    async updateTenantStatus(tenantId, enabled, adminUserId) {
+        const tenant = await this.prisma.tenant.update({
+            where: { id: tenantId },
+            data: {
+                settings: {
+                    enabled,
+                    disabledAt: enabled ? null : new Date().toISOString(),
+                    disabledBy: enabled ? null : adminUserId,
+                },
+            },
+        });
+        await this.prisma.auditLog.create({
+            data: {
+                tenantId,
+                userId: adminUserId,
+                action: enabled ? 'tenant.enabled' : 'tenant.disabled',
+                metadata: { enabled },
+            },
+        });
+        return { tenantId, enabled, updatedAt: new Date() };
+    }
+    async getTenantDetails(tenantId) {
+        const tenant = await this.prisma.tenant.findUnique({
+            where: { id: tenantId },
+            include: {
+                _count: {
+                    select: {
+                        users: true,
+                        candidates: true,
+                        interviews: true,
+                    },
+                },
+            },
+        });
+        const integrations = await this.prisma.integration.findMany({
+            where: { tenantId },
+            select: { provider: true, status: true, lastSyncedAt: true },
+        });
+        return {
+            ...tenant,
+            integrations,
+            usage: tenant?._count,
+        };
+    }
+    async listTenantUsers(tenantId) {
+        return this.prisma.user.findMany({
+            where: { tenantId },
+            select: {
+                id: true,
+                email: true,
+                name: true,
+                role: true,
+                status: true,
+                createdAt: true,
+                lastLogin: true,
+            },
+            orderBy: { createdAt: 'desc' },
+        });
+    }
+    async updateUserStatus(userId, status, adminUserId) {
+        const user = await this.prisma.user.findUnique({ where: { id: userId } });
+        if (!user)
+            throw new common_1.BadRequestException('User not found');
+        await this.prisma.user.update({
+            where: { id: userId },
+            data: { status },
+        });
+        await this.prisma.auditLog.create({
+            data: {
+                tenantId: user.tenantId,
+                userId: adminUserId,
+                action: status === 'INACTIVE' ? 'user.disabled' : 'user.enabled',
+                metadata: { targetUserId: userId, status },
+            },
+        });
+        return { userId, status, updatedAt: new Date() };
+    }
+    async listAllIntegrations() {
+        return this.prisma.integration.findMany({
+            include: {
+                tenant: { select: { id: true, name: true } },
+            },
+            orderBy: { createdAt: 'desc' },
+        });
+    }
+    async updateIntegrationStatus(tenantId, provider, enabled, adminUserId) {
+        const status = enabled ? 'connected' : 'disabled';
+        await this.prisma.integration.update({
+            where: { tenantId_provider: { tenantId, provider } },
+            data: { status },
+        });
+        await this.prisma.auditLog.create({
+            data: {
+                tenantId,
+                userId: adminUserId,
+                action: enabled ? 'integration.enabled' : 'integration.disabled',
+                metadata: { provider, enabled },
+            },
+        });
+        return { tenantId, provider, enabled, updatedAt: new Date() };
+    }
+    async getIntegrationSummary() {
+        const integrations = await this.prisma.integration.groupBy({
+            by: ['provider', 'status'],
+            _count: { id: true },
+        });
+        const summary = {};
+        for (const item of integrations) {
+            if (!summary[item.provider]) {
+                summary[item.provider] = { connected: 0, disabled: 0, error: 0 };
+            }
+            if (item.status === 'connected')
+                summary[item.provider].connected = item._count.id;
+            else if (item.status === 'disabled')
+                summary[item.provider].disabled = item._count.id;
+            else if (item.status === 'error')
+                summary[item.provider].error = item._count.id;
+        }
+        return summary;
+    }
+    async getSystemHealth() {
+        const [tenantCount, userCount, activeIntegrations] = await Promise.all([
+            this.prisma.tenant.count(),
+            this.prisma.user.count(),
+            this.prisma.integration.count({ where: { status: 'connected' } }),
+        ]);
+        return {
+            tenants: tenantCount,
+            users: userCount,
+            activeIntegrations,
+            timestamp: new Date().toISOString(),
+        };
+    }
 };
 exports.AdminConsoleService = AdminConsoleService;
 exports.AdminConsoleService = AdminConsoleService = __decorate([

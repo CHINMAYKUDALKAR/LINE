@@ -19,6 +19,7 @@ const email_module_1 = require("../email/email.module");
 const storage_module_1 = require("../storage/storage.module");
 const bullmq_1 = require("@nestjs/bullmq");
 const recycle_bin_module_1 = require("../recycle-bin/recycle-bin.module");
+const integrations_module_1 = require("../integrations/integrations.module");
 let CandidatesModule = class CandidatesModule {
 };
 exports.CandidatesModule = CandidatesModule;
@@ -31,6 +32,7 @@ exports.CandidatesModule = CandidatesModule = __decorate([
             recycle_bin_module_1.RecycleBinModule,
             email_module_1.EmailModule,
             storage_module_1.StorageModule,
+            integrations_module_1.IntegrationsModule,
         ],
         controllers: [candidates_controller_1.CandidatesController],
         providers: [candidates_service_1.CandidatesService, stage_transition_service_1.StageTransitionService, resume_parser_service_1.ResumeParserService, prisma_service_1.PrismaService, s3_service_1.S3Service, candidate_import_processor_1.CandidateImportProcessor],

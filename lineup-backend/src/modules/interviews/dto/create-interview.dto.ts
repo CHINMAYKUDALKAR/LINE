@@ -37,5 +37,25 @@ export class CreateInterviewDto {
     @IsOptional()
     @IsString()
     notes?: string;
+
+    @ApiPropertyOptional({ description: 'Custom subject for candidate email', example: 'Interview Invitation' })
+    @IsOptional()
+    @IsString()
+    candidateEmailSubject?: string;
+
+    @ApiPropertyOptional({ description: 'Custom body for candidate email', example: 'Dear candidate...' })
+    @IsOptional()
+    @IsString()
+    candidateEmailBody?: string;
+
+    @ApiPropertyOptional({ description: 'Custom subject for interviewer email', example: 'Interview Scheduled' })
+    @IsOptional()
+    @IsString()
+    interviewerEmailSubject?: string;
+
+    @ApiPropertyOptional({ description: 'Custom body for interviewer email', example: 'Hi team...' })
+    @IsOptional()
+    @IsString()
+    interviewerEmailBody?: string;
 }
 

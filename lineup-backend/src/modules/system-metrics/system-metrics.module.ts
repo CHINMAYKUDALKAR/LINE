@@ -6,6 +6,7 @@ import { QueueMetricsService } from './services/queue-metrics.service';
 import { CommunicationMetricsService } from './services/communication-metrics.service';
 import { SchedulingMetricsService } from './services/scheduling-metrics.service';
 import { TenantUsageService } from './services/tenant-usage.service';
+import { IntegrationMetricsService } from './services/integration-metrics.service';
 import { PrismaService } from '../../common/prisma.service';
 import { COMMUNICATION_QUEUES } from '../communication/queues';
 
@@ -29,6 +30,7 @@ import { COMMUNICATION_QUEUES } from '../communication/queues';
         CommunicationMetricsService,
         SchedulingMetricsService,
         TenantUsageService,
+        IntegrationMetricsService,
     ],
     exports: [PlatformMetricsService],
 })

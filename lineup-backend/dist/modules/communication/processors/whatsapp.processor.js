@@ -17,56 +17,54 @@ const common_1 = require("@nestjs/common");
 const prisma_service_1 = require("../../../common/prisma.service");
 const queues_1 = require("../queues");
 const client_1 = require("@prisma/client");
-const cuid2_1 = require("@paralleldrive/cuid2");
+const whatsapp_service_1 = require("../services/whatsapp.service");
 let WhatsAppProcessor = WhatsAppProcessor_1 = class WhatsAppProcessor extends bullmq_1.WorkerHost {
     prisma;
+    whatsAppService;
     logger = new common_1.Logger(WhatsAppProcessor_1.name);
-    constructor(prisma) {
+    constructor(prisma, whatsAppService) {
         super();
         this.prisma = prisma;
+        this.whatsAppService = whatsAppService;
     }
     async process(job) {
-        const { messageLogId, tenantId, recipientPhone, body, context } = job.data;
+        const { messageLogId, tenantId, recipientPhone, body } = job.data;
         this.logger.log(`Processing WhatsApp job ${job.id} for message ${messageLogId}`);
         if (!recipientPhone) {
             throw new Error('No recipient phone provided');
         }
+        if (!this.whatsAppService.isValidPhoneNumber(recipientPhone)) {
+            this.logger.warn(`Invalid phone number format: ${recipientPhone}`);
+        }
         try {
-            await this.mockWhatsAppSend(recipientPhone, body);
-            const externalId = `mock-wa-${(0, cuid2_1.createId)()}`;
-            this.logger.log(`WhatsApp message sent (mock): ${externalId}`);
+            const result = await this.whatsAppService.sendMessage(recipientPhone, body, tenantId);
+            if (!result.success) {
+                throw new Error(result.error || 'WhatsApp send failed');
+            }
+            this.logger.log(`WhatsApp message sent: ${result.messageId}`);
             await this.prisma.messageLog.update({
                 where: { id: messageLogId },
                 data: {
                     status: client_1.MessageStatus.SENT,
                     sentAt: new Date(),
-                    externalId: externalId,
+                    externalId: result.messageId,
                 },
             });
         }
         catch (error) {
-            this.logger.error(`Failed to send WhatsApp message: ${error.message}`);
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            this.logger.error(`Failed to send WhatsApp message: ${errorMessage}`);
             await this.prisma.messageLog.update({
                 where: { id: messageLogId },
                 data: {
                     status: client_1.MessageStatus.FAILED,
                     failedAt: new Date(),
                     retryCount: { increment: 1 },
-                    metadata: { error: error.message },
+                    metadata: { error: errorMessage },
                 },
             });
             throw error;
         }
-    }
-    async mockWhatsAppSend(phone, message) {
-        this.logger.debug(`[MOCK] Sending WhatsApp to ${phone}: ${message.substring(0, 50)}...`);
-        await new Promise(resolve => setTimeout(resolve, 100));
-        console.log('[MOCK WhatsApp API]', {
-            to: phone,
-            type: 'text',
-            text: { body: message },
-            timestamp: new Date().toISOString(),
-        });
     }
     onFailed(job, error) {
         this.logger.error(`WhatsApp job ${job.id} failed: ${error.message}`);
@@ -90,6 +88,8 @@ __decorate([
 ], WhatsAppProcessor.prototype, "onCompleted", null);
 exports.WhatsAppProcessor = WhatsAppProcessor = WhatsAppProcessor_1 = __decorate([
     (0, bullmq_1.Processor)(queues_1.COMMUNICATION_QUEUES.WHATSAPP),
-    __metadata("design:paramtypes", [prisma_service_1.PrismaService])
+    (0, common_1.Injectable)(),
+    __metadata("design:paramtypes", [prisma_service_1.PrismaService,
+        whatsapp_service_1.WhatsAppService])
 ], WhatsAppProcessor);
 //# sourceMappingURL=whatsapp.processor.js.map

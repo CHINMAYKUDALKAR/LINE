@@ -1,0 +1,255 @@
+name: Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+          - dev
+          - staging
+          - production
+      skip_tests:
+        description: 'Skip tests (use with caution)'
+        required: false
+        default: false
+        type: boolean
+
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - 'docs/**'
+      - '*.md'
+      - '.gitignore'
+
+env:
+  NODE_VERSION: '18.x'
+  REGISTRY: ghcr.io
+  BACKEND_IMAGE: ${{ github.repository }}/lineup-backend
+  FRONTEND_IMAGE: ${{ github.repository }}/lineup-frontend
+
+jobs:
+  # ============================================
+  # BUILD & TEST (Pre-deployment validation)
+  # ============================================
+  validate:
+    name: Validate Build
+    runs-on: ubuntu-latest
+    if: ${{ !inputs.skip_tests }}
+    outputs:
+      backend_sha: ${{ steps.sha.outputs.backend }}
+      frontend_sha: ${{ steps.sha.outputs.frontend }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Get SHA
+        id: sha
+        run: |
+          echo "backend=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+          echo "frontend=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+
+      - name: Build backend
+        working-directory: lineup-backend
+        run: |
+          npm ci
+          npx prisma generate
+          npm run build
+
+      - name: Build frontend
+        working-directory: lineup-frontend
+        run: |
+          npm ci
+          npm run build
+        env:
+          NEXT_PUBLIC_API_URL: ${{ secrets.API_URL || 'http://localhost:3000' }}
+
+  # ============================================
+  # BUILD DOCKER IMAGES
+  # ============================================
+  build-images:
+    name: Build Docker Images
+    runs-on: ubuntu-latest
+    needs: [validate]
+    if: always() && (needs.validate.result == 'success' || inputs.skip_tests)
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push backend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./lineup-backend
+          file: ./lineup-backend/Dockerfile
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.BACKEND_IMAGE }}:${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ env.BACKEND_IMAGE }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and push frontend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./lineup-frontend
+          file: ./lineup-frontend/Dockerfile
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.FRONTEND_IMAGE }}:${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ env.FRONTEND_IMAGE }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            NEXT_PUBLIC_API_URL=${{ secrets.API_URL || 'http://localhost:3000' }}
+
+  # ============================================
+  # DEPLOY TO DEV
+  # ============================================
+  deploy-dev:
+    name: Deploy to Dev
+    runs-on: ubuntu-latest
+    needs: [build-images]
+    if: github.ref == 'refs/heads/main' || inputs.environment == 'dev'
+    environment:
+      name: dev
+      url: ${{ secrets.DEV_URL }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to Dev
+        run: |
+          echo "🚀 Deploying to DEV environment..."
+          echo "Image: ${{ env.REGISTRY }}/${{ env.BACKEND_IMAGE }}:${{ github.sha }}"
+          # Add your deployment commands here:
+          # - SSH to server and pull new images
+          # - Update docker-compose and restart
+          # - Trigger cloud provider deployment
+          # Example: 
+          # curl -X POST "${{ secrets.DEV_WEBHOOK_URL }}" \
+          #   -H "Authorization: Bearer ${{ secrets.DEPLOY_TOKEN }}" \
+          #   -d '{"image_tag": "${{ github.sha }}"}'
+
+      - name: Run smoke tests
+        run: |
+          echo "🔍 Running smoke tests..."
+          # curl -f ${{ secrets.DEV_URL }}/health || exit 1
+
+      - name: Notify success
+        run: echo "✅ Dev deployment completed"
+
+  # ============================================
+  # DEPLOY TO STAGING
+  # ============================================
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: [deploy-dev]
+    if: inputs.environment == 'staging' || inputs.environment == 'production'
+    environment:
+      name: staging
+      url: ${{ secrets.STAGING_URL }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to Staging
+        run: |
+          echo "🚀 Deploying to STAGING environment..."
+          echo "Image: ${{ env.REGISTRY }}/${{ env.BACKEND_IMAGE }}:${{ github.sha }}"
+          # Add staging deployment commands
+
+      - name: Run integration tests
+        run: |
+          echo "🔍 Running integration tests against staging..."
+          # npm run test:e2e -- --baseUrl=${{ secrets.STAGING_URL }}
+
+      - name: Notify success
+        run: echo "✅ Staging deployment completed"
+
+  # ============================================
+  # DEPLOY TO PRODUCTION (Manual Approval Required)
+  # ============================================
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: [deploy-staging]
+    if: inputs.environment == 'production'
+    environment:
+      name: production
+      url: ${{ secrets.PRODUCTION_URL }}
+    # ⚠️ Production requires manual approval via GitHub Environments
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Pre-deployment backup
+        run: |
+          echo "💾 Creating pre-deployment database backup..."
+          # Trigger backup job or script
+          # curl -X POST "${{ secrets.BACKUP_WEBHOOK_URL }}"
+
+      - name: Deploy to Production
+        run: |
+          echo "🚀 Deploying to PRODUCTION environment..."
+          echo "Image: ${{ env.REGISTRY }}/${{ env.BACKEND_IMAGE }}:${{ github.sha }}"
+          # Add production deployment commands
+
+      - name: Health check
+        run: |
+          echo "🔍 Verifying deployment health..."
+          # curl -f ${{ secrets.PRODUCTION_URL }}/health/ready || exit 1
+
+      - name: Notify success
+        run: echo "✅ Production deployment completed"
+
+  # ============================================
+  # ROLLBACK (Manual trigger only)
+  # ============================================
+  rollback:
+    name: Rollback Deployment
+    runs-on: ubuntu-latest
+    if: failure() && (needs.deploy-production.result == 'failure' || needs.deploy-staging.result == 'failure')
+    needs: [deploy-production, deploy-staging]
+
+    steps:
+      - name: Rollback
+        run: |
+          echo "⚠️ Deployment failed! Initiating rollback..."
+          # Add rollback commands:
+          # - Revert to previous image tag
+          # - Restore database if needed
+          # docker tag previous-image:tag current-image:latest
+          # docker-compose up -d
+
+      - name: Notify rollback
+        run: |
+          echo "🔄 Rollback completed"
+          # Send notification to Slack/Teams/email

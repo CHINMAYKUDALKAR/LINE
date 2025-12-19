@@ -165,5 +165,48 @@ export class IntegrationsController {
         const tenantId = req.user.tenantId;
         return this.integrationsService.getFieldSchemas(tenantId, provider);
     }
+
+    @Get(':provider/status')
+    @Roles(Role.ADMIN, Role.MANAGER)
+    @ApiOperation({ summary: 'Get integration status and sync statistics' })
+    @ApiParam({ name: 'provider', description: 'Integration provider' })
+    @ApiResponse({ status: 200, description: 'Integration status with capabilities and 24h stats' })
+    async getStatus(
+        @Req() req: any,
+        @Param('provider') provider: string,
+    ) {
+        const tenantId = req.user.tenantId;
+        return this.integrationsService.getIntegrationStatus(tenantId, provider);
+    }
+
+    @Get(':provider/sync-logs')
+    @Roles(Role.ADMIN, Role.MANAGER)
+    @ApiOperation({ summary: 'Get sync logs for an integration' })
+    @ApiParam({ name: 'provider', description: 'Integration provider' })
+    @ApiQuery({ name: 'limit', required: false, description: 'Number of logs to return (default: 50)' })
+    @ApiQuery({ name: 'status', required: false, description: 'Filter by status (SUCCESS, FAILED, PENDING)' })
+    @ApiResponse({ status: 200, description: 'List of sync log entries' })
+    async getSyncLogs(
+        @Req() req: any,
+        @Param('provider') provider: string,
+        @Query('limit') limit?: string,
+        @Query('status') status?: string,
+    ) {
+        const tenantId = req.user.tenantId;
+        return this.integrationsService.getSyncLogs(tenantId, provider, parseInt(limit || '50'), status);
+    }
+
+    @Get(':provider/failure-summary')
+    @Roles(Role.ADMIN, Role.MANAGER)
+    @ApiOperation({ summary: 'Get failure summary for an integration' })
+    @ApiParam({ name: 'provider', description: 'Integration provider' })
+    @ApiResponse({ status: 200, description: 'Error summary grouped by message with counts' })
+    async getFailureSummary(
+        @Req() req: any,
+        @Param('provider') provider: string,
+    ) {
+        const tenantId = req.user.tenantId;
+        return this.integrationsService.getFailureSummary(tenantId, provider);
+    }
 }
 

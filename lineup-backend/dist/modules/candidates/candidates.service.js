@@ -21,18 +21,21 @@ const cache_util_1 = require("../../common/cache.util");
 const storage_service_1 = require("../storage/storage.service");
 const bullmq_1 = require("@nestjs/bullmq");
 const bullmq_2 = require("bullmq");
+const integration_events_service_1 = require("../integrations/services/integration-events.service");
 let CandidatesService = class CandidatesService {
     prisma;
     storageService;
     importQueue;
     eventEmitter;
     recycleBinService;
-    constructor(prisma, storageService, importQueue, eventEmitter, recycleBinService) {
+    integrationEvents;
+    constructor(prisma, storageService, importQueue, eventEmitter, recycleBinService, integrationEvents) {
         this.prisma = prisma;
         this.storageService = storageService;
         this.importQueue = importQueue;
         this.eventEmitter = eventEmitter;
         this.recycleBinService = recycleBinService;
+        this.integrationEvents = integrationEvents;
     }
     async create(tenantId, userId, dto) {
         if (dto.email) {
@@ -53,6 +56,7 @@ let CandidatesService = class CandidatesService {
             data: { tenantId, userId, action: 'CANDIDATE_CREATE', metadata: { id: candidate.id, name: candidate.name } }
         });
         await (0, cache_util_1.invalidateCache)(`reports:${tenantId}:*`);
+        this.integrationEvents.onCandidateCreated(tenantId, candidate.id, userId).catch(() => { });
         return candidate;
     }
     async update(tenantId, userId, id, dto) {
@@ -71,6 +75,10 @@ let CandidatesService = class CandidatesService {
                 stage: dto.stage,
                 previousStage: candidate.stage
             });
+            this.integrationEvents.onCandidateStageChanged(tenantId, id, dto.stage, userId || undefined).catch(() => { });
+        }
+        else {
+            this.integrationEvents.onCandidateUpdated(tenantId, id, userId || undefined).catch(() => { });
         }
         await (0, cache_util_1.invalidateCache)(`reports:${tenantId}:*`);
         return updated;
@@ -453,6 +461,7 @@ exports.CandidatesService = CandidatesService = __decorate([
         storage_service_1.StorageService,
         bullmq_2.Queue,
         event_emitter_1.EventEmitter2,
-        recycle_bin_service_1.RecycleBinService])
+        recycle_bin_service_1.RecycleBinService,
+        integration_events_service_1.IntegrationEventsService])
 ], CandidatesService);
 //# sourceMappingURL=candidates.service.js.map

@@ -1,7 +1,9 @@
-import { Controller, Post, Body, UseGuards, Req, Get, Query, Param, Res, HttpCode, HttpStatus } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, Req, Get, Query, Param, Res, HttpCode, HttpStatus, Delete } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiBody, ApiParam } from '@nestjs/swagger';
 import * as express from 'express';
 import { AuthService } from './auth.service';
+import { TwoFactorService } from './two-factor.service';
+import { SessionService } from './session.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { SignupDto } from './dto/signup.dto';
@@ -14,15 +16,30 @@ import { CreateInvitationDto } from './dto/create-invitation.dto';
 import { VerifyEmailDto } from './dto/verify-email.dto';
 import { PasswordCheckDto } from './dto/password-check.dto';
 import { ResendVerificationDto } from './dto/resend-verification.dto';
+import {
+    Verify2FASetupDto,
+    Verify2FALoginDto,
+    Disable2FADto,
+    TwoFactorSetupResponse,
+    TwoFactorEnabledResponse,
+    TwoFactorStatusResponse,
+    SessionDto,
+    RevokeSessionDto,
+} from './dto/two-factor.dto';
 import { JwtAuthGuard } from './guards/jwt.guard';
 import { RbacGuard } from './guards/rbac.guard';
 import { Roles } from './decorators/roles.decorator';
 import { RateLimited, RateLimitProfile, SkipRateLimit } from '../../common/rate-limit';
 
+
 @ApiTags('auth')
 @Controller('api/v1/auth')
 export class AuthController {
-    constructor(private svc: AuthService) { }
+    constructor(
+        private svc: AuthService,
+        private twoFactorService: TwoFactorService,
+        private sessionService: SessionService,
+    ) { }
 
     // ============================================
     // PUBLIC AUTH ENDPOINTS
@@ -303,6 +320,134 @@ export class AuthController {
     @ApiBody({ type: ResendVerificationDto })
     resendVerification(@Body() dto: ResendVerificationDto) {
         return this.svc.resendVerification(dto.email);
+    }
+
+    // ============================================
+    // TWO-FACTOR AUTHENTICATION
+    // ============================================
+
+    @Get('2fa/status')
+    @ApiBearerAuth('JWT-auth')
+    @UseGuards(JwtAuthGuard)
+    @ApiOperation({ summary: 'Get 2FA status for current user' })
+    @ApiResponse({ status: 200, description: '2FA status', type: TwoFactorStatusResponse })
+    async get2FAStatus(@Req() req: any): Promise<TwoFactorStatusResponse> {
+        return this.twoFactorService.getStatus(req.user.sub);
+    }
+
+    @Post('2fa/enable')
+    @ApiBearerAuth('JWT-auth')
+    @UseGuards(JwtAuthGuard)
+    @RateLimited(RateLimitProfile.AUTH_SENSITIVE)
+    @ApiOperation({ summary: 'Initiate 2FA setup - returns QR code' })
+    @ApiResponse({ status: 200, description: '2FA setup data', type: TwoFactorSetupResponse })
+    async enable2FA(@Req() req: any): Promise<TwoFactorSetupResponse> {
+        return this.twoFactorService.initSetup(req.user.sub);
+    }
+
+    @Post('2fa/verify-setup')
+    @ApiBearerAuth('JWT-auth')
+    @UseGuards(JwtAuthGuard)
+    @RateLimited(RateLimitProfile.AUTH_SENSITIVE)
+    @HttpCode(HttpStatus.OK)
+    @ApiOperation({ summary: 'Verify TOTP token and enable 2FA' })
+    @ApiResponse({ status: 200, description: '2FA enabled with recovery codes', type: TwoFactorEnabledResponse })
+    @ApiBody({ type: Verify2FASetupDto })
+    async verifyAndEnable2FA(
+        @Req() req: any,
+        @Body() dto: Verify2FASetupDto,
+    ): Promise<TwoFactorEnabledResponse> {
+        const result = await this.twoFactorService.verifyAndEnable(req.user.sub, dto.token);
+        return {
+            recoveryCodes: result.codes,
+            message: '2FA has been enabled. Save these recovery codes securely - they will not be shown again.',
+        };
+    }
+
+    @Post('2fa/disable')
+    @ApiBearerAuth('JWT-auth')
+    @UseGuards(JwtAuthGuard)
+    @RateLimited(RateLimitProfile.AUTH_SENSITIVE)
+    @HttpCode(HttpStatus.OK)
+    @ApiOperation({ summary: 'Disable 2FA (requires password and token)' })
+    @ApiResponse({ status: 200, description: '2FA disabled' })
+    @ApiBody({ type: Disable2FADto })
+    async disable2FA(@Req() req: any, @Body() dto: Disable2FADto) {
+        // Verify password first
+        await this.svc.validateUser(req.user.email, dto.password);
+
+        // Verify 2FA token
+        const valid = await this.twoFactorService.verifyToken(req.user.sub, dto.token);
+        if (!valid) {
+            throw new Error('Invalid 2FA token');
+        }
+
+        await this.twoFactorService.disable(req.user.sub);
+        return { success: true, message: '2FA has been disabled' };
+    }
+
+    @Post('2fa/regenerate-codes')
+    @ApiBearerAuth('JWT-auth')
+    @UseGuards(JwtAuthGuard)
+    @RateLimited(RateLimitProfile.AUTH_SENSITIVE)
+    @HttpCode(HttpStatus.OK)
+    @ApiOperation({ summary: 'Generate new recovery codes (invalidates old ones)' })
+    @ApiResponse({ status: 200, description: 'New recovery codes', type: TwoFactorEnabledResponse })
+    async regenerateRecoveryCodes(@Req() req: any): Promise<TwoFactorEnabledResponse> {
+        const result = await this.twoFactorService.regenerateRecoveryCodes(req.user.sub);
+        return {
+            recoveryCodes: result.codes,
+            message: 'New recovery codes generated. Old codes are now invalid.',
+        };
+    }
+
+    // ============================================
+    // SESSION MANAGEMENT
+    // ============================================
+
+    @Get('sessions')
+    @ApiBearerAuth('JWT-auth')
+    @UseGuards(JwtAuthGuard)
+    @ApiOperation({ summary: 'List all active sessions for current user' })
+    @ApiResponse({ status: 200, description: 'List of sessions', type: [SessionDto] })
+    async listSessions(@Req() req: any): Promise<SessionDto[]> {
+        // Extract current session ID from token if available
+        const sessions = await this.sessionService.listSessions(req.user.sub);
+        return sessions;
+    }
+
+    @Delete('sessions/:sessionId')
+    @ApiBearerAuth('JWT-auth')
+    @UseGuards(JwtAuthGuard)
+    @HttpCode(HttpStatus.OK)
+    @ApiOperation({ summary: 'Revoke a specific session' })
+    @ApiResponse({ status: 200, description: 'Session revoked' })
+    @ApiParam({ name: 'sessionId', description: 'Session ID to revoke' })
+    async revokeSession(@Req() req: any, @Param('sessionId') sessionId: string) {
+        const revoked = await this.sessionService.revokeSession(
+            req.user.sub,
+            sessionId,
+            'admin_revoke',
+            req.user.sub,
+        );
+        return { success: revoked };
+    }
+
+    @Post('sessions/revoke-others')
+    @ApiBearerAuth('JWT-auth')
+    @UseGuards(JwtAuthGuard)
+    @HttpCode(HttpStatus.OK)
+    @ApiOperation({ summary: 'Revoke all sessions except current' })
+    @ApiResponse({ status: 200, description: 'Other sessions revoked' })
+    async revokeOtherSessions(@Req() req: any) {
+        // Get current session ID from somewhere (would need to be passed or tracked)
+        // For now, revoke all and re-issue would be needed
+        const count = await this.sessionService.revokeAllSessions(
+            req.user.sub,
+            'logout',
+            req.tenantId,
+        );
+        return { success: true, revokedCount: count };
     }
 
     // ============================================

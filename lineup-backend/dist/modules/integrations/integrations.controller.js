@@ -73,6 +73,18 @@ let IntegrationsController = class IntegrationsController {
         const tenantId = req.user.tenantId;
         return this.integrationsService.getFieldSchemas(tenantId, provider);
     }
+    async getStatus(req, provider) {
+        const tenantId = req.user.tenantId;
+        return this.integrationsService.getIntegrationStatus(tenantId, provider);
+    }
+    async getSyncLogs(req, provider, limit, status) {
+        const tenantId = req.user.tenantId;
+        return this.integrationsService.getSyncLogs(tenantId, provider, parseInt(limit || '50'), status);
+    }
+    async getFailureSummary(req, provider) {
+        const tenantId = req.user.tenantId;
+        return this.integrationsService.getFailureSummary(tenantId, provider);
+    }
 };
 exports.IntegrationsController = IntegrationsController;
 __decorate([
@@ -204,6 +216,46 @@ __decorate([
     __metadata("design:paramtypes", [Object, String]),
     __metadata("design:returntype", Promise)
 ], IntegrationsController.prototype, "getFields", null);
+__decorate([
+    (0, common_1.Get)(':provider/status'),
+    (0, roles_decorator_1.Roles)(client_1.Role.ADMIN, client_1.Role.MANAGER),
+    (0, swagger_1.ApiOperation)({ summary: 'Get integration status and sync statistics' }),
+    (0, swagger_1.ApiParam)({ name: 'provider', description: 'Integration provider' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Integration status with capabilities and 24h stats' }),
+    __param(0, (0, common_1.Req)()),
+    __param(1, (0, common_1.Param)('provider')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:returntype", Promise)
+], IntegrationsController.prototype, "getStatus", null);
+__decorate([
+    (0, common_1.Get)(':provider/sync-logs'),
+    (0, roles_decorator_1.Roles)(client_1.Role.ADMIN, client_1.Role.MANAGER),
+    (0, swagger_1.ApiOperation)({ summary: 'Get sync logs for an integration' }),
+    (0, swagger_1.ApiParam)({ name: 'provider', description: 'Integration provider' }),
+    (0, swagger_1.ApiQuery)({ name: 'limit', required: false, description: 'Number of logs to return (default: 50)' }),
+    (0, swagger_1.ApiQuery)({ name: 'status', required: false, description: 'Filter by status (SUCCESS, FAILED, PENDING)' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'List of sync log entries' }),
+    __param(0, (0, common_1.Req)()),
+    __param(1, (0, common_1.Param)('provider')),
+    __param(2, (0, common_1.Query)('limit')),
+    __param(3, (0, common_1.Query)('status')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String, String, String]),
+    __metadata("design:returntype", Promise)
+], IntegrationsController.prototype, "getSyncLogs", null);
+__decorate([
+    (0, common_1.Get)(':provider/failure-summary'),
+    (0, roles_decorator_1.Roles)(client_1.Role.ADMIN, client_1.Role.MANAGER),
+    (0, swagger_1.ApiOperation)({ summary: 'Get failure summary for an integration' }),
+    (0, swagger_1.ApiParam)({ name: 'provider', description: 'Integration provider' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Error summary grouped by message with counts' }),
+    __param(0, (0, common_1.Req)()),
+    __param(1, (0, common_1.Param)('provider')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:returntype", Promise)
+], IntegrationsController.prototype, "getFailureSummary", null);
 exports.IntegrationsController = IntegrationsController = __decorate([
     (0, swagger_1.ApiTags)('integrations'),
     (0, swagger_1.ApiBearerAuth)('JWT-auth'),

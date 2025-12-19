@@ -23,6 +23,14 @@ let GoogleCalendarProvider = class GoogleCalendarProvider {
         this.googleOAuth = googleOAuth;
         this.googleCalendar = googleCalendar;
     }
+    getCapabilities() {
+        return {
+            candidateSync: 'none',
+            jobSync: 'none',
+            interviewSync: 'write',
+            supportsWebhooks: true,
+        };
+    }
     async getAuthUrl(tenantId, state) {
         return this.googleOAuth.getAuthUrl(tenantId);
     }

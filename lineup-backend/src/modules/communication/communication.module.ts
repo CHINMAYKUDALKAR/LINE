@@ -11,6 +11,7 @@ import { ChannelService } from './services/channel.service';
 import { SchedulerService } from './services/scheduler.service';
 import { VariableResolverService } from './services/variable-resolver.service';
 import { TwilioService } from './services/twilio.service';
+import { WhatsAppService } from './services/whatsapp.service';
 import { EmailProcessor } from './processors/email.processor';
 import { WhatsAppProcessor } from './processors/whatsapp.processor';
 import { SmsProcessor } from './processors/sms.processor';
@@ -78,6 +79,7 @@ import { COMMUNICATION_QUEUES, QUEUE_RETRY_CONFIG } from './queues';
         SchedulerService,
         VariableResolverService,
         TwilioService,
+        WhatsAppService,
         EmailProcessor,
         WhatsAppProcessor,
         SmsProcessor,
@@ -91,6 +93,7 @@ import { COMMUNICATION_QUEUES, QUEUE_RETRY_CONFIG } from './queues';
         ChannelService,
         VariableResolverService,
         TwilioService,
+        WhatsAppService,
     ],
 })
 export class CommunicationModule { }

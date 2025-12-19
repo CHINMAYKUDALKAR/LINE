@@ -1,5 +1,7 @@
 import * as express from 'express';
 import { AuthService } from './auth.service';
+import { TwoFactorService } from './two-factor.service';
+import { SessionService } from './session.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { SignupDto } from './dto/signup.dto';
@@ -12,9 +14,12 @@ import { CreateInvitationDto } from './dto/create-invitation.dto';
 import { VerifyEmailDto } from './dto/verify-email.dto';
 import { PasswordCheckDto } from './dto/password-check.dto';
 import { ResendVerificationDto } from './dto/resend-verification.dto';
+import { Verify2FASetupDto, Disable2FADto, TwoFactorSetupResponse, TwoFactorEnabledResponse, TwoFactorStatusResponse, SessionDto } from './dto/two-factor.dto';
 export declare class AuthController {
     private svc;
-    constructor(svc: AuthService);
+    private twoFactorService;
+    private sessionService;
+    constructor(svc: AuthService, twoFactorService: TwoFactorService, sessionService: SessionService);
     signup(dto: SignupDto, req: express.Request, res: express.Response): Promise<{
         accessToken: string;
         user: {
@@ -153,6 +158,22 @@ export declare class AuthController {
     resendVerification(dto: ResendVerificationDto): Promise<{
         success: boolean;
         message: string;
+    }>;
+    get2FAStatus(req: any): Promise<TwoFactorStatusResponse>;
+    enable2FA(req: any): Promise<TwoFactorSetupResponse>;
+    verifyAndEnable2FA(req: any, dto: Verify2FASetupDto): Promise<TwoFactorEnabledResponse>;
+    disable2FA(req: any, dto: Disable2FADto): Promise<{
+        success: boolean;
+        message: string;
+    }>;
+    regenerateRecoveryCodes(req: any): Promise<TwoFactorEnabledResponse>;
+    listSessions(req: any): Promise<SessionDto[]>;
+    revokeSession(req: any, sessionId: string): Promise<{
+        success: boolean;
+    }>;
+    revokeOtherSessions(req: any): Promise<{
+        success: boolean;
+        revokedCount: number;
     }>;
     private setRefreshTokenCookie;
 }

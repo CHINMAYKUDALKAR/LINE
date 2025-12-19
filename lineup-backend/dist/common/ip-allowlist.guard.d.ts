@@ -29,6 +29,8 @@ export declare class IPAllowlistService {
         passwordMaxAgeDays: number | null;
         maxConcurrentSessions: number | null;
         sessionTimeoutMinutes: number | null;
+        enforce2FA: boolean;
+        enforce2FAForAdmins: boolean;
         createdAt: Date;
         updatedAt: Date;
     } | null>;
@@ -45,6 +47,8 @@ export declare class IPAllowlistService {
         passwordMaxAgeDays: number | null;
         maxConcurrentSessions: number | null;
         sessionTimeoutMinutes: number | null;
+        enforce2FA: boolean;
+        enforce2FAForAdmins: boolean;
         createdAt: Date;
         updatedAt: Date;
     }>;
@@ -61,6 +65,8 @@ export declare class IPAllowlistService {
         passwordMaxAgeDays: number | null;
         maxConcurrentSessions: number | null;
         sessionTimeoutMinutes: number | null;
+        enforce2FA: boolean;
+        enforce2FAForAdmins: boolean;
         createdAt: Date;
         updatedAt: Date;
     } | null>;
@@ -77,6 +83,8 @@ export declare class IPAllowlistService {
         passwordMaxAgeDays: number | null;
         maxConcurrentSessions: number | null;
         sessionTimeoutMinutes: number | null;
+        enforce2FA: boolean;
+        enforce2FAForAdmins: boolean;
         createdAt: Date;
         updatedAt: Date;
     }>;
@@ -93,6 +101,8 @@ export declare class IPAllowlistService {
         passwordMaxAgeDays: number | null;
         maxConcurrentSessions: number | null;
         sessionTimeoutMinutes: number | null;
+        enforce2FA: boolean;
+        enforce2FAForAdmins: boolean;
         createdAt: Date;
         updatedAt: Date;
     }>;

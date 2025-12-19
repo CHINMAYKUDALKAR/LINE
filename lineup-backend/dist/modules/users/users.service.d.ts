@@ -60,6 +60,9 @@ export declare class UsersService {
         invitationToken: string | null;
         invitationExpiresAt: Date | null;
         teamIds: string[];
+        twoFactorEnabled: boolean;
+        twoFactorSecret: string | null;
+        recoveryCodes: string[];
         lastLogin: Date | null;
         createdAt: Date;
         updatedAt: Date;

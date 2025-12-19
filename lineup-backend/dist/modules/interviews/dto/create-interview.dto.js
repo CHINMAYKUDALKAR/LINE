@@ -21,6 +21,10 @@ class CreateInterviewDto {
     location;
     meetingLink;
     notes;
+    candidateEmailSubject;
+    candidateEmailBody;
+    interviewerEmailSubject;
+    interviewerEmailBody;
 }
 exports.CreateInterviewDto = CreateInterviewDto;
 __decorate([
@@ -67,4 +71,28 @@ __decorate([
     (0, class_validator_1.IsString)(),
     __metadata("design:type", String)
 ], CreateInterviewDto.prototype, "notes", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: 'Custom subject for candidate email', example: 'Interview Invitation' }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateInterviewDto.prototype, "candidateEmailSubject", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: 'Custom body for candidate email', example: 'Dear candidate...' }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateInterviewDto.prototype, "candidateEmailBody", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: 'Custom subject for interviewer email', example: 'Interview Scheduled' }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateInterviewDto.prototype, "interviewerEmailSubject", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: 'Custom body for interviewer email', example: 'Hi team...' }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateInterviewDto.prototype, "interviewerEmailBody", void 0);
 //# sourceMappingURL=create-interview.dto.js.map

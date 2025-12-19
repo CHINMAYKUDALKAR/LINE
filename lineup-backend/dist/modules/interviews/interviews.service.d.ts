@@ -6,13 +6,15 @@ import { BulkScheduleDto, BulkScheduleResult } from './dto/bulk-schedule.dto';
 import { Queue } from 'bullmq';
 import { InterviewAutomationService } from './services/interview-automation.service';
 import { RecycleBinService } from '../recycle-bin/recycle-bin.service';
+import { IntegrationEventsService } from '../integrations/services/integration-events.service';
 export declare class InterviewsService {
     private prisma;
     private reminderQueue;
     private syncQueue;
     private automationService;
     private recycleBinService;
-    constructor(prisma: PrismaService, reminderQueue: Queue, syncQueue: Queue, automationService: InterviewAutomationService, recycleBinService: RecycleBinService);
+    private integrationEvents;
+    constructor(prisma: PrismaService, reminderQueue: Queue, syncQueue: Queue, automationService: InterviewAutomationService, recycleBinService: RecycleBinService, integrationEvents: IntegrationEventsService);
     create(tenantId: string, userId: string, dto: CreateInterviewDto): Promise<{
         id: string;
         tenantId: string;
@@ -195,8 +197,8 @@ export declare class InterviewsService {
     listNotes(tenantId: string, interviewId: string, page?: number, perPage?: number): Promise<{
         data: {
             author: {
-                name: string | null;
                 id: string;
+                name: string | null;
                 email: string;
             };
             authorId: string;
@@ -210,8 +212,8 @@ export declare class InterviewsService {
     }>;
     addNote(tenantId: string, interviewId: string, userId: string, content: string): Promise<{
         author: {
-            name: string | null;
             id: string;
+            name: string | null;
             email: string;
         };
         id: string;

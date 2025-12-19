@@ -131,6 +131,10 @@ export class InterviewAutomationService {
                 duration: payload.duration,
                 stage: payload.stage,
                 meetingLink: payload.meetingLink,
+                candidateEmailSubject: payload.candidateEmailSubject,
+                candidateEmailBody: payload.candidateEmailBody,
+                interviewerEmailSubject: payload.interviewerEmailSubject,
+                interviewerEmailBody: payload.interviewerEmailBody,
             },
         };
 

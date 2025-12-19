@@ -58,6 +58,9 @@ export declare class UsersController {
         invitationToken: string | null;
         invitationExpiresAt: Date | null;
         teamIds: string[];
+        twoFactorEnabled: boolean;
+        twoFactorSecret: string | null;
+        recoveryCodes: string[];
         lastLogin: Date | null;
         createdAt: Date;
         updatedAt: Date;

@@ -50,6 +50,8 @@ const common_1 = require("@nestjs/common");
 const swagger_1 = require("@nestjs/swagger");
 const express = __importStar(require("express"));
 const auth_service_1 = require("./auth.service");
+const two_factor_service_1 = require("./two-factor.service");
+const session_service_1 = require("./session.service");
 const register_dto_1 = require("./dto/register.dto");
 const login_dto_1 = require("./dto/login.dto");
 const signup_dto_1 = require("./dto/signup.dto");
@@ -62,14 +64,19 @@ const create_invitation_dto_1 = require("./dto/create-invitation.dto");
 const verify_email_dto_1 = require("./dto/verify-email.dto");
 const password_check_dto_1 = require("./dto/password-check.dto");
 const resend_verification_dto_1 = require("./dto/resend-verification.dto");
+const two_factor_dto_1 = require("./dto/two-factor.dto");
 const jwt_guard_1 = require("./guards/jwt.guard");
 const rbac_guard_1 = require("./guards/rbac.guard");
 const roles_decorator_1 = require("./decorators/roles.decorator");
 const rate_limit_1 = require("../../common/rate-limit");
 let AuthController = class AuthController {
     svc;
-    constructor(svc) {
+    twoFactorService;
+    sessionService;
+    constructor(svc, twoFactorService, sessionService) {
         this.svc = svc;
+        this.twoFactorService = twoFactorService;
+        this.sessionService = sessionService;
     }
     async signup(dto, req, res) {
         const result = await this.svc.signUpCreateTenant(dto, req);
@@ -167,6 +174,47 @@ let AuthController = class AuthController {
     }
     resendVerification(dto) {
         return this.svc.resendVerification(dto.email);
+    }
+    async get2FAStatus(req) {
+        return this.twoFactorService.getStatus(req.user.sub);
+    }
+    async enable2FA(req) {
+        return this.twoFactorService.initSetup(req.user.sub);
+    }
+    async verifyAndEnable2FA(req, dto) {
+        const result = await this.twoFactorService.verifyAndEnable(req.user.sub, dto.token);
+        return {
+            recoveryCodes: result.codes,
+            message: '2FA has been enabled. Save these recovery codes securely - they will not be shown again.',
+        };
+    }
+    async disable2FA(req, dto) {
+        await this.svc.validateUser(req.user.email, dto.password);
+        const valid = await this.twoFactorService.verifyToken(req.user.sub, dto.token);
+        if (!valid) {
+            throw new Error('Invalid 2FA token');
+        }
+        await this.twoFactorService.disable(req.user.sub);
+        return { success: true, message: '2FA has been disabled' };
+    }
+    async regenerateRecoveryCodes(req) {
+        const result = await this.twoFactorService.regenerateRecoveryCodes(req.user.sub);
+        return {
+            recoveryCodes: result.codes,
+            message: 'New recovery codes generated. Old codes are now invalid.',
+        };
+    }
+    async listSessions(req) {
+        const sessions = await this.sessionService.listSessions(req.user.sub);
+        return sessions;
+    }
+    async revokeSession(req, sessionId) {
+        const revoked = await this.sessionService.revokeSession(req.user.sub, sessionId, 'admin_revoke', req.user.sub);
+        return { success: revoked };
+    }
+    async revokeOtherSessions(req) {
+        const count = await this.sessionService.revokeAllSessions(req.user.sub, 'logout', req.tenantId);
+        return { success: true, revokedCount: count };
     }
     setRefreshTokenCookie(res, refreshToken, rememberMe) {
         const maxAge = rememberMe
@@ -406,9 +454,114 @@ __decorate([
     __metadata("design:paramtypes", [resend_verification_dto_1.ResendVerificationDto]),
     __metadata("design:returntype", void 0)
 ], AuthController.prototype, "resendVerification", null);
+__decorate([
+    (0, common_1.Get)('2fa/status'),
+    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
+    (0, common_1.UseGuards)(jwt_guard_1.JwtAuthGuard),
+    (0, swagger_1.ApiOperation)({ summary: 'Get 2FA status for current user' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: '2FA status', type: two_factor_dto_1.TwoFactorStatusResponse }),
+    __param(0, (0, common_1.Req)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], AuthController.prototype, "get2FAStatus", null);
+__decorate([
+    (0, common_1.Post)('2fa/enable'),
+    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
+    (0, common_1.UseGuards)(jwt_guard_1.JwtAuthGuard),
+    (0, rate_limit_1.RateLimited)(rate_limit_1.RateLimitProfile.AUTH_SENSITIVE),
+    (0, swagger_1.ApiOperation)({ summary: 'Initiate 2FA setup - returns QR code' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: '2FA setup data', type: two_factor_dto_1.TwoFactorSetupResponse }),
+    __param(0, (0, common_1.Req)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], AuthController.prototype, "enable2FA", null);
+__decorate([
+    (0, common_1.Post)('2fa/verify-setup'),
+    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
+    (0, common_1.UseGuards)(jwt_guard_1.JwtAuthGuard),
+    (0, rate_limit_1.RateLimited)(rate_limit_1.RateLimitProfile.AUTH_SENSITIVE),
+    (0, common_1.HttpCode)(common_1.HttpStatus.OK),
+    (0, swagger_1.ApiOperation)({ summary: 'Verify TOTP token and enable 2FA' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: '2FA enabled with recovery codes', type: two_factor_dto_1.TwoFactorEnabledResponse }),
+    (0, swagger_1.ApiBody)({ type: two_factor_dto_1.Verify2FASetupDto }),
+    __param(0, (0, common_1.Req)()),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, two_factor_dto_1.Verify2FASetupDto]),
+    __metadata("design:returntype", Promise)
+], AuthController.prototype, "verifyAndEnable2FA", null);
+__decorate([
+    (0, common_1.Post)('2fa/disable'),
+    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
+    (0, common_1.UseGuards)(jwt_guard_1.JwtAuthGuard),
+    (0, rate_limit_1.RateLimited)(rate_limit_1.RateLimitProfile.AUTH_SENSITIVE),
+    (0, common_1.HttpCode)(common_1.HttpStatus.OK),
+    (0, swagger_1.ApiOperation)({ summary: 'Disable 2FA (requires password and token)' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: '2FA disabled' }),
+    (0, swagger_1.ApiBody)({ type: two_factor_dto_1.Disable2FADto }),
+    __param(0, (0, common_1.Req)()),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, two_factor_dto_1.Disable2FADto]),
+    __metadata("design:returntype", Promise)
+], AuthController.prototype, "disable2FA", null);
+__decorate([
+    (0, common_1.Post)('2fa/regenerate-codes'),
+    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
+    (0, common_1.UseGuards)(jwt_guard_1.JwtAuthGuard),
+    (0, rate_limit_1.RateLimited)(rate_limit_1.RateLimitProfile.AUTH_SENSITIVE),
+    (0, common_1.HttpCode)(common_1.HttpStatus.OK),
+    (0, swagger_1.ApiOperation)({ summary: 'Generate new recovery codes (invalidates old ones)' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'New recovery codes', type: two_factor_dto_1.TwoFactorEnabledResponse }),
+    __param(0, (0, common_1.Req)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], AuthController.prototype, "regenerateRecoveryCodes", null);
+__decorate([
+    (0, common_1.Get)('sessions'),
+    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
+    (0, common_1.UseGuards)(jwt_guard_1.JwtAuthGuard),
+    (0, swagger_1.ApiOperation)({ summary: 'List all active sessions for current user' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'List of sessions', type: [two_factor_dto_1.SessionDto] }),
+    __param(0, (0, common_1.Req)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], AuthController.prototype, "listSessions", null);
+__decorate([
+    (0, common_1.Delete)('sessions/:sessionId'),
+    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
+    (0, common_1.UseGuards)(jwt_guard_1.JwtAuthGuard),
+    (0, common_1.HttpCode)(common_1.HttpStatus.OK),
+    (0, swagger_1.ApiOperation)({ summary: 'Revoke a specific session' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Session revoked' }),
+    (0, swagger_1.ApiParam)({ name: 'sessionId', description: 'Session ID to revoke' }),
+    __param(0, (0, common_1.Req)()),
+    __param(1, (0, common_1.Param)('sessionId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:returntype", Promise)
+], AuthController.prototype, "revokeSession", null);
+__decorate([
+    (0, common_1.Post)('sessions/revoke-others'),
+    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
+    (0, common_1.UseGuards)(jwt_guard_1.JwtAuthGuard),
+    (0, common_1.HttpCode)(common_1.HttpStatus.OK),
+    (0, swagger_1.ApiOperation)({ summary: 'Revoke all sessions except current' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Other sessions revoked' }),
+    __param(0, (0, common_1.Req)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], AuthController.prototype, "revokeOtherSessions", null);
 exports.AuthController = AuthController = __decorate([
     (0, swagger_1.ApiTags)('auth'),
     (0, common_1.Controller)('api/v1/auth'),
-    __metadata("design:paramtypes", [auth_service_1.AuthService])
+    __metadata("design:paramtypes", [auth_service_1.AuthService,
+        two_factor_service_1.TwoFactorService,
+        session_service_1.SessionService])
 ], AuthController);
 //# sourceMappingURL=auth.controller.js.map

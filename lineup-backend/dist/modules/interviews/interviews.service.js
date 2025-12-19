@@ -21,18 +21,21 @@ const bullmq_2 = require("bullmq");
 const availability_util_1 = require("./utils/availability.util");
 const interview_automation_service_1 = require("./services/interview-automation.service");
 const recycle_bin_service_1 = require("../recycle-bin/recycle-bin.service");
+const integration_events_service_1 = require("../integrations/services/integration-events.service");
 let InterviewsService = class InterviewsService {
     prisma;
     reminderQueue;
     syncQueue;
     automationService;
     recycleBinService;
-    constructor(prisma, reminderQueue, syncQueue, automationService, recycleBinService) {
+    integrationEvents;
+    constructor(prisma, reminderQueue, syncQueue, automationService, recycleBinService, integrationEvents) {
         this.prisma = prisma;
         this.reminderQueue = reminderQueue;
         this.syncQueue = syncQueue;
         this.automationService = automationService;
         this.recycleBinService = recycleBinService;
+        this.integrationEvents = integrationEvents;
     }
     async create(tenantId, userId, dto) {
         const candidate = await this.prisma.candidate.findUnique({ where: { id: dto.candidateId } });
@@ -75,8 +78,13 @@ let InterviewsService = class InterviewsService {
             duration: interview.durationMins,
             stage: interview.stage,
             meetingLink: interview.meetingLink || undefined,
+            candidateEmailSubject: dto.candidateEmailSubject,
+            candidateEmailBody: dto.candidateEmailBody,
+            interviewerEmailSubject: dto.interviewerEmailSubject,
+            interviewerEmailBody: dto.interviewerEmailBody,
         };
         await this.automationService.onInterviewCreated(eventPayload);
+        this.integrationEvents.onInterviewScheduled(tenantId, interview.id, userId).catch(() => { });
         return interview;
     }
     async reschedule(tenantId, userId, id, dto) {
@@ -133,6 +141,7 @@ let InterviewsService = class InterviewsService {
             meetingLink: updated.meetingLink || undefined,
         };
         await this.automationService.onInterviewRescheduled(eventPayload);
+        this.integrationEvents.onInterviewRescheduled(tenantId, id, userId).catch(() => { });
         return {
             interview: updated,
             conflicts: conflicts.map(c => ({
@@ -260,6 +269,7 @@ let InterviewsService = class InterviewsService {
             stage: interview.stage,
         };
         await this.automationService.onInterviewCompleted(eventPayload);
+        this.integrationEvents.onInterviewCompleted(tenantId, id, userId).catch(() => { });
         return updated;
     }
     async delete(tenantId, userId, id) {
@@ -618,6 +628,7 @@ exports.InterviewsService = InterviewsService = __decorate([
         bullmq_2.Queue,
         bullmq_2.Queue,
         interview_automation_service_1.InterviewAutomationService,
-        recycle_bin_service_1.RecycleBinService])
+        recycle_bin_service_1.RecycleBinService,
+        integration_events_service_1.IntegrationEventsService])
 ], InterviewsService);
 //# sourceMappingURL=interviews.service.js.map

@@ -47,6 +47,8 @@ export declare class SettingsController {
         passwordMaxAgeDays: number | null;
         maxConcurrentSessions: number | null;
         sessionTimeoutMinutes: number | null;
+        enforce2FA: boolean;
+        enforce2FAForAdmins: boolean;
         createdAt: Date;
         updatedAt: Date;
     } | null>;
@@ -63,6 +65,8 @@ export declare class SettingsController {
         passwordMaxAgeDays: number | null;
         maxConcurrentSessions: number | null;
         sessionTimeoutMinutes: number | null;
+        enforce2FA: boolean;
+        enforce2FAForAdmins: boolean;
         createdAt: Date;
         updatedAt: Date;
     }>;

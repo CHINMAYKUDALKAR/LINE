@@ -12,6 +12,7 @@ import { InterviewReminderProcessor } from './processors/interview-reminder.proc
 import { NoShowCheckProcessor } from './processors/no-show-check.processor';
 import { Queue } from 'bullmq';
 import { RecycleBinModule } from '../recycle-bin/recycle-bin.module';
+import { IntegrationsModule } from '../integrations/integrations.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { RecycleBinModule } from '../recycle-bin/recycle-bin.module';
     BullModule.registerQueue({ name: 'interviews-queue' }), // Added for the new queue
     EmailModule,
     RecycleBinModule,
+    IntegrationsModule,
   ],
   controllers: [InterviewsController],
   providers: [

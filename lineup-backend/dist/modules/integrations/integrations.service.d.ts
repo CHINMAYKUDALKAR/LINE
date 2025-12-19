@@ -11,22 +11,22 @@ export declare class IntegrationsService {
     constructor(prisma: PrismaService, providerFactory: ProviderFactory, auditService: AuditService, syncQueue: Queue);
     listIntegrations(tenantId: string): Promise<{
         id: string;
-        createdAt: Date;
-        updatedAt: Date;
-        status: string | null;
         provider: string;
+        status: string | null;
         lastSyncedAt: Date | null;
         lastError: string | null;
+        createdAt: Date;
+        updatedAt: Date;
     }[]>;
     getIntegration(tenantId: string, provider: string): Promise<{
         id: string;
-        settings: import(".prisma/client").Prisma.JsonValue;
-        createdAt: Date;
-        updatedAt: Date;
-        status: string | null;
         provider: string;
+        settings: import(".prisma/client").Prisma.JsonValue;
+        status: string | null;
         lastSyncedAt: Date | null;
         lastError: string | null;
+        createdAt: Date;
+        updatedAt: Date;
     }>;
     connect(tenantId: string, provider: string, userId: string): Promise<{
         authUrl: string;
@@ -91,5 +91,45 @@ export declare class IntegrationsService {
             required: boolean;
         }[];
         mappings: any;
+    }>;
+    getIntegrationStatus(tenantId: string, provider: string): Promise<{
+        connected: boolean;
+        provider: string;
+        lastSyncAt: Date | null;
+        lastError: string | null;
+        capabilities: {
+            candidateSync: string;
+            jobSync: string;
+            interviewSync: string;
+            supportsWebhooks: boolean;
+        };
+        stats: {
+            total: number;
+            success: number;
+            failed: number;
+            pending: number;
+            successRate: number;
+        };
+    }>;
+    getSyncLogs(tenantId: string, provider: string, limit?: number, status?: string): Promise<{
+        id: string;
+        status: import(".prisma/client").$Enums.SyncLogStatus;
+        createdAt: Date;
+        eventType: string;
+        direction: import(".prisma/client").$Enums.SyncDirection;
+        entityType: string;
+        entityId: string | null;
+        externalId: string | null;
+        errorMessage: string | null;
+        retryCount: number;
+        completedAt: Date | null;
+    }[]>;
+    getFailureSummary(tenantId: string, provider: string): Promise<{
+        recentErrors: {
+            count: number;
+            lastOccurred: Date;
+            message: string;
+        }[];
+        totalFailures24h: number;
     }>;
 }
