@@ -26,25 +26,33 @@ export declare class InterviewsController {
         deletedAt: Date | null;
     }>;
     bulkSchedule(req: any, dto: BulkScheduleDto): Promise<import("./dto/bulk-schedule.dto").BulkScheduleResult>;
-    createReschedule(req: any, dto: RescheduleInterviewDto & {
-        interviewId: string;
-    }): Promise<{
-        id: string;
-        tenantId: string;
-        candidateId: string;
-        interviewerIds: string[];
-        date: Date;
-        durationMins: number;
-        stage: string;
-        status: string;
-        meetingLink: string | null;
-        notes: string | null;
-        avgRating: number | null;
-        hasFeedback: boolean;
-        isNoShow: boolean;
-        createdAt: Date;
-        updatedAt: Date;
-        deletedAt: Date | null;
+    reschedule(req: any, id: string, dto: RescheduleInterviewDto): Promise<{
+        interview: {
+            id: string;
+            tenantId: string;
+            candidateId: string;
+            interviewerIds: string[];
+            date: Date;
+            durationMins: number;
+            stage: string;
+            status: string;
+            meetingLink: string | null;
+            notes: string | null;
+            avgRating: number | null;
+            hasFeedback: boolean;
+            isNoShow: boolean;
+            createdAt: Date;
+            updatedAt: Date;
+            deletedAt: Date | null;
+        };
+        conflicts: {
+            interviewId: string;
+            date: Date;
+            duration: number;
+            stage: string;
+        }[];
+        hasConflicts: boolean;
+        message: string;
     }>;
     list(req: any, dto: ListInterviewsDto): Promise<{
         data: ({

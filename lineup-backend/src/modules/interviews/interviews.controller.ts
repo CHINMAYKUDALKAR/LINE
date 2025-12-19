@@ -2,7 +2,7 @@ import { Controller, Post, Get, Patch, Delete, Body, Param, Query, UseGuards, Re
 import { ApiTags, ApiOperation, ApiParam, ApiBody, ApiResponse, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { InterviewsService } from './interviews.service';
 import { CreateInterviewDto } from './dto/create-interview.dto';
-import { RescheduleInterviewDto } from './dto/reschedule-interview.dto';
+import { RescheduleInterviewDto, RescheduleResponseDto } from './dto/reschedule-interview.dto';
 import { ListInterviewsDto } from './dto/list-interviews.dto';
 import { BulkScheduleDto } from './dto/bulk-schedule.dto';
 import { CreateInterviewNoteDto, UpdateInterviewNoteDto } from './dto/interview-note.dto';
@@ -43,17 +43,20 @@ export class InterviewsController {
         return this.svc.bulkSchedule(req.user.tenantId, req.user.sub, dto);
     }
 
-    @Post('reschedule/:id')
+    @Patch(':id/reschedule')
     @RateLimited(RateLimitProfile.WRITE)
     @Roles('ADMIN', 'MANAGER', 'RECRUITER')
-    @ApiOperation({ summary: 'Reschedule an existing interview' })
+    @ApiOperation({
+        summary: 'Reschedule an existing interview (drag-and-drop)',
+        description: 'Reschedules an interview to a new time. Conflicts are returned as warnings but do not block the operation.'
+    })
     @ApiParam({ name: 'id', description: 'Interview ID to reschedule' })
     @ApiBody({ type: RescheduleInterviewDto })
-    @ApiResponse({ status: 200, description: 'Interview rescheduled successfully' })
+    @ApiResponse({ status: 200, description: 'Interview rescheduled successfully', type: RescheduleResponseDto })
+    @ApiResponse({ status: 400, description: 'Interview cannot be rescheduled (invalid status)' })
     @ApiResponse({ status: 404, description: 'Interview not found' })
-    @ApiResponse({ status: 409, description: 'Scheduling conflict detected' })
-    createReschedule(@Req() req: any, @Body() dto: RescheduleInterviewDto & { interviewId: string }) {
-        return this.svc.reschedule(req.user.tenantId, req.user.sub, dto.interviewId, dto);
+    reschedule(@Req() req: any, @Param('id') id: string, @Body() dto: RescheduleInterviewDto) {
+        return this.svc.reschedule(req.user.tenantId, req.user.sub, id, dto);
     }
 
     @Get()

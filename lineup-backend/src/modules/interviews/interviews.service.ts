@@ -77,22 +77,54 @@ export class InterviewsService {
     async reschedule(tenantId: string, userId: string, id: string, dto: RescheduleInterviewDto) {
         const interview = await this.get(tenantId, id);
 
+        // Only SCHEDULED or RESCHEDULED interviews can be rescheduled
+        if (!['SCHEDULED', 'RESCHEDULED'].includes(interview.status)) {
+            throw new BadRequestException(
+                `Cannot reschedule interview with status '${interview.status}'. Only SCHEDULED interviews can be rescheduled.`
+            );
+        }
+
+        const oldDate = interview.date;
         const start = AvailabilityUtil.parseDate(dto.newStartAt);
         const end = new Date(start.getTime() + dto.newDurationMins * 60000);
 
-        await this.checkConflicts(tenantId, interview.interviewerIds, start, end, id);
+        // Detect conflicts (warn-only, never block)
+        const conflicts = await this.detectConflicts(tenantId, interview.interviewerIds, start, end, id);
 
         const updated = await this.prisma.interview.update({
             where: { id },
             data: {
                 date: start,
                 durationMins: dto.newDurationMins,
-                status: 'RESCHEDULED'
+                status: 'SCHEDULED' // Keep as SCHEDULED (not RESCHEDULED) for calendar clarity
             }
         });
 
+        // Audit log with old and new times
         await this.prisma.auditLog.create({
-            data: { tenantId, userId, action: 'INTERVIEW_RESCHEDULE', metadata: { id, oldDate: interview.date, newDate: start } }
+            data: {
+                tenantId,
+                userId,
+                action: 'INTERVIEW_RESCHEDULE',
+                metadata: {
+                    id,
+                    oldDate,
+                    newDate: start,
+                    oldDuration: interview.durationMins,
+                    newDuration: dto.newDurationMins,
+                    hasConflicts: conflicts.length > 0,
+                }
+            }
+        });
+
+        // Create timeline event for candidate
+        await this.prisma.candidateNote.create({
+            data: {
+                tenantId,
+                candidateId: interview.candidateId,
+                authorId: userId,
+                content: `Interview rescheduled from ${oldDate.toISOString()} to ${start.toISOString()}`,
+            },
         });
 
         await this.enqueueReminders(tenantId, id, start);
@@ -111,7 +143,20 @@ export class InterviewsService {
         };
         await this.automationService.onInterviewRescheduled(eventPayload);
 
-        return updated;
+        // Return enhanced response with conflict warnings
+        return {
+            interview: updated,
+            conflicts: conflicts.map(c => ({
+                interviewId: c.id,
+                date: c.date,
+                duration: c.durationMins,
+                stage: c.stage,
+            })),
+            hasConflicts: conflicts.length > 0,
+            message: conflicts.length > 0
+                ? `Interview rescheduled with ${conflicts.length} conflict warning(s)`
+                : 'Interview rescheduled successfully',
+        };
     }
 
     async get(tenantId: string, id: string) {
@@ -163,7 +208,11 @@ export class InterviewsService {
         return { data: enrichedData, meta: { total, page, perPage, lastPage: Math.ceil(total / perPage) } };
     }
 
-    async checkConflicts(tenantId: string, interviewerIds: string[], start: Date, end: Date, excludeId?: string) {
+    /**
+     * Detect conflicts (warn-only, never blocks)
+     * Returns array of conflicting interviews for the given time slot
+     */
+    async detectConflicts(tenantId: string, interviewerIds: string[], start: Date, end: Date, excludeId?: string) {
         const potentialConflicts = await this.prisma.interview.findMany({
             where: {
                 tenantId,
@@ -179,6 +228,15 @@ export class InterviewsService {
             return i.date < end && iEnd > start;
         });
 
+        return conflicts;
+    }
+
+    /**
+     * Check conflicts and throw error (for create operations)
+     * @deprecated Use detectConflicts() for warn-only behavior
+     */
+    async checkConflicts(tenantId: string, interviewerIds: string[], start: Date, end: Date, excludeId?: string) {
+        const conflicts = await this.detectConflicts(tenantId, interviewerIds, start, end, excludeId);
         if (conflicts.length > 0) {
             throw new ConflictException({
                 message: 'Interview conflict detected',

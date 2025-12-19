@@ -32,22 +32,32 @@ export declare class InterviewsService {
         deletedAt: Date | null;
     }>;
     reschedule(tenantId: string, userId: string, id: string, dto: RescheduleInterviewDto): Promise<{
-        id: string;
-        tenantId: string;
-        candidateId: string;
-        interviewerIds: string[];
-        date: Date;
-        durationMins: number;
-        stage: string;
-        status: string;
-        meetingLink: string | null;
-        notes: string | null;
-        avgRating: number | null;
-        hasFeedback: boolean;
-        isNoShow: boolean;
-        createdAt: Date;
-        updatedAt: Date;
-        deletedAt: Date | null;
+        interview: {
+            id: string;
+            tenantId: string;
+            candidateId: string;
+            interviewerIds: string[];
+            date: Date;
+            durationMins: number;
+            stage: string;
+            status: string;
+            meetingLink: string | null;
+            notes: string | null;
+            avgRating: number | null;
+            hasFeedback: boolean;
+            isNoShow: boolean;
+            createdAt: Date;
+            updatedAt: Date;
+            deletedAt: Date | null;
+        };
+        conflicts: {
+            interviewId: string;
+            date: Date;
+            duration: number;
+            stage: string;
+        }[];
+        hasConflicts: boolean;
+        message: string;
     }>;
     get(tenantId: string, id: string): Promise<{
         candidate: {
@@ -121,6 +131,24 @@ export declare class InterviewsService {
             lastPage: number;
         };
     }>;
+    detectConflicts(tenantId: string, interviewerIds: string[], start: Date, end: Date, excludeId?: string): Promise<{
+        id: string;
+        tenantId: string;
+        candidateId: string;
+        interviewerIds: string[];
+        date: Date;
+        durationMins: number;
+        stage: string;
+        status: string;
+        meetingLink: string | null;
+        notes: string | null;
+        avgRating: number | null;
+        hasFeedback: boolean;
+        isNoShow: boolean;
+        createdAt: Date;
+        updatedAt: Date;
+        deletedAt: Date | null;
+    }[]>;
     checkConflicts(tenantId: string, interviewerIds: string[], start: Date, end: Date, excludeId?: string): Promise<void>;
     cancel(tenantId: string, userId: string, id: string): Promise<{
         id: string;

@@ -36,8 +36,8 @@ let InterviewsController = class InterviewsController {
     bulkSchedule(req, dto) {
         return this.svc.bulkSchedule(req.user.tenantId, req.user.sub, dto);
     }
-    createReschedule(req, dto) {
-        return this.svc.reschedule(req.user.tenantId, req.user.sub, dto.interviewId, dto);
+    reschedule(req, id, dto) {
+        return this.svc.reschedule(req.user.tenantId, req.user.sub, id, dto);
     }
     list(req, dto) {
         return this.svc.list(req.user.tenantId, dto);
@@ -103,21 +103,25 @@ __decorate([
     __metadata("design:returntype", void 0)
 ], InterviewsController.prototype, "bulkSchedule", null);
 __decorate([
-    (0, common_1.Post)('reschedule/:id'),
+    (0, common_1.Patch)(':id/reschedule'),
     (0, rate_limit_1.RateLimited)(rate_limit_1.RateLimitProfile.WRITE),
     (0, roles_decorator_1.Roles)('ADMIN', 'MANAGER', 'RECRUITER'),
-    (0, swagger_1.ApiOperation)({ summary: 'Reschedule an existing interview' }),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Reschedule an existing interview (drag-and-drop)',
+        description: 'Reschedules an interview to a new time. Conflicts are returned as warnings but do not block the operation.'
+    }),
     (0, swagger_1.ApiParam)({ name: 'id', description: 'Interview ID to reschedule' }),
     (0, swagger_1.ApiBody)({ type: reschedule_interview_dto_1.RescheduleInterviewDto }),
-    (0, swagger_1.ApiResponse)({ status: 200, description: 'Interview rescheduled successfully' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Interview rescheduled successfully', type: reschedule_interview_dto_1.RescheduleResponseDto }),
+    (0, swagger_1.ApiResponse)({ status: 400, description: 'Interview cannot be rescheduled (invalid status)' }),
     (0, swagger_1.ApiResponse)({ status: 404, description: 'Interview not found' }),
-    (0, swagger_1.ApiResponse)({ status: 409, description: 'Scheduling conflict detected' }),
     __param(0, (0, common_1.Req)()),
-    __param(1, (0, common_1.Body)()),
+    __param(1, (0, common_1.Param)('id')),
+    __param(2, (0, common_1.Body)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, Object]),
+    __metadata("design:paramtypes", [Object, String, reschedule_interview_dto_1.RescheduleInterviewDto]),
     __metadata("design:returntype", void 0)
-], InterviewsController.prototype, "createReschedule", null);
+], InterviewsController.prototype, "reschedule", null);
 __decorate([
     (0, common_1.Get)(),
     (0, rate_limit_1.RateLimited)(rate_limit_1.RateLimitProfile.READ),
