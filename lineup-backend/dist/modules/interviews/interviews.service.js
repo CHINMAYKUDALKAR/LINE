@@ -307,18 +307,16 @@ let InterviewsService = class InterviewsService {
                     where: { id: slot.candidateId },
                     data: { stage: newStage },
                 });
-                await this.prisma.auditLog.create({
+                await this.prisma.candidateStageHistory.create({
                     data: {
                         tenantId,
-                        userId,
-                        action: 'CANDIDATE_STAGE_TRANSITION',
-                        metadata: {
-                            candidateId: slot.candidateId,
-                            previousStage,
-                            newStage,
-                            triggeredBy: 'BULK_SCHEDULE',
-                            interviewId: interview.id,
-                        },
+                        candidateId: slot.candidateId,
+                        previousStage,
+                        newStage,
+                        source: 'SYSTEM',
+                        triggeredBy: 'BULK_SCHEDULE',
+                        actorId: userId,
+                        reason: null,
                     },
                 });
                 for (const interviewerId of dto.interviewerIds) {

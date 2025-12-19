@@ -6,6 +6,8 @@ import { UpdateCandidateDto } from './dto/update-candidate.dto';
 import { ListCandidatesDto } from './dto/list-candidates.dto';
 import { BulkImportDto } from './dto/bulk-import.dto';
 import { CreateCandidateNoteDto, UpdateCandidateNoteDto } from './dto/candidate-note.dto';
+import { TransitionStageDto, RejectCandidateDto, StageTransitionResponseDto, StageHistoryEntryDto } from './dto/transition-stage.dto';
+import { StageTransitionService } from './services/stage-transition.service';
 import { JwtAuthGuard } from '../auth/guards/jwt.guard';
 import { RbacGuard } from '../auth/guards/rbac.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -16,7 +18,10 @@ import { RateLimited, RateLimitProfile } from '../../common/rate-limit';
 @Controller('api/v1/candidates')
 @UseGuards(JwtAuthGuard, RbacGuard)
 export class CandidatesController {
-    constructor(private svc: CandidatesService) { }
+    constructor(
+        private svc: CandidatesService,
+        private stageTransitionService: StageTransitionService,
+    ) { }
 
     @Post()
     @RateLimited(RateLimitProfile.WRITE)
@@ -63,6 +68,69 @@ export class CandidatesController {
     delete(@Req() req: any, @Param('id') id: string) {
         return this.svc.delete(req.user.tenantId, req.user.sub, id);
     }
+
+    // =====================================================
+    // STAGE TRANSITIONS
+    // =====================================================
+
+    @Post(':id/transition')
+    @RateLimited(RateLimitProfile.WRITE)
+    @Roles('ADMIN', 'MANAGER', 'RECRUITER')
+    @ApiOperation({ summary: 'Transition candidate to a new stage' })
+    @ApiParam({ name: 'id', description: 'Candidate ID' })
+    @ApiBody({ type: TransitionStageDto })
+    @ApiResponse({ status: 200, description: 'Stage transition successful', type: StageTransitionResponseDto })
+    @ApiResponse({ status: 400, description: 'Invalid stage or transition not allowed' })
+    @ApiResponse({ status: 403, description: 'Candidate is in terminal stage' })
+    @ApiResponse({ status: 404, description: 'Candidate not found' })
+    async transitionStage(@Req() req: any, @Param('id') id: string, @Body() dto: TransitionStageDto) {
+        // Only ADMIN can use allowOverride
+        const allowOverride = req.user.role === 'ADMIN' ? dto.allowOverride : false;
+
+        return this.stageTransitionService.transitionStage(req.user.tenantId, {
+            candidateId: id,
+            newStage: dto.newStage,
+            source: 'USER',
+            triggeredBy: 'MANUAL',
+            actorId: req.user.sub,
+            reason: dto.reason,
+            allowOverride,
+        });
+    }
+
+    @Post(':id/reject')
+    @RateLimited(RateLimitProfile.WRITE)
+    @Roles('ADMIN', 'MANAGER', 'RECRUITER')
+    @ApiOperation({ summary: 'Reject a candidate (moves to terminal REJECTED stage)' })
+    @ApiParam({ name: 'id', description: 'Candidate ID' })
+    @ApiBody({ type: RejectCandidateDto })
+    @ApiResponse({ status: 200, description: 'Candidate rejected successfully', type: StageTransitionResponseDto })
+    @ApiResponse({ status: 400, description: 'Reason is required' })
+    @ApiResponse({ status: 403, description: 'Candidate is already in terminal stage' })
+    @ApiResponse({ status: 404, description: 'Candidate not found' })
+    async rejectCandidate(@Req() req: any, @Param('id') id: string, @Body() dto: RejectCandidateDto) {
+        return this.stageTransitionService.rejectCandidate(
+            req.user.tenantId,
+            id,
+            dto.reason,
+            req.user.sub,
+        );
+    }
+
+    @Get(':id/stage-history')
+    @RateLimited(RateLimitProfile.READ)
+    @Roles('ADMIN', 'MANAGER', 'RECRUITER')
+    @ApiOperation({ summary: 'Get full stage transition history for a candidate' })
+    @ApiParam({ name: 'id', description: 'Candidate ID' })
+    @ApiResponse({ status: 200, description: 'Stage transition history', type: [StageHistoryEntryDto] })
+    @ApiResponse({ status: 404, description: 'Candidate not found' })
+    async getStageHistory(@Req() req: any, @Param('id') id: string) {
+        return this.stageTransitionService.getStageHistory(req.user.tenantId, id);
+    }
+
+    // =====================================================
+    // RESUME / DOCUMENTS
+    // =====================================================
 
     @Post(':id/resume/upload-url')
     @RateLimited(RateLimitProfile.WRITE)

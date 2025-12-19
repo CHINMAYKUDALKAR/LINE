@@ -3,9 +3,12 @@ import { CreateCandidateDto } from './dto/create-candidate.dto';
 import { UpdateCandidateDto } from './dto/update-candidate.dto';
 import { ListCandidatesDto } from './dto/list-candidates.dto';
 import { CreateCandidateNoteDto, UpdateCandidateNoteDto } from './dto/candidate-note.dto';
+import { TransitionStageDto, RejectCandidateDto } from './dto/transition-stage.dto';
+import { StageTransitionService } from './services/stage-transition.service';
 export declare class CandidatesController {
     private svc;
-    constructor(svc: CandidatesService);
+    private stageTransitionService;
+    constructor(svc: CandidatesService, stageTransitionService: StageTransitionService);
     create(req: any, dto: CreateCandidateDto): Promise<{
         id: string;
         tenantId: string;
@@ -83,6 +86,25 @@ export declare class CandidatesController {
     delete(req: any, id: string): Promise<{
         success: boolean;
     }>;
+    transitionStage(req: any, id: string, dto: TransitionStageDto): Promise<import("./services/stage-transition.service").StageTransitionResult>;
+    rejectCandidate(req: any, id: string, dto: RejectCandidateDto): Promise<import("./services/stage-transition.service").StageTransitionResult>;
+    getStageHistory(req: any, id: string): Promise<{
+        actor: {
+            name: string | null;
+            id: string;
+            email: string;
+        } | null;
+        id: string;
+        tenantId: string;
+        candidateId: string;
+        previousStage: string;
+        newStage: string;
+        source: string;
+        triggeredBy: string;
+        actorId: string | null;
+        reason: string | null;
+        createdAt: Date;
+    }[]>;
     uploadUrl(req: any, id: string, filename: string): Promise<{
         fileId: string;
         uploadUrl: string;

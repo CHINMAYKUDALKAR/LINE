@@ -70,8 +70,9 @@ model HiringStage {
   order     Int      // Pipeline order (1, 2, 3...)
   color     String?  // Optional UI color hex code
   
-  isActive  Boolean  @default(true)
-  isDefault Boolean  @default(false) // Only one per tenant
+  isActive   Boolean  @default(true)
+  isDefault  Boolean  @default(false) // Only one per tenant
+  isTerminal Boolean  @default(false) // Terminal stages (HIRED, REJECTED) cannot be changed
   
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -204,8 +205,28 @@ model Candidate {
 
   interviews     Interview[]
   candidateNotes CandidateNote[]
+  stageHistory   CandidateStageHistory[]
 
   @@index([tenantId, createdAt], name: "idx_candidate_tenant_created")
+}
+
+// Track all candidate stage transitions for audit trail
+model CandidateStageHistory {
+  id            String   @id @default(cuid())
+  tenantId      String
+  candidateId   String
+  previousStage String
+  newStage      String
+  source        String   // 'SYSTEM' | 'USER'
+  triggeredBy   String   // 'INTERVIEW_SCHEDULED', 'MANUAL', 'BULK_SCHEDULE', etc.
+  actorId       String?  // User who initiated (null for system)
+  reason        String?  // Required for manual/override transitions
+  createdAt     DateTime @default(now())
+
+  candidate     Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, candidateId])
+  @@index([candidateId, createdAt])
 }
 
 

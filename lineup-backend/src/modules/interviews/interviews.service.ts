@@ -348,19 +348,17 @@ export class InterviewsService {
                     data: { stage: newStage },
                 });
 
-                // Log stage transition for audit
-                await this.prisma.auditLog.create({
+                // Record in stage history for full audit trail
+                await this.prisma.candidateStageHistory.create({
                     data: {
                         tenantId,
-                        userId,
-                        action: 'CANDIDATE_STAGE_TRANSITION',
-                        metadata: {
-                            candidateId: slot.candidateId,
-                            previousStage,
-                            newStage,
-                            triggeredBy: 'BULK_SCHEDULE',
-                            interviewId: interview.id,
-                        },
+                        candidateId: slot.candidateId,
+                        previousStage,
+                        newStage,
+                        source: 'SYSTEM',
+                        triggeredBy: 'BULK_SCHEDULE',
+                        actorId: userId,
+                        reason: null,
                     },
                 });
 

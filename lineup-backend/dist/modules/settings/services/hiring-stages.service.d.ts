@@ -6,11 +6,20 @@ export declare const DEFAULT_HIRING_STAGES: ({
     order: number;
     color: string;
     isDefault: boolean;
+    isTerminal?: undefined;
 } | {
     name: string;
     key: string;
     order: number;
     color: string;
+    isDefault?: undefined;
+    isTerminal?: undefined;
+} | {
+    name: string;
+    key: string;
+    order: number;
+    color: string;
+    isTerminal: boolean;
     isDefault?: undefined;
 })[];
 export declare class HiringStagesService {
@@ -25,6 +34,7 @@ export declare class HiringStagesService {
         color: string | null;
         isActive: boolean;
         isDefault: boolean;
+        isTerminal: boolean;
         createdAt: Date;
         updatedAt: Date;
     }[]>;
@@ -37,6 +47,7 @@ export declare class HiringStagesService {
         color: string | null;
         isActive: boolean;
         isDefault: boolean;
+        isTerminal: boolean;
         createdAt: Date;
         updatedAt: Date;
     }>;
@@ -49,6 +60,7 @@ export declare class HiringStagesService {
         color: string | null;
         isActive: boolean;
         isDefault: boolean;
+        isTerminal: boolean;
         createdAt: Date;
         updatedAt: Date;
     } | null>;
@@ -62,6 +74,7 @@ export declare class HiringStagesService {
         color: string | null;
         isActive: boolean;
         isDefault: boolean;
+        isTerminal: boolean;
         createdAt: Date;
         updatedAt: Date;
     }>;
@@ -74,6 +87,7 @@ export declare class HiringStagesService {
         color: string | null;
         isActive: boolean;
         isDefault: boolean;
+        isTerminal: boolean;
         createdAt: Date;
         updatedAt: Date;
     }>;
@@ -86,6 +100,7 @@ export declare class HiringStagesService {
         color: string | null;
         isActive: boolean;
         isDefault: boolean;
+        isTerminal: boolean;
         createdAt: Date;
         updatedAt: Date;
     }>;
@@ -98,6 +113,7 @@ export declare class HiringStagesService {
         color: string | null;
         isActive: boolean;
         isDefault: boolean;
+        isTerminal: boolean;
         createdAt: Date;
         updatedAt: Date;
     }[]>;
@@ -110,6 +126,7 @@ export declare class HiringStagesService {
         color: string | null;
         isActive: boolean;
         isDefault: boolean;
+        isTerminal: boolean;
         createdAt: Date;
         updatedAt: Date;
     }>;

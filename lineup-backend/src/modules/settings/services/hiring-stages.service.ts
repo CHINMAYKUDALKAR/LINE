@@ -10,6 +10,8 @@ export const DEFAULT_HIRING_STAGES = [
     { name: 'Interview 2', key: 'INTERVIEW_2', order: 4, color: '#06b6d4' },
     { name: 'HR Round', key: 'HR_ROUND', order: 5, color: '#10b981' },
     { name: 'Offer', key: 'OFFER', order: 6, color: '#22c55e' },
+    { name: 'Hired', key: 'HIRED', order: 7, color: '#16a34a', isTerminal: true },
+    { name: 'Rejected', key: 'REJECTED', order: 99, color: '#dc2626', isTerminal: true },
 ];
 
 @Injectable()
@@ -294,7 +296,8 @@ export class HiringStagesService {
                 key: s.key,
                 order: s.order,
                 color: s.color,
-                isDefault: s.isDefault || false,
+                isDefault: (s as any).isDefault || false,
+                isTerminal: (s as any).isTerminal || false,
             })),
         });
     }

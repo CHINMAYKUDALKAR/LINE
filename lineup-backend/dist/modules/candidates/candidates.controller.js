@@ -20,14 +20,18 @@ const create_candidate_dto_1 = require("./dto/create-candidate.dto");
 const update_candidate_dto_1 = require("./dto/update-candidate.dto");
 const list_candidates_dto_1 = require("./dto/list-candidates.dto");
 const candidate_note_dto_1 = require("./dto/candidate-note.dto");
+const transition_stage_dto_1 = require("./dto/transition-stage.dto");
+const stage_transition_service_1 = require("./services/stage-transition.service");
 const jwt_guard_1 = require("../auth/guards/jwt.guard");
 const rbac_guard_1 = require("../auth/guards/rbac.guard");
 const roles_decorator_1 = require("../auth/decorators/roles.decorator");
 const rate_limit_1 = require("../../common/rate-limit");
 let CandidatesController = class CandidatesController {
     svc;
-    constructor(svc) {
+    stageTransitionService;
+    constructor(svc, stageTransitionService) {
         this.svc = svc;
+        this.stageTransitionService = stageTransitionService;
     }
     create(req, dto) {
         return this.svc.create(req.user.tenantId, req.user.sub, dto);
@@ -43,6 +47,24 @@ let CandidatesController = class CandidatesController {
     }
     delete(req, id) {
         return this.svc.delete(req.user.tenantId, req.user.sub, id);
+    }
+    async transitionStage(req, id, dto) {
+        const allowOverride = req.user.role === 'ADMIN' ? dto.allowOverride : false;
+        return this.stageTransitionService.transitionStage(req.user.tenantId, {
+            candidateId: id,
+            newStage: dto.newStage,
+            source: 'USER',
+            triggeredBy: 'MANUAL',
+            actorId: req.user.sub,
+            reason: dto.reason,
+            allowOverride,
+        });
+    }
+    async rejectCandidate(req, id, dto) {
+        return this.stageTransitionService.rejectCandidate(req.user.tenantId, id, dto.reason, req.user.sub);
+    }
+    async getStageHistory(req, id) {
+        return this.stageTransitionService.getStageHistory(req.user.tenantId, id);
     }
     uploadUrl(req, id, filename) {
         return this.svc.generateResumeUploadUrl(req.user.tenantId, req.user.sub, id, filename);
@@ -135,6 +157,56 @@ __decorate([
     __metadata("design:paramtypes", [Object, String]),
     __metadata("design:returntype", void 0)
 ], CandidatesController.prototype, "delete", null);
+__decorate([
+    (0, common_1.Post)(':id/transition'),
+    (0, rate_limit_1.RateLimited)(rate_limit_1.RateLimitProfile.WRITE),
+    (0, roles_decorator_1.Roles)('ADMIN', 'MANAGER', 'RECRUITER'),
+    (0, swagger_1.ApiOperation)({ summary: 'Transition candidate to a new stage' }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: 'Candidate ID' }),
+    (0, swagger_1.ApiBody)({ type: transition_stage_dto_1.TransitionStageDto }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Stage transition successful', type: transition_stage_dto_1.StageTransitionResponseDto }),
+    (0, swagger_1.ApiResponse)({ status: 400, description: 'Invalid stage or transition not allowed' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: 'Candidate is in terminal stage' }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: 'Candidate not found' }),
+    __param(0, (0, common_1.Req)()),
+    __param(1, (0, common_1.Param)('id')),
+    __param(2, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String, transition_stage_dto_1.TransitionStageDto]),
+    __metadata("design:returntype", Promise)
+], CandidatesController.prototype, "transitionStage", null);
+__decorate([
+    (0, common_1.Post)(':id/reject'),
+    (0, rate_limit_1.RateLimited)(rate_limit_1.RateLimitProfile.WRITE),
+    (0, roles_decorator_1.Roles)('ADMIN', 'MANAGER', 'RECRUITER'),
+    (0, swagger_1.ApiOperation)({ summary: 'Reject a candidate (moves to terminal REJECTED stage)' }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: 'Candidate ID' }),
+    (0, swagger_1.ApiBody)({ type: transition_stage_dto_1.RejectCandidateDto }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Candidate rejected successfully', type: transition_stage_dto_1.StageTransitionResponseDto }),
+    (0, swagger_1.ApiResponse)({ status: 400, description: 'Reason is required' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: 'Candidate is already in terminal stage' }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: 'Candidate not found' }),
+    __param(0, (0, common_1.Req)()),
+    __param(1, (0, common_1.Param)('id')),
+    __param(2, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String, transition_stage_dto_1.RejectCandidateDto]),
+    __metadata("design:returntype", Promise)
+], CandidatesController.prototype, "rejectCandidate", null);
+__decorate([
+    (0, common_1.Get)(':id/stage-history'),
+    (0, rate_limit_1.RateLimited)(rate_limit_1.RateLimitProfile.READ),
+    (0, roles_decorator_1.Roles)('ADMIN', 'MANAGER', 'RECRUITER'),
+    (0, swagger_1.ApiOperation)({ summary: 'Get full stage transition history for a candidate' }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: 'Candidate ID' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Stage transition history', type: [transition_stage_dto_1.StageHistoryEntryDto] }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: 'Candidate not found' }),
+    __param(0, (0, common_1.Req)()),
+    __param(1, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:returntype", Promise)
+], CandidatesController.prototype, "getStageHistory", null);
 __decorate([
     (0, common_1.Post)(':id/resume/upload-url'),
     (0, rate_limit_1.RateLimited)(rate_limit_1.RateLimitProfile.WRITE),
@@ -246,6 +318,7 @@ exports.CandidatesController = CandidatesController = __decorate([
     (0, swagger_1.ApiBearerAuth)('JWT-auth'),
     (0, common_1.Controller)('api/v1/candidates'),
     (0, common_1.UseGuards)(jwt_guard_1.JwtAuthGuard, rbac_guard_1.RbacGuard),
-    __metadata("design:paramtypes", [candidates_service_1.CandidatesService])
+    __metadata("design:paramtypes", [candidates_service_1.CandidatesService,
+        stage_transition_service_1.StageTransitionService])
 ], CandidatesController);
 //# sourceMappingURL=candidates.controller.js.map

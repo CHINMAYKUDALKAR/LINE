@@ -12,6 +12,7 @@ export declare class HiringStagesController {
         color: string | null;
         isActive: boolean;
         isDefault: boolean;
+        isTerminal: boolean;
         createdAt: Date;
         updatedAt: Date;
     }[]>;
@@ -24,6 +25,7 @@ export declare class HiringStagesController {
         color: string | null;
         isActive: boolean;
         isDefault: boolean;
+        isTerminal: boolean;
         createdAt: Date;
         updatedAt: Date;
     }>;
@@ -36,6 +38,7 @@ export declare class HiringStagesController {
         color: string | null;
         isActive: boolean;
         isDefault: boolean;
+        isTerminal: boolean;
         createdAt: Date;
         updatedAt: Date;
     }>;
@@ -48,6 +51,7 @@ export declare class HiringStagesController {
         color: string | null;
         isActive: boolean;
         isDefault: boolean;
+        isTerminal: boolean;
         createdAt: Date;
         updatedAt: Date;
     }>;
@@ -60,6 +64,7 @@ export declare class HiringStagesController {
         color: string | null;
         isActive: boolean;
         isDefault: boolean;
+        isTerminal: boolean;
         createdAt: Date;
         updatedAt: Date;
     }[]>;
@@ -72,6 +77,7 @@ export declare class HiringStagesController {
         color: string | null;
         isActive: boolean;
         isDefault: boolean;
+        isTerminal: boolean;
         createdAt: Date;
         updatedAt: Date;
     }>;

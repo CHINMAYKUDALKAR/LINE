@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { CandidatesService } from './candidates.service';
 import { CandidatesController } from './candidates.controller';
 import { CandidateImportProcessor } from './processors/candidate-import.processor';
+import { StageTransitionService } from './services/stage-transition.service';
 import { PrismaService } from '../../common/prisma.service';
 import { StorageService } from '../storage/storage.service';
 import { EmailService } from '../email/email.service';
@@ -20,7 +21,7 @@ import { RecycleBinModule } from '../recycle-bin/recycle-bin.module';
     StorageModule,
   ],
   controllers: [CandidatesController],
-  providers: [CandidatesService, PrismaService, CandidateImportProcessor],
-  exports: [CandidatesService]
+  providers: [CandidatesService, StageTransitionService, PrismaService, CandidateImportProcessor],
+  exports: [CandidatesService, StageTransitionService]
 })
 export class CandidatesModule { }

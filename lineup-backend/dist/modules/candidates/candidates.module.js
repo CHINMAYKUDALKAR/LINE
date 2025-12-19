@@ -11,6 +11,7 @@ const common_1 = require("@nestjs/common");
 const candidates_service_1 = require("./candidates.service");
 const candidates_controller_1 = require("./candidates.controller");
 const candidate_import_processor_1 = require("./processors/candidate-import.processor");
+const stage_transition_service_1 = require("./services/stage-transition.service");
 const prisma_service_1 = require("../../common/prisma.service");
 const email_module_1 = require("../email/email.module");
 const storage_module_1 = require("../storage/storage.module");
@@ -30,8 +31,8 @@ exports.CandidatesModule = CandidatesModule = __decorate([
             storage_module_1.StorageModule,
         ],
         controllers: [candidates_controller_1.CandidatesController],
-        providers: [candidates_service_1.CandidatesService, prisma_service_1.PrismaService, candidate_import_processor_1.CandidateImportProcessor],
-        exports: [candidates_service_1.CandidatesService]
+        providers: [candidates_service_1.CandidatesService, stage_transition_service_1.StageTransitionService, prisma_service_1.PrismaService, candidate_import_processor_1.CandidateImportProcessor],
+        exports: [candidates_service_1.CandidatesService, stage_transition_service_1.StageTransitionService]
     })
 ], CandidatesModule);
 //# sourceMappingURL=candidates.module.js.map
