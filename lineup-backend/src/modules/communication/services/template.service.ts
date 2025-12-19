@@ -247,9 +247,6 @@ export class TemplateService {
                 { name: 'company.name', description: 'Company name' },
                 { name: 'company.domain', description: 'Company domain' },
             ],
-            portal: [
-                { name: 'portal.link', description: 'Candidate portal link' },
-            ],
         };
     }
 

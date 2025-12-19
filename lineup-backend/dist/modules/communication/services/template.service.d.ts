@@ -125,10 +125,6 @@ export declare class TemplateService {
             name: string;
             description: string;
         }[];
-        portal: {
-            name: string;
-            description: string;
-        }[];
     };
     getVersions(tenantId: string, name: string, channel: Channel): Promise<{
         id: string;

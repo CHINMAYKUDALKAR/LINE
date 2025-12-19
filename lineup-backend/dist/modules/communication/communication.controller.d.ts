@@ -188,10 +188,6 @@ export declare class CommunicationController {
             name: string;
             description: string;
         }[];
-        portal: {
-            name: string;
-            description: string;
-        }[];
     };
     getTemplate(req: any, id: string): Promise<{
         id: string;
