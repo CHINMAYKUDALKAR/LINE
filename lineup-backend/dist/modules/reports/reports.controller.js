@@ -21,31 +21,39 @@ const rbac_guard_1 = require("../auth/guards/rbac.guard");
 const roles_decorator_1 = require("../auth/decorators/roles.decorator");
 const scheduled_report_dto_1 = require("./dto/scheduled-report.dto");
 const rate_limit_1 = require("../../common/rate-limit");
+const get_report_dto_1 = require("./dto/get-report.dto");
+const dashboard_summary_dto_1 = require("./dto/dashboard-summary.dto");
 let ReportsController = class ReportsController {
     svc;
     constructor(svc) {
         this.svc = svc;
     }
+    summary(req) {
+        return this.svc.getDashboardSummary(req.user.tenantId);
+    }
     overview(req, refresh) {
         return this.svc.overview(req.user.tenantId, refresh === 'true');
     }
-    funnel(req, refresh) {
-        return this.svc.funnel(req.user.tenantId, refresh === 'true');
+    funnel(req, filters, refresh) {
+        return this.svc.funnel(req.user.tenantId, filters, refresh === 'true');
     }
-    timeToHire(req, refresh) {
-        return this.svc.timeToHire(req.user.tenantId, refresh === 'true');
+    timeToHire(req, filters, refresh) {
+        return this.svc.timeToHire(req.user.tenantId, filters, refresh === 'true');
     }
-    interviewerLoad(req, refresh) {
-        return this.svc.interviewerLoad(req.user.tenantId, refresh === 'true');
+    interviewerLoad(req, filters, refresh) {
+        return this.svc.interviewerLoad(req.user.tenantId, filters, refresh === 'true');
     }
-    async exportCsv(req, res, type) {
-        const { filename, content } = await this.svc.exportToCsv(req.user.tenantId, type);
+    sourcePerformance(req, filters, refresh) {
+        return this.svc.sourcePerformance(req.user.tenantId, filters, refresh === 'true');
+    }
+    async exportCsv(req, res, type, filters) {
+        const { filename, content } = await this.svc.exportToCsv(req.user.tenantId, type, filters);
         res.setHeader('Content-Type', 'text/csv');
         res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
         res.send(content);
     }
-    async exportPdf(req, res, type) {
-        const { filename, html } = await this.svc.exportToPdf(req.user.tenantId, type);
+    async exportPdf(req, res, type, filters) {
+        const { filename, html } = await this.svc.exportToPdf(req.user.tenantId, type, filters);
         res.setHeader('Content-Type', 'text/html');
         res.setHeader('X-Filename', filename);
         res.send(html);
@@ -68,6 +76,16 @@ let ReportsController = class ReportsController {
 };
 exports.ReportsController = ReportsController;
 __decorate([
+    (0, common_1.Get)('summary'),
+    (0, roles_decorator_1.Roles)('MANAGER', 'ADMIN'),
+    (0, swagger_1.ApiOperation)({ summary: 'Get dashboard summary metrics' }),
+    (0, swagger_1.ApiResponse)({ status: 200, type: dashboard_summary_dto_1.DashboardSummaryDto }),
+    __param(0, (0, common_1.Req)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", void 0)
+], ReportsController.prototype, "summary", null);
+__decorate([
     (0, common_1.Get)('overview'),
     (0, roles_decorator_1.Roles)('MANAGER', 'ADMIN'),
     (0, swagger_1.ApiOperation)({ summary: 'Get overview report with funnel, time-to-hire, and interviewer load' }),
@@ -86,9 +104,10 @@ __decorate([
     (0, swagger_1.ApiQuery)({ name: 'refresh', required: false, description: 'Force refresh cached data' }),
     (0, swagger_1.ApiResponse)({ status: 200, description: 'Funnel data by hiring stage' }),
     __param(0, (0, common_1.Req)()),
-    __param(1, (0, common_1.Query)('refresh')),
+    __param(1, (0, common_1.Query)()),
+    __param(2, (0, common_1.Query)('refresh')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:paramtypes", [Object, get_report_dto_1.GetReportDto, String]),
     __metadata("design:returntype", void 0)
 ], ReportsController.prototype, "funnel", null);
 __decorate([
@@ -98,9 +117,10 @@ __decorate([
     (0, swagger_1.ApiQuery)({ name: 'refresh', required: false, description: 'Force refresh cached data' }),
     (0, swagger_1.ApiResponse)({ status: 200, description: 'Time-to-hire statistics' }),
     __param(0, (0, common_1.Req)()),
-    __param(1, (0, common_1.Query)('refresh')),
+    __param(1, (0, common_1.Query)()),
+    __param(2, (0, common_1.Query)('refresh')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:paramtypes", [Object, get_report_dto_1.GetReportDto, String]),
     __metadata("design:returntype", void 0)
 ], ReportsController.prototype, "timeToHire", null);
 __decorate([
@@ -110,11 +130,25 @@ __decorate([
     (0, swagger_1.ApiQuery)({ name: 'refresh', required: false, description: 'Force refresh cached data' }),
     (0, swagger_1.ApiResponse)({ status: 200, description: 'Interviewer load metrics per user' }),
     __param(0, (0, common_1.Req)()),
-    __param(1, (0, common_1.Query)('refresh')),
+    __param(1, (0, common_1.Query)()),
+    __param(2, (0, common_1.Query)('refresh')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:paramtypes", [Object, get_report_dto_1.GetReportDto, String]),
     __metadata("design:returntype", void 0)
 ], ReportsController.prototype, "interviewerLoad", null);
+__decorate([
+    (0, common_1.Get)('source-performance'),
+    (0, roles_decorator_1.Roles)('MANAGER', 'ADMIN'),
+    (0, swagger_1.ApiOperation)({ summary: 'Get source effectiveness report' }),
+    (0, swagger_1.ApiQuery)({ name: 'refresh', required: false, description: 'Force refresh cached data' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Source performance metrics' }),
+    __param(0, (0, common_1.Req)()),
+    __param(1, (0, common_1.Query)()),
+    __param(2, (0, common_1.Query)('refresh')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, get_report_dto_1.GetReportDto, String]),
+    __metadata("design:returntype", void 0)
+], ReportsController.prototype, "sourcePerformance", null);
 __decorate([
     (0, common_1.Get)('export/csv/:type'),
     (0, roles_decorator_1.Roles)('MANAGER', 'ADMIN'),
@@ -123,8 +157,9 @@ __decorate([
     __param(0, (0, common_1.Req)()),
     __param(1, (0, common_1.Res)()),
     __param(2, (0, common_1.Param)('type')),
+    __param(3, (0, common_1.Query)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, Object, String]),
+    __metadata("design:paramtypes", [Object, Object, String, get_report_dto_1.GetReportDto]),
     __metadata("design:returntype", Promise)
 ], ReportsController.prototype, "exportCsv", null);
 __decorate([
@@ -135,8 +170,9 @@ __decorate([
     __param(0, (0, common_1.Req)()),
     __param(1, (0, common_1.Res)()),
     __param(2, (0, common_1.Param)('type')),
+    __param(3, (0, common_1.Query)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, Object, String]),
+    __metadata("design:paramtypes", [Object, Object, String, get_report_dto_1.GetReportDto]),
     __metadata("design:returntype", Promise)
 ], ReportsController.prototype, "exportPdf", null);
 __decorate([

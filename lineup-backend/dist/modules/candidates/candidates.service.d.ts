@@ -73,13 +73,15 @@ export declare class CandidatesService {
     }>;
     list(tenantId: string, dto: ListCandidatesDto): Promise<{
         data: {
-            name: string;
             id: string;
+            name: string;
             email: string | null;
-            createdAt: Date;
             roleTitle: string | null;
             stage: string;
             source: string | null;
+            createdById: string | null;
+            createdAt: Date;
+            updatedAt: Date;
         }[];
         meta: {
             total: number;
@@ -127,17 +129,17 @@ export declare class CandidatesService {
             id: string;
             createdAt: Date;
             updatedAt: Date;
-            metadata: import(".prisma/client").Prisma.JsonValue;
             filename: string;
             mimeType: string | null;
             size: number | null;
+            metadata: import(".prisma/client").Prisma.JsonValue;
         }[];
     }>;
     listNotes(tenantId: string, candidateId: string, page?: number, perPage?: number): Promise<{
         data: {
             author: {
-                name: string | null;
                 id: string;
+                name: string | null;
                 email: string;
             };
             id: string;
@@ -158,8 +160,8 @@ export declare class CandidatesService {
     private sanitizeContent;
     addNote(tenantId: string, candidateId: string, userId: string, content: string): Promise<{
         author: {
-            name: string | null;
             id: string;
+            name: string | null;
             email: string;
         };
         id: string;

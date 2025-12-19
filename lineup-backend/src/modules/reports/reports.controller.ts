@@ -8,6 +8,9 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { CreateScheduledReportDto, ReportType } from './dto/scheduled-report.dto';
 import { RateLimited, RateLimitProfile } from '../../common/rate-limit';
 
+import { GetReportDto } from './dto/get-report.dto';
+import { DashboardSummaryDto } from './dto/dashboard-summary.dto';
+
 @ApiTags('reports')
 @ApiBearerAuth('JWT-auth')
 @Controller('api/v1/reports')
@@ -17,6 +20,14 @@ export class ReportsController {
     constructor(private svc: ReportsService) { }
 
     // ─── Core Reports ────────────────────────────────────────────────────────────
+
+    @Get('summary')
+    @Roles('MANAGER', 'ADMIN')
+    @ApiOperation({ summary: 'Get dashboard summary metrics' })
+    @ApiResponse({ status: 200, type: DashboardSummaryDto })
+    summary(@Req() req: any) {
+        return this.svc.getDashboardSummary(req.user.tenantId);
+    }
 
     @Get('overview')
     @Roles('MANAGER', 'ADMIN')
@@ -32,8 +43,8 @@ export class ReportsController {
     @ApiOperation({ summary: 'Get candidate funnel/stage breakdown' })
     @ApiQuery({ name: 'refresh', required: false, description: 'Force refresh cached data' })
     @ApiResponse({ status: 200, description: 'Funnel data by hiring stage' })
-    funnel(@Req() req: any, @Query('refresh') refresh?: string) {
-        return this.svc.funnel(req.user.tenantId, refresh === 'true');
+    funnel(@Req() req: any, @Query() filters: GetReportDto, @Query('refresh') refresh?: string) {
+        return this.svc.funnel(req.user.tenantId, filters, refresh === 'true');
     }
 
     @Get('time-to-hire')
@@ -41,8 +52,8 @@ export class ReportsController {
     @ApiOperation({ summary: 'Get average time-to-hire metrics' })
     @ApiQuery({ name: 'refresh', required: false, description: 'Force refresh cached data' })
     @ApiResponse({ status: 200, description: 'Time-to-hire statistics' })
-    timeToHire(@Req() req: any, @Query('refresh') refresh?: string) {
-        return this.svc.timeToHire(req.user.tenantId, refresh === 'true');
+    timeToHire(@Req() req: any, @Query() filters: GetReportDto, @Query('refresh') refresh?: string) {
+        return this.svc.timeToHire(req.user.tenantId, filters, refresh === 'true');
     }
 
     @Get('interviewer-load')
@@ -50,8 +61,17 @@ export class ReportsController {
     @ApiOperation({ summary: 'Get interviewer workload distribution' })
     @ApiQuery({ name: 'refresh', required: false, description: 'Force refresh cached data' })
     @ApiResponse({ status: 200, description: 'Interviewer load metrics per user' })
-    interviewerLoad(@Req() req: any, @Query('refresh') refresh?: string) {
-        return this.svc.interviewerLoad(req.user.tenantId, refresh === 'true');
+    interviewerLoad(@Req() req: any, @Query() filters: GetReportDto, @Query('refresh') refresh?: string) {
+        return this.svc.interviewerLoad(req.user.tenantId, filters, refresh === 'true');
+    }
+
+    @Get('source-performance')
+    @Roles('MANAGER', 'ADMIN')
+    @ApiOperation({ summary: 'Get source effectiveness report' })
+    @ApiQuery({ name: 'refresh', required: false, description: 'Force refresh cached data' })
+    @ApiResponse({ status: 200, description: 'Source performance metrics' })
+    sourcePerformance(@Req() req: any, @Query() filters: GetReportDto, @Query('refresh') refresh?: string) {
+        return this.svc.sourcePerformance(req.user.tenantId, filters, refresh === 'true');
     }
 
     // ─── Export Endpoints ────────────────────────────────────────────────────────
@@ -63,9 +83,10 @@ export class ReportsController {
     async exportCsv(
         @Req() req: any,
         @Res() res: Response,
-        @Param('type') type: ReportType
+        @Param('type') type: ReportType,
+        @Query() filters: GetReportDto
     ) {
-        const { filename, content } = await this.svc.exportToCsv(req.user.tenantId, type);
+        const { filename, content } = await this.svc.exportToCsv(req.user.tenantId, type, filters);
         res.setHeader('Content-Type', 'text/csv');
         res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
         res.send(content);
@@ -78,9 +99,10 @@ export class ReportsController {
     async exportPdf(
         @Req() req: any,
         @Res() res: Response,
-        @Param('type') type: ReportType
+        @Param('type') type: ReportType,
+        @Query() filters: GetReportDto
     ) {
-        const { filename, html } = await this.svc.exportToPdf(req.user.tenantId, type);
+        const { filename, html } = await this.svc.exportToPdf(req.user.tenantId, type, filters);
         // Return HTML that can be converted to PDF on client side using html2pdf or similar
         res.setHeader('Content-Type', 'text/html');
         res.setHeader('X-Filename', filename);

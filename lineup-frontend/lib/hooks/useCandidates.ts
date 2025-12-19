@@ -46,6 +46,9 @@ export interface CandidateListParams {
     stage?: string;
     source?: string;
     q?: string;
+    recruiterId?: string;
+    dateFrom?: string;
+    dateTo?: string;
 }
 
 export interface CandidateListResponse {

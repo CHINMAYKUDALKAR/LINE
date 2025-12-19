@@ -13,7 +13,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.ReportsService = void 0;
 const common_1 = require("@nestjs/common");
 const prisma_service_1 = require("../../common/prisma.service");
-const sql_util_1 = require("../../common/sql.util");
+const client_1 = require("@prisma/client");
 const cache_util_1 = require("../../common/cache.util");
 const scheduled_report_dto_1 = require("./dto/scheduled-report.dto");
 let ReportsService = ReportsService_1 = class ReportsService {
@@ -22,60 +22,184 @@ let ReportsService = ReportsService_1 = class ReportsService {
     constructor(prisma) {
         this.prisma = prisma;
     }
-    async getReport(tenantId, name, forceRefresh = false) {
-        const cacheKey = `reports:${tenantId}:${name}`;
-        if (!forceRefresh) {
+    async getDashboardSummary(tenantId) {
+        const [totalCandidates, activeInterviews, offersMade, hires] = await Promise.all([
+            this.prisma.candidate.count({
+                where: { tenantId, deletedAt: null }
+            }),
+            this.prisma.interview.count({
+                where: {
+                    tenantId,
+                    deletedAt: null,
+                    status: { in: ['SCHEDULED', 'RESCHEDULED', 'PENDING_FEEDBACK'] }
+                }
+            }),
+            this.prisma.candidate.count({
+                where: { tenantId, deletedAt: null, stage: 'OFFER' }
+            }),
+            this.prisma.candidate.count({
+                where: { tenantId, deletedAt: null, stage: 'HIRED' }
+            })
+        ]);
+        return {
+            totalCandidates,
+            activeInterviews,
+            offersMade,
+            hires
+        };
+    }
+    buildDateFilter(field, from, to) {
+        if (from && to) {
+            return client_1.Prisma.sql `AND ${client_1.Prisma.raw(field)} >= ${new Date(from)} AND ${client_1.Prisma.raw(field)} <= ${new Date(to)}`;
+        }
+        if (from) {
+            return client_1.Prisma.sql `AND ${client_1.Prisma.raw(field)} >= ${new Date(from)}`;
+        }
+        if (to) {
+            return client_1.Prisma.sql `AND ${client_1.Prisma.raw(field)} <= ${new Date(to)}`;
+        }
+        return client_1.Prisma.empty;
+    }
+    buildRoleFilter(role) {
+        return role ? client_1.Prisma.sql `AND "roleTitle" = ${role}` : client_1.Prisma.empty;
+    }
+    async funnel(tenantId, filters = {}, force = false) {
+        const cacheKey = `reports:${tenantId}:funnel:${JSON.stringify(filters)}`;
+        if (!force) {
             const cached = await (0, cache_util_1.getCached)(cacheKey);
             if (cached)
                 return cached;
         }
-        try {
-            const sqlTemplate = (0, sql_util_1.loadSQL)(`${name}.sql`);
-            const result = await this.prisma.$queryRawUnsafe(sqlTemplate, tenantId);
-            await (0, cache_util_1.setCached)(cacheKey, result, 1800);
-            return result;
-        }
-        catch (error) {
-            this.logger.error(`Error generating report ${name}: ${error.message}`);
-            throw error;
-        }
+        const dateFilter = this.buildDateFilter('"createdAt"', filters.from, filters.to);
+        const roleFilter = this.buildRoleFilter(filters.role);
+        const result = await this.prisma.$queryRaw `
+            SELECT
+                stage,
+                COUNT(*)::int as count,
+                ROUND((COUNT(*) * 100.0 / SUM(COUNT(*)) OVER ())::numeric, 1)::float as percentage
+            FROM "Candidate"
+            WHERE "tenantId" = ${tenantId} 
+            AND "deletedAt" IS NULL
+            ${dateFilter}
+            ${roleFilter}
+            GROUP BY stage
+            ORDER BY count DESC;
+        `;
+        await (0, cache_util_1.setCached)(cacheKey, result, 600);
+        return result;
     }
-    async funnel(tenantId, force = false) { return this.getReport(tenantId, 'funnel', force); }
-    async timeToHire(tenantId, force = false) {
-        const result = await this.getReport(tenantId, 'time_to_hire', force);
-        return result[0] || { averageDays: 0 };
+    async timeToHire(tenantId, filters = {}, force = false) {
+        const cacheKey = `reports:${tenantId}:time_to_hire:${JSON.stringify(filters)}`;
+        if (!force) {
+            const cached = await (0, cache_util_1.getCached)(cacheKey);
+            if (cached)
+                return cached;
+        }
+        const dateFilter = this.buildDateFilter('"createdAt"', filters.from, filters.to);
+        const roleFilter = this.buildRoleFilter(filters.role);
+        const result = await this.prisma.$queryRaw `
+            SELECT
+                COALESCE(ROUND(AVG(EXTRACT(EPOCH FROM ("updatedAt" - "createdAt"))/86400)::numeric, 1), 0)::float as "averageDays"
+            FROM "Candidate"
+            WHERE "tenantId" = ${tenantId} 
+            AND stage = 'HIRED' 
+            AND "deletedAt" IS NULL
+            ${dateFilter}
+            ${roleFilter}
+        `;
+        const data = result[0] || { averageDays: 0 };
+        await (0, cache_util_1.setCached)(cacheKey, data, 600);
+        return data;
     }
-    async interviewerLoad(tenantId, force = false) { return this.getReport(tenantId, 'interviewer_load', force); }
-    async sourcePerformance(tenantId, force = false) { return this.getReport(tenantId, 'source_performance', force); }
-    async stageMetrics(tenantId, force = false) { return this.getReport(tenantId, 'stage_metrics', force); }
+    async interviewerLoad(tenantId, filters = {}, force = false) {
+        const cacheKey = `reports:${tenantId}:interviewer_load:${JSON.stringify(filters)}`;
+        if (!force) {
+            const cached = await (0, cache_util_1.getCached)(cacheKey);
+            if (cached)
+                return cached;
+        }
+        const dateFilter = this.buildDateFilter('inter.date', filters.from, filters.to);
+        const roleFilter = filters.role ? client_1.Prisma.sql `AND c."roleTitle" = ${filters.role}` : client_1.Prisma.empty;
+        const result = await this.prisma.$queryRaw `
+            SELECT
+                u.id as "interviewerId",
+                u.name as "interviewerName",
+                COUNT(*)::int as "totalInterviews",
+                COUNT(CASE WHEN inter.date >= date_trunc('week', current_date) THEN 1 END)::int as "thisWeek",
+                COUNT(CASE WHEN inter.date >= date_trunc('month', current_date) THEN 1 END)::int as "thisMonth",
+                COUNT(CASE WHEN inter."hasFeedback" = false AND inter.status = 'COMPLETED' THEN 1 END)::int as "pendingFeedback"
+            FROM "Interview" inter
+            CROSS JOIN LATERAL UNNEST(inter."interviewerIds") AS vid
+            JOIN "User" u ON u.id = vid
+            JOIN "Candidate" c ON c.id = inter."candidateId"
+            WHERE inter."tenantId" = ${tenantId} 
+            AND inter."deletedAt" IS NULL 
+            AND c."deletedAt" IS NULL
+            ${dateFilter}
+            ${roleFilter}
+            GROUP BY u.id, u.name
+            ORDER BY "totalInterviews" DESC;
+        `;
+        await (0, cache_util_1.setCached)(cacheKey, result, 600);
+        return result;
+    }
+    async sourcePerformance(tenantId, filters = {}, force = false) {
+        const cacheKey = `reports:${tenantId}:source_performance:${JSON.stringify(filters)}`;
+        if (!force) {
+            const cached = await (0, cache_util_1.getCached)(cacheKey);
+            if (cached)
+                return cached;
+        }
+        const dateFilter = this.buildDateFilter('"createdAt"', filters.from, filters.to);
+        const roleFilter = this.buildRoleFilter(filters.role);
+        const result = await this.prisma.$queryRaw `
+            SELECT
+                COALESCE(source, 'Unknown') as source,
+                COUNT(*)::int as "totalCandidates",
+                COUNT(CASE WHEN stage = 'HIRED' THEN 1 END)::int as "hires",
+                COUNT(CASE WHEN stage IN ('OFFER', 'HIRED') THEN 1 END)::int as "offers"
+            FROM "Candidate"
+            WHERE "tenantId" = ${tenantId}
+            AND "deletedAt" IS NULL
+            ${dateFilter}
+            ${roleFilter}
+            GROUP BY source
+            ORDER BY "hires" DESC, "totalCandidates" DESC;
+        `;
+        await (0, cache_util_1.setCached)(cacheKey, result, 600);
+        return result;
+    }
+    async stageMetrics(tenantId, filters = {}, force = false) {
+        return this.funnel(tenantId, filters, force);
+    }
     async overview(tenantId, force = false) {
         const [funnel, timeToHire, interviewerLoad] = await Promise.all([
-            this.funnel(tenantId, force),
-            this.timeToHire(tenantId, force),
-            this.interviewerLoad(tenantId, force)
+            this.funnel(tenantId, {}, force),
+            this.timeToHire(tenantId, {}, force),
+            this.interviewerLoad(tenantId, {}, force)
         ]);
         return { funnel, timeToHire, interviewerLoad };
     }
-    async getReportData(tenantId, reportType, force = true) {
+    async getReportData(tenantId, reportType, filters = {}, force = true) {
         switch (reportType) {
             case scheduled_report_dto_1.ReportType.OVERVIEW:
                 return this.overview(tenantId, force);
             case scheduled_report_dto_1.ReportType.FUNNEL:
-                return this.funnel(tenantId, force);
+                return this.funnel(tenantId, filters, force);
             case scheduled_report_dto_1.ReportType.TIME_TO_HIRE:
-                return this.timeToHire(tenantId, force);
+                return this.timeToHire(tenantId, filters, force);
             case scheduled_report_dto_1.ReportType.INTERVIEWER_LOAD:
-                return this.interviewerLoad(tenantId, force);
+                return this.interviewerLoad(tenantId, filters, force);
             case scheduled_report_dto_1.ReportType.SOURCE_PERFORMANCE:
-                return this.sourcePerformance(tenantId, force);
+                return this.sourcePerformance(tenantId, filters, force);
             case scheduled_report_dto_1.ReportType.STAGE_METRICS:
-                return this.stageMetrics(tenantId, force);
+                return this.stageMetrics(tenantId, filters, force);
             default:
                 throw new common_1.BadRequestException(`Unknown report type: ${reportType}`);
         }
     }
-    async exportToCsv(tenantId, reportType) {
-        const data = await this.getReportData(tenantId, reportType);
+    async exportToCsv(tenantId, reportType, filters = {}) {
+        const data = await this.getReportData(tenantId, reportType, filters);
         const filename = `${reportType}-report-${new Date().toISOString().split('T')[0]}.csv`;
         let rows = [];
         if (reportType === scheduled_report_dto_1.ReportType.OVERVIEW && data && typeof data === 'object' && !Array.isArray(data)) {
@@ -118,8 +242,8 @@ let ReportsService = ReportsService_1 = class ReportsService {
         ];
         return { filename, content: csvLines.join('\n') };
     }
-    async exportToPdf(tenantId, reportType) {
-        const data = await this.getReportData(tenantId, reportType);
+    async exportToPdf(tenantId, reportType, filters = {}) {
+        const data = await this.getReportData(tenantId, reportType, filters);
         const filename = `${reportType}-report-${new Date().toISOString().split('T')[0]}.pdf`;
         const generatedAt = new Date().toLocaleString();
         let tableHtml = '';

@@ -90,6 +90,14 @@ export class CandidatesService {
 
         if (dto.stage) where.stage = dto.stage;
         if (dto.source) where.source = dto.source;
+        if (dto.recruiterId && dto.recruiterId !== 'all') where.createdById = dto.recruiterId;
+
+        if (dto.dateFrom || dto.dateTo) {
+            where.createdAt = { ...where.createdAt }; // preserve existing if any
+            if (dto.dateFrom) where.createdAt.gte = new Date(dto.dateFrom);
+            if (dto.dateTo) where.createdAt.lte = new Date(dto.dateTo);
+        }
+
         if (dto.q) {
             where.OR = [
                 { name: { contains: dto.q, mode: 'insensitive' } },
@@ -105,7 +113,17 @@ export class CandidatesService {
                 skip: (page - 1) * perPage,
                 take: perPage,
                 orderBy: dto.sort ? this.parseSort(dto.sort) : { createdAt: 'desc' },
-                select: { id: true, name: true, email: true, stage: true, roleTitle: true, createdAt: true, source: true }
+                select: {
+                    id: true,
+                    name: true,
+                    email: true,
+                    stage: true,
+                    roleTitle: true,
+                    createdAt: true,
+                    updatedAt: true,
+                    source: true,
+                    createdById: true
+                }
             })
         ]);
 

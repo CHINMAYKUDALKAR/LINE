@@ -4,6 +4,8 @@ import { Prisma } from '@prisma/client';
 import { loadSQL } from '../../common/sql.util';
 import { getCached, setCached } from '../../common/cache.util';
 import { CreateScheduledReportDto, ReportType, ScheduleFrequency } from './dto/scheduled-report.dto';
+import { GetReportDto } from './dto/get-report.dto';
+import { DashboardSummaryDto } from './dto/dashboard-summary.dto';
 
 @Injectable()
 export class ReportsService {
@@ -11,72 +13,218 @@ export class ReportsService {
 
     constructor(private prisma: PrismaService) { }
 
+    // ─── Dashboard Summary ───────────────────────────────────────────────────────
+
+    async getDashboardSummary(tenantId: string): Promise<DashboardSummaryDto> {
+        // Run aggregations in parallel
+        const [totalCandidates, activeInterviews, offersMade, hires] = await Promise.all([
+            // Total active candidates (not deleted)
+            this.prisma.candidate.count({
+                where: { tenantId, deletedAt: null }
+            }),
+            // Active interviews (Scheduled, Rescheduled)
+            this.prisma.interview.count({
+                where: {
+                    tenantId,
+                    deletedAt: null,
+                    status: { in: ['SCHEDULED', 'RESCHEDULED', 'PENDING_FEEDBACK'] }
+                }
+            }),
+            // Offers made
+            this.prisma.candidate.count({
+                where: { tenantId, deletedAt: null, stage: 'OFFER' }
+            }),
+            // Hires usually stage = HIRED
+            this.prisma.candidate.count({
+                where: { tenantId, deletedAt: null, stage: 'HIRED' }
+            })
+        ]);
+
+        return {
+            totalCandidates,
+            activeInterviews,
+            offersMade,
+            hires
+        };
+    }
+
     // ─── Core Report Methods ─────────────────────────────────────────────────────
 
-    async getReport(tenantId: string, name: string, forceRefresh = false) {
-        const cacheKey = `reports:${tenantId}:${name}`;
+    private buildDateFilter(field: string, from?: string, to?: string): Prisma.Sql {
+        if (from && to) {
+            return Prisma.sql`AND ${Prisma.raw(field)} >= ${new Date(from)} AND ${Prisma.raw(field)} <= ${new Date(to)}`;
+        }
+        if (from) {
+            return Prisma.sql`AND ${Prisma.raw(field)} >= ${new Date(from)}`;
+        }
+        if (to) {
+            return Prisma.sql`AND ${Prisma.raw(field)} <= ${new Date(to)}`;
+        }
+        return Prisma.empty;
+    }
 
-        if (!forceRefresh) {
+    private buildRoleFilter(role?: string): Prisma.Sql {
+        return role ? Prisma.sql`AND "roleTitle" = ${role}` : Prisma.empty;
+    }
+
+    async funnel(tenantId: string, filters: GetReportDto = {}, force = false) {
+        const cacheKey = `reports:${tenantId}:funnel:${JSON.stringify(filters)}`;
+        if (!force) {
             const cached = await getCached(cacheKey);
             if (cached) return cached;
         }
 
-        try {
-            const sqlTemplate = loadSQL(`${name}.sql`);
-            // Use $queryRawUnsafe with the tenantId as parameter
-            // The SQL files use $1 as placeholder for tenantId
-            const result = await this.prisma.$queryRawUnsafe(sqlTemplate, tenantId);
+        const dateFilter = this.buildDateFilter('"createdAt"', filters.from, filters.to);
+        const roleFilter = this.buildRoleFilter(filters.role);
 
-            // Cache for 30 minutes
-            await setCached(cacheKey, result, 1800);
-            return result;
-        } catch (error) {
-            this.logger.error(`Error generating report ${name}: ${error.message}`);
-            throw error;
+        const result = await this.prisma.$queryRaw<any[]>`
+            SELECT
+                stage,
+                COUNT(*)::int as count,
+                ROUND((COUNT(*) * 100.0 / SUM(COUNT(*)) OVER ())::numeric, 1)::float as percentage
+            FROM "Candidate"
+            WHERE "tenantId" = ${tenantId} 
+            AND "deletedAt" IS NULL
+            ${dateFilter}
+            ${roleFilter}
+            GROUP BY stage
+            ORDER BY count DESC;
+        `;
+
+        await setCached(cacheKey, result, 600); // 10 min cache
+        return result;
+    }
+
+    async timeToHire(tenantId: string, filters: GetReportDto = {}, force = false) {
+        // Placeholder for now
+        const cacheKey = `reports:${tenantId}:time_to_hire:${JSON.stringify(filters)}`;
+        if (!force) {
+            const cached = await getCached(cacheKey);
+            if (cached) return cached;
         }
+
+        // Basic implementation based on simple start/end diff for hired candidates
+        const dateFilter = this.buildDateFilter('"createdAt"', filters.from, filters.to);
+        const roleFilter = this.buildRoleFilter(filters.role);
+
+        const result = await this.prisma.$queryRaw<any[]>`
+            SELECT
+                COALESCE(ROUND(AVG(EXTRACT(EPOCH FROM ("updatedAt" - "createdAt"))/86400)::numeric, 1), 0)::float as "averageDays"
+            FROM "Candidate"
+            WHERE "tenantId" = ${tenantId} 
+            AND stage = 'HIRED' 
+            AND "deletedAt" IS NULL
+            ${dateFilter}
+            ${roleFilter}
+        `;
+
+        const data = result[0] || { averageDays: 0 };
+        await setCached(cacheKey, data, 600);
+        return data;
     }
 
-    async funnel(tenantId: string, force = false) { return this.getReport(tenantId, 'funnel', force); }
-    async timeToHire(tenantId: string, force = false) {
-        const result = await this.getReport(tenantId, 'time_to_hire', force) as any[];
-        return result[0] || { averageDays: 0 };
-    }
-    async interviewerLoad(tenantId: string, force = false) { return this.getReport(tenantId, 'interviewer_load', force); }
-    async sourcePerformance(tenantId: string, force = false) { return this.getReport(tenantId, 'source_performance', force); }
-    async stageMetrics(tenantId: string, force = false) { return this.getReport(tenantId, 'stage_metrics', force); }
+    async interviewerLoad(tenantId: string, filters: GetReportDto = {}, force = false) {
+        const cacheKey = `reports:${tenantId}:interviewer_load:${JSON.stringify(filters)}`;
+        if (!force) {
+            const cached = await getCached(cacheKey);
+            if (cached) return cached;
+        }
 
-    async overview(tenantId: string, force = false) {
+        const dateFilter = this.buildDateFilter('inter.date', filters.from, filters.to);
+        const roleFilter = filters.role ? Prisma.sql`AND c."roleTitle" = ${filters.role}` : Prisma.empty;
+
+        const result = await this.prisma.$queryRaw<any[]>`
+            SELECT
+                u.id as "interviewerId",
+                u.name as "interviewerName",
+                COUNT(*)::int as "totalInterviews",
+                COUNT(CASE WHEN inter.date >= date_trunc('week', current_date) THEN 1 END)::int as "thisWeek",
+                COUNT(CASE WHEN inter.date >= date_trunc('month', current_date) THEN 1 END)::int as "thisMonth",
+                COUNT(CASE WHEN inter."hasFeedback" = false AND inter.status = 'COMPLETED' THEN 1 END)::int as "pendingFeedback"
+            FROM "Interview" inter
+            CROSS JOIN LATERAL UNNEST(inter."interviewerIds") AS vid
+            JOIN "User" u ON u.id = vid
+            JOIN "Candidate" c ON c.id = inter."candidateId"
+            WHERE inter."tenantId" = ${tenantId} 
+            AND inter."deletedAt" IS NULL 
+            AND c."deletedAt" IS NULL
+            ${dateFilter}
+            ${roleFilter}
+            GROUP BY u.id, u.name
+            ORDER BY "totalInterviews" DESC;
+        `;
+
+        await setCached(cacheKey, result, 600);
+        return result;
+    }
+
+    async sourcePerformance(tenantId: string, filters: GetReportDto = {}, force = false) {
+        const cacheKey = `reports:${tenantId}:source_performance:${JSON.stringify(filters)}`;
+        if (!force) {
+            const cached = await getCached(cacheKey);
+            if (cached) return cached;
+        }
+
+        const dateFilter = this.buildDateFilter('"createdAt"', filters.from, filters.to);
+        const roleFilter = this.buildRoleFilter(filters.role);
+
+        const result = await this.prisma.$queryRaw<any[]>`
+            SELECT
+                COALESCE(source, 'Unknown') as source,
+                COUNT(*)::int as "totalCandidates",
+                COUNT(CASE WHEN stage = 'HIRED' THEN 1 END)::int as "hires",
+                COUNT(CASE WHEN stage IN ('OFFER', 'HIRED') THEN 1 END)::int as "offers"
+            FROM "Candidate"
+            WHERE "tenantId" = ${tenantId}
+            AND "deletedAt" IS NULL
+            ${dateFilter}
+            ${roleFilter}
+            GROUP BY source
+            ORDER BY "hires" DESC, "totalCandidates" DESC;
+        `;
+
+        await setCached(cacheKey, result, 600);
+        return result;
+    }
+
+    async stageMetrics(tenantId: string, filters: GetReportDto = {}, force = false) {
+        return this.funnel(tenantId, filters, force);
+    }
+
+    async overview(tenantId: string, force = false): Promise<any> {
+        // Run parallel aggregations
         const [funnel, timeToHire, interviewerLoad] = await Promise.all([
-            this.funnel(tenantId, force),
-            this.timeToHire(tenantId, force),
-            this.interviewerLoad(tenantId, force)
+            this.funnel(tenantId, {}, force),
+            this.timeToHire(tenantId, {}, force),
+            this.interviewerLoad(tenantId, {}, force)
         ]);
         return { funnel, timeToHire, interviewerLoad };
     }
 
+
     // ─── Export Methods ──────────────────────────────────────────────────────────
 
-    async getReportData(tenantId: string, reportType: ReportType, force = true) {
+    async getReportData(tenantId: string, reportType: ReportType, filters: GetReportDto = {}, force = true) {
         switch (reportType) {
             case ReportType.OVERVIEW:
                 return this.overview(tenantId, force);
             case ReportType.FUNNEL:
-                return this.funnel(tenantId, force);
+                return this.funnel(tenantId, filters, force);
             case ReportType.TIME_TO_HIRE:
-                return this.timeToHire(tenantId, force);
+                return this.timeToHire(tenantId, filters, force);
             case ReportType.INTERVIEWER_LOAD:
-                return this.interviewerLoad(tenantId, force);
+                return this.interviewerLoad(tenantId, filters, force);
             case ReportType.SOURCE_PERFORMANCE:
-                return this.sourcePerformance(tenantId, force);
+                return this.sourcePerformance(tenantId, filters, force);
             case ReportType.STAGE_METRICS:
-                return this.stageMetrics(tenantId, force);
+                return this.stageMetrics(tenantId, filters, force);
             default:
                 throw new BadRequestException(`Unknown report type: ${reportType}`);
         }
     }
 
-    async exportToCsv(tenantId: string, reportType: ReportType): Promise<{ filename: string; content: string }> {
-        const data = await this.getReportData(tenantId, reportType);
+    async exportToCsv(tenantId: string, reportType: ReportType, filters: GetReportDto = {}): Promise<{ filename: string; content: string }> {
+        const data = await this.getReportData(tenantId, reportType, filters);
         const filename = `${reportType}-report-${new Date().toISOString().split('T')[0]}.csv`;
 
         // Handle different report structures
@@ -134,8 +282,8 @@ export class ReportsService {
         return { filename, content: csvLines.join('\n') };
     }
 
-    async exportToPdf(tenantId: string, reportType: ReportType): Promise<{ filename: string; html: string }> {
-        const data = await this.getReportData(tenantId, reportType);
+    async exportToPdf(tenantId: string, reportType: ReportType, filters: GetReportDto = {}): Promise<{ filename: string; html: string }> {
+        const data = await this.getReportData(tenantId, reportType, filters);
         const filename = `${reportType}-report-${new Date().toISOString().split('T')[0]}.pdf`;
         const generatedAt = new Date().toLocaleString();
 

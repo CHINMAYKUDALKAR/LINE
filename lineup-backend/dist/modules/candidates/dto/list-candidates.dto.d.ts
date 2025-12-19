@@ -5,4 +5,7 @@ export declare class ListCandidatesDto {
     page?: string;
     perPage?: string;
     sort?: string;
+    recruiterId?: string;
+    dateFrom?: string;
+    dateTo?: string;
 }

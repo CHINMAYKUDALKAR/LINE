@@ -15,6 +15,8 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { CandidateListItem } from '@/types/candidate-list';
 import { CandidateRowMenu } from './CandidateRowMenu';
+import { CandidateMobileCard } from './CandidateMobileCard';
+import { stageLabels, stageColors, getInitials } from '@/lib/candidate-constants';
 import { UserRole } from '@/types/navigation';
 import { cn } from '@/lib/utils';
 import { EditableSelect } from '@/components/ui/editable-select';
@@ -37,39 +39,14 @@ interface CandidateTableProps {
 type SortField = 'name' | 'stage' | 'role' | 'recruiter' | 'lastActivity';
 type SortDirection = 'asc' | 'desc';
 
-const stageLabels: Record<string, string> = {
-  received: 'Received',
-  screening: 'Screening',
-  'interview-1': 'Interview 1',
-  'interview-2': 'Interview 2',
-  'hr-round': 'HR Round',
-  offer: 'Offer',
-};
-
-const stageColors: Record<string, string> = {
-  received: 'bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200',
-  screening: 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100',
-  'interview-1': 'bg-indigo-50 text-indigo-700 border-indigo-200 hover:bg-indigo-100',
-  'interview-2': 'bg-violet-50 text-violet-700 border-violet-200 hover:bg-violet-100',
-  'hr-round': 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100',
-  offer: 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100',
-};
-
-const getInitials = (name: string) => {
-  return name
-    .split(' ')
-    .map((n) => n[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2);
-};
-
 // Stage options for EditableSelect
 const stageOptions = Object.entries(stageLabels).map(([value, label]) => ({
   value,
   label,
   color: stageColors[value],
 }));
+
+
 
 export function CandidateTable({
   candidates,
@@ -161,88 +138,7 @@ export function CandidateTable({
     router.push(`/candidates/${candidate.id}`);
   };
 
-  // Mobile Card Component
-  const CandidateMobileCard = ({ candidate, isSelected }: { candidate: CandidateListItem; isSelected: boolean }) => {
-    const stageColor = stageColors[candidate.stage] || stageColors.received;
 
-    return (
-      <div
-        className={cn(
-          "bg-card p-4 border-b border-border last:border-0",
-          isSelected && "bg-primary/5"
-        )}
-        onClick={(e) => handleRowClick(candidate, e)}
-      >
-        <div className="flex items-start justify-between gap-3 mb-3">
-          <div className="flex items-start gap-3">
-            <Checkbox
-              checked={isSelected}
-              onCheckedChange={() => handleSelectOne(candidate.id)}
-              className="mt-1"
-            />
-            <div className="flex items-center gap-3">
-              <Avatar className="h-10 w-10">
-                <AvatarFallback className="bg-primary/10 text-primary text-sm">
-                  {getInitials(candidate.name)}
-                </AvatarFallback>
-              </Avatar>
-              <div>
-                <h3 className="font-semibold text-foreground">{candidate.name}</h3>
-                <p className="text-sm text-muted-foreground">{candidate.role}</p>
-              </div>
-            </div>
-          </div>
-
-          <CandidateRowMenu
-            candidate={candidate}
-            userRole={userRole}
-            onViewProfile={(c) => router.push(`/candidate/${c.id}`)}
-            onScheduleInterview={onScheduleInterview}
-            onChangeStage={onChangeStage}
-            onSendEmail={onSendEmail}
-            onSendWhatsApp={onSendWhatsApp}
-            onSendSMS={onSendSMS}
-            onDelete={onDelete}
-          />
-        </div>
-
-        <div className="pl-[2.75rem] space-y-3">
-          <div className="flex items-center justify-between">
-            {onUpdateCandidate && userRole !== 'interviewer' ? (
-              <div onClick={(e) => e.stopPropagation()} className="w-full max-w-[180px]">
-                <EditableSelect
-                  value={candidate.stage}
-                  options={stageOptions}
-                  onSave={async (newStage) => {
-                    await onUpdateCandidate(candidate.id, { stage: newStage as any });
-                  }}
-                  fieldName="stage"
-                  editable={true}
-                />
-              </div>
-            ) : (
-              <Badge
-                variant="outline"
-                className={cn('cursor-pointer transition-colors', stageColor)}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (userRole !== 'interviewer') {
-                    onChangeStage(candidate);
-                  }
-                }}
-              >
-                {stageLabels[candidate.stage]}
-              </Badge>
-            )}
-
-            <span className="text-xs text-muted-foreground">
-              {formatDistanceToNow(new Date(candidate.lastActivity), { addSuffix: true })}
-            </span>
-          </div>
-        </div>
-      </div>
-    );
-  };
 
   return (
     <div className="bg-card rounded-lg border border-border overflow-hidden">
@@ -276,6 +172,18 @@ export function CandidateTable({
                 key={candidate.id}
                 candidate={candidate}
                 isSelected={selectedIds.includes(candidate.id)}
+                userRole={userRole}
+                onSelect={handleSelectOne}
+                onClick={handleRowClick}
+                onViewProfile={(c) => router.push(`/candidate/${c.id}`)}
+                onScheduleInterview={onScheduleInterview}
+                onChangeStage={onChangeStage}
+                onSendEmail={onSendEmail}
+                onSendWhatsApp={onSendWhatsApp}
+                onSendSMS={onSendSMS}
+                onDelete={onDelete}
+                onUpdateCandidate={onUpdateCandidate}
+                stageOptions={stageOptions}
               />
             ))
           )}

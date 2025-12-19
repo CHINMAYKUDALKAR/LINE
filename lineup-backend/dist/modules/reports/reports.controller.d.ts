@@ -1,19 +1,19 @@
 import type { Response } from 'express';
 import { ReportsService } from './reports.service';
 import { CreateScheduledReportDto, ReportType } from './dto/scheduled-report.dto';
+import { GetReportDto } from './dto/get-report.dto';
+import { DashboardSummaryDto } from './dto/dashboard-summary.dto';
 export declare class ReportsController {
     private svc;
     constructor(svc: ReportsService);
-    overview(req: any, refresh?: string): Promise<{
-        funnel: unknown;
-        timeToHire: any;
-        interviewerLoad: unknown;
-    }>;
-    funnel(req: any, refresh?: string): Promise<unknown>;
-    timeToHire(req: any, refresh?: string): Promise<any>;
-    interviewerLoad(req: any, refresh?: string): Promise<unknown>;
-    exportCsv(req: any, res: Response, type: ReportType): Promise<void>;
-    exportPdf(req: any, res: Response, type: ReportType): Promise<void>;
+    summary(req: any): Promise<DashboardSummaryDto>;
+    overview(req: any, refresh?: string): Promise<any>;
+    funnel(req: any, filters: GetReportDto, refresh?: string): Promise<{}>;
+    timeToHire(req: any, filters: GetReportDto, refresh?: string): Promise<any>;
+    interviewerLoad(req: any, filters: GetReportDto, refresh?: string): Promise<{}>;
+    sourcePerformance(req: any, filters: GetReportDto, refresh?: string): Promise<{}>;
+    exportCsv(req: any, res: Response, type: ReportType, filters: GetReportDto): Promise<void>;
+    exportPdf(req: any, res: Response, type: ReportType, filters: GetReportDto): Promise<void>;
     createSchedule(req: any, dto: CreateScheduledReportDto): Promise<{
         id: string;
         tenantId: string;

@@ -1,26 +1,26 @@
 import { PrismaService } from '../../common/prisma.service';
 import { CreateScheduledReportDto, ReportType } from './dto/scheduled-report.dto';
+import { GetReportDto } from './dto/get-report.dto';
+import { DashboardSummaryDto } from './dto/dashboard-summary.dto';
 export declare class ReportsService {
     private prisma;
     private readonly logger;
     constructor(prisma: PrismaService);
-    getReport(tenantId: string, name: string, forceRefresh?: boolean): Promise<unknown>;
-    funnel(tenantId: string, force?: boolean): Promise<unknown>;
-    timeToHire(tenantId: string, force?: boolean): Promise<any>;
-    interviewerLoad(tenantId: string, force?: boolean): Promise<unknown>;
-    sourcePerformance(tenantId: string, force?: boolean): Promise<unknown>;
-    stageMetrics(tenantId: string, force?: boolean): Promise<unknown>;
-    overview(tenantId: string, force?: boolean): Promise<{
-        funnel: unknown;
-        timeToHire: any;
-        interviewerLoad: unknown;
-    }>;
-    getReportData(tenantId: string, reportType: ReportType, force?: boolean): Promise<any>;
-    exportToCsv(tenantId: string, reportType: ReportType): Promise<{
+    getDashboardSummary(tenantId: string): Promise<DashboardSummaryDto>;
+    private buildDateFilter;
+    private buildRoleFilter;
+    funnel(tenantId: string, filters?: GetReportDto, force?: boolean): Promise<{}>;
+    timeToHire(tenantId: string, filters?: GetReportDto, force?: boolean): Promise<any>;
+    interviewerLoad(tenantId: string, filters?: GetReportDto, force?: boolean): Promise<{}>;
+    sourcePerformance(tenantId: string, filters?: GetReportDto, force?: boolean): Promise<{}>;
+    stageMetrics(tenantId: string, filters?: GetReportDto, force?: boolean): Promise<{}>;
+    overview(tenantId: string, force?: boolean): Promise<any>;
+    getReportData(tenantId: string, reportType: ReportType, filters?: GetReportDto, force?: boolean): Promise<any>;
+    exportToCsv(tenantId: string, reportType: ReportType, filters?: GetReportDto): Promise<{
         filename: string;
         content: string;
     }>;
-    exportToPdf(tenantId: string, reportType: ReportType): Promise<{
+    exportToPdf(tenantId: string, reportType: ReportType, filters?: GetReportDto): Promise<{
         filename: string;
         html: string;
     }>;

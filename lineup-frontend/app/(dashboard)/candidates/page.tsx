@@ -29,6 +29,14 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import {
+    Pagination,
+    PaginationContent,
+    PaginationItem,
+    PaginationLink,
+    PaginationNext,
+    PaginationPrevious,
+} from "@/components/ui/pagination";
 
 export default function Candidates() {
     const [filters, setFilters] = useState<CandidateListFilters>({
@@ -64,12 +72,16 @@ export default function Candidates() {
     const [isBulkDeleting, setIsBulkDeleting] = useState(false);
 
     // Use real API data with pagination
+    // Use real API data with pagination
     const { data: candidatesData, isLoading } = useCandidates({
         page,
         perPage,
         q: filters.search || undefined,
         stage: filters.stage !== 'all' ? filters.stage : undefined,
         source: filters.source !== 'all' ? filters.source : undefined,
+        recruiterId: filters.recruiterId !== 'all' ? filters.recruiterId : undefined,
+        dateFrom: filters.dateAddedFrom ? new Date(filters.dateAddedFrom).toISOString() : undefined,
+        dateTo: filters.dateAddedTo ? new Date(filters.dateAddedTo).toISOString() : undefined,
     });
 
     // Type for API candidate response
@@ -110,31 +122,8 @@ export default function Candidates() {
         }));
     }, [candidatesData]);
 
-    const filteredCandidates = useMemo(() => {
-        return candidates.filter((candidate) => {
-            // Recruiter filter (client-side)
-            if (filters.recruiterId !== 'all' && candidate.recruiterId !== filters.recruiterId) {
-                return false;
-            }
-
-            // Experience filter
-            if (filters.experienceMin !== null) {
-                if (candidate.experienceYears < filters.experienceMin) return false;
-                if (filters.experienceMax !== null && candidate.experienceYears > filters.experienceMax) {
-                    return false;
-                }
-            }
-
-            // Date added filter
-            if (filters.dateAddedFrom) {
-                const candidateDate = new Date(candidate.dateAdded);
-                if (candidateDate < filters.dateAddedFrom) return false;
-                if (filters.dateAddedTo && candidateDate > filters.dateAddedTo) return false;
-            }
-
-            return true;
-        });
-    }, [candidates, filters]);
+    // Client-side mapping is enough, no extra filtering needed
+    const filteredCandidates = candidates;
 
 
     const handleAddCandidate = () => {
@@ -350,6 +339,32 @@ export default function Candidates() {
                                     toast({ title: "View Candidate", description: c.name });
                                 }}
                             />
+                        </div>
+                    )}
+
+                    {candidatesData?.meta && candidatesData.meta.lastPage > 1 && (
+                        <div className="mt-4 flex justify-end">
+                            <Pagination>
+                                <PaginationContent>
+                                    <PaginationItem>
+                                        <PaginationPrevious
+                                            onClick={() => setPage(p => Math.max(1, p - 1))}
+                                            aria-disabled={page <= 1}
+                                            className={page <= 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                                        />
+                                    </PaginationItem>
+                                    <PaginationItem>
+                                        <PaginationLink isActive>{page} / {candidatesData.meta.lastPage}</PaginationLink>
+                                    </PaginationItem>
+                                    <PaginationItem>
+                                        <PaginationNext
+                                            onClick={() => setPage(p => Math.min(candidatesData.meta.lastPage, p + 1))}
+                                            aria-disabled={page >= candidatesData.meta.lastPage}
+                                            className={page >= candidatesData.meta.lastPage ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                                        />
+                                    </PaginationItem>
+                                </PaginationContent>
+                            </Pagination>
                         </div>
                     )}
 

@@ -31,5 +31,20 @@ export class ListCandidatesDto {
     @IsOptional()
     @IsString()
     sort?: string;
+
+    @ApiPropertyOptional({ description: 'Filter by recruiter ID' })
+    @IsOptional()
+    @IsString()
+    recruiterId?: string;
+
+    @ApiPropertyOptional({ description: 'Filter by date (from)', example: '2023-01-01' })
+    @IsOptional()
+    @IsString()
+    dateFrom?: string;
+
+    @ApiPropertyOptional({ description: 'Filter by date (to)', example: '2023-01-31' })
+    @IsOptional()
+    @IsString()
+    dateTo?: string;
 }
 

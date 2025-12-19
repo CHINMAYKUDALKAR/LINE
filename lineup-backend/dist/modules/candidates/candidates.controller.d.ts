@@ -33,13 +33,15 @@ export declare class CandidatesController {
     }>;
     list(req: any, dto: ListCandidatesDto): Promise<{
         data: {
-            name: string;
             id: string;
+            name: string;
             email: string | null;
-            createdAt: Date;
             roleTitle: string | null;
             stage: string;
             source: string | null;
+            createdById: string | null;
+            createdAt: Date;
+            updatedAt: Date;
         }[];
         meta: {
             total: number;
@@ -93,8 +95,8 @@ export declare class CandidatesController {
     rejectCandidate(req: any, id: string, dto: RejectCandidateDto): Promise<import("./services/stage-transition.service").StageTransitionResult>;
     getStageHistory(req: any, id: string): Promise<{
         actor: {
-            name: string | null;
             id: string;
+            name: string | null;
             email: string;
         } | null;
         id: string;
@@ -162,17 +164,17 @@ export declare class CandidatesController {
             id: string;
             createdAt: Date;
             updatedAt: Date;
-            metadata: import(".prisma/client").Prisma.JsonValue;
             filename: string;
             mimeType: string | null;
             size: number | null;
+            metadata: import(".prisma/client").Prisma.JsonValue;
         }[];
     }>;
     listNotes(req: any, id: string): Promise<{
         data: {
             author: {
-                name: string | null;
                 id: string;
+                name: string | null;
                 email: string;
             };
             id: string;
@@ -192,8 +194,8 @@ export declare class CandidatesController {
     }>;
     addNote(req: any, id: string, dto: CreateCandidateNoteDto): Promise<{
         author: {
-            name: string | null;
             id: string;
+            name: string | null;
             email: string;
         };
         id: string;

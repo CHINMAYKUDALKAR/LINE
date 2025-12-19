@@ -19,6 +19,9 @@ class ListCandidatesDto {
     page;
     perPage;
     sort;
+    recruiterId;
+    dateFrom;
+    dateTo;
 }
 exports.ListCandidatesDto = ListCandidatesDto;
 __decorate([
@@ -57,4 +60,22 @@ __decorate([
     (0, class_validator_1.IsString)(),
     __metadata("design:type", String)
 ], ListCandidatesDto.prototype, "sort", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: 'Filter by recruiter ID' }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], ListCandidatesDto.prototype, "recruiterId", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: 'Filter by date (from)', example: '2023-01-01' }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], ListCandidatesDto.prototype, "dateFrom", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: 'Filter by date (to)', example: '2023-01-31' }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], ListCandidatesDto.prototype, "dateTo", void 0);
 //# sourceMappingURL=list-candidates.dto.js.map
