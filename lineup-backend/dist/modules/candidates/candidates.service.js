@@ -346,6 +346,81 @@ let CandidatesService = class CandidatesService {
         });
         return { success: true };
     }
+    async logResumeParseAction(tenantId, userId, fileId, status) {
+        await this.prisma.auditLog.create({
+            data: {
+                tenantId,
+                userId,
+                action: 'RESUME_PARSE',
+                metadata: { fileId, status },
+            },
+        });
+    }
+    async logBulkResumeParseAction(tenantId, userId, fileIds, summary) {
+        await this.prisma.auditLog.create({
+            data: {
+                tenantId,
+                userId,
+                action: 'RESUME_PARSE_BULK',
+                metadata: { fileIds, summary },
+            },
+        });
+    }
+    async createFromResume(tenantId, userId, dto) {
+        const file = await this.prisma.fileObject.findFirst({
+            where: { id: dto.fileId, tenantId, deletedAt: null },
+        });
+        if (!file) {
+            throw new common_1.NotFoundException('Resume file not found');
+        }
+        if (dto.email) {
+            const existing = await this.prisma.candidate.findFirst({
+                where: { tenantId, email: dto.email },
+            });
+            if (existing) {
+                throw new common_1.BadRequestException('Candidate with this email already exists');
+            }
+        }
+        const candidate = await this.prisma.candidate.create({
+            data: {
+                tenantId,
+                createdById: userId,
+                name: dto.name,
+                email: dto.email || null,
+                phone: dto.phone || null,
+                roleTitle: dto.roleTitle || null,
+                stage: dto.stage || 'APPLIED',
+                tags: dto.skills || [],
+                resumeUrl: file.key,
+            },
+        });
+        await this.prisma.fileObject.update({
+            where: { id: dto.fileId },
+            data: {
+                linkedType: 'candidate',
+                linkedId: candidate.id,
+            },
+        });
+        await this.prisma.auditLog.create({
+            data: {
+                tenantId,
+                userId,
+                action: 'CANDIDATE_CREATE_FROM_RESUME',
+                metadata: {
+                    candidateId: candidate.id,
+                    fileId: dto.fileId,
+                    extractedFields: {
+                        name: dto.name,
+                        email: dto.email,
+                        phone: dto.phone,
+                        skills: dto.skills,
+                    },
+                },
+            },
+        });
+        await (0, cache_util_1.invalidateCache)(`reports:${tenantId}:*`);
+        return candidate;
+    }
     parseSort(sort) {
         const [field, dir] = sort.split(':');
         return { [field]: dir };

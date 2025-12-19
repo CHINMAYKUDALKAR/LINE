@@ -458,6 +458,126 @@ export class CandidatesService {
         return { success: true };
     }
 
+    // =====================================================
+    // RESUME PARSING
+    // =====================================================
+
+    /**
+     * Log resume parse action for audit
+     */
+    async logResumeParseAction(tenantId: string, userId: string, fileId: string, status: string) {
+        await this.prisma.auditLog.create({
+            data: {
+                tenantId,
+                userId,
+                action: 'RESUME_PARSE',
+                metadata: { fileId, status },
+            },
+        });
+    }
+
+    /**
+     * Log bulk resume parse action for audit
+     */
+    async logBulkResumeParseAction(
+        tenantId: string,
+        userId: string,
+        fileIds: string[],
+        summary: { total: number; parsed: number; partiallyParsed: number; unparsable: number }
+    ) {
+        await this.prisma.auditLog.create({
+            data: {
+                tenantId,
+                userId,
+                action: 'RESUME_PARSE_BULK',
+                metadata: { fileIds, summary },
+            },
+        });
+    }
+
+    /**
+     * Create candidate from parsed resume data (review-then-save flow)
+     */
+    async createFromResume(
+        tenantId: string,
+        userId: string,
+        dto: {
+            fileId: string;
+            name: string;
+            email?: string;
+            phone?: string;
+            skills?: string[];
+            roleTitle?: string;
+            stage?: string;
+        }
+    ) {
+        // Validate file exists
+        const file = await this.prisma.fileObject.findFirst({
+            where: { id: dto.fileId, tenantId, deletedAt: null },
+        });
+
+        if (!file) {
+            throw new NotFoundException('Resume file not found');
+        }
+
+        // Check for existing candidate with same email
+        if (dto.email) {
+            const existing = await this.prisma.candidate.findFirst({
+                where: { tenantId, email: dto.email },
+            });
+            if (existing) {
+                throw new BadRequestException('Candidate with this email already exists');
+            }
+        }
+
+        // Create candidate
+        const candidate = await this.prisma.candidate.create({
+            data: {
+                tenantId,
+                createdById: userId,
+                name: dto.name,
+                email: dto.email || null,
+                phone: dto.phone || null,
+                roleTitle: dto.roleTitle || null,
+                stage: dto.stage || 'APPLIED',
+                tags: dto.skills || [],
+                resumeUrl: file.key,
+            },
+        });
+
+        // Link file to candidate
+        await this.prisma.fileObject.update({
+            where: { id: dto.fileId },
+            data: {
+                linkedType: 'candidate',
+                linkedId: candidate.id,
+            },
+        });
+
+        // Audit log
+        await this.prisma.auditLog.create({
+            data: {
+                tenantId,
+                userId,
+                action: 'CANDIDATE_CREATE_FROM_RESUME',
+                metadata: {
+                    candidateId: candidate.id,
+                    fileId: dto.fileId,
+                    extractedFields: {
+                        name: dto.name,
+                        email: dto.email,
+                        phone: dto.phone,
+                        skills: dto.skills,
+                    },
+                },
+            },
+        });
+
+        await invalidateCache(`reports:${tenantId}:*`);
+
+        return candidate;
+    }
+
     private parseSort(sort: string) {
         const [field, dir] = sort.split(':');
         return { [field]: dir };

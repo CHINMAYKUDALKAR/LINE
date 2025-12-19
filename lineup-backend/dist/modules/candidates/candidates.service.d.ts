@@ -182,5 +182,39 @@ export declare class CandidatesService {
     deleteNote(tenantId: string, noteId: string, userId: string, userRole: string): Promise<{
         success: boolean;
     }>;
+    logResumeParseAction(tenantId: string, userId: string, fileId: string, status: string): Promise<void>;
+    logBulkResumeParseAction(tenantId: string, userId: string, fileIds: string[], summary: {
+        total: number;
+        parsed: number;
+        partiallyParsed: number;
+        unparsable: number;
+    }): Promise<void>;
+    createFromResume(tenantId: string, userId: string, dto: {
+        fileId: string;
+        name: string;
+        email?: string;
+        phone?: string;
+        skills?: string[];
+        roleTitle?: string;
+        stage?: string;
+    }): Promise<{
+        id: string;
+        tenantId: string;
+        name: string;
+        email: string | null;
+        phone: string | null;
+        roleTitle: string | null;
+        stage: string;
+        source: string | null;
+        resumeUrl: string | null;
+        notes: string | null;
+        tags: string[];
+        createdById: string | null;
+        overallScore: number | null;
+        lastFeedbackAt: Date | null;
+        createdAt: Date;
+        updatedAt: Date;
+        deletedAt: Date | null;
+    }>;
     private parseSort;
 }

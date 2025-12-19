@@ -7,7 +7,9 @@ import { ListCandidatesDto } from './dto/list-candidates.dto';
 import { BulkImportDto } from './dto/bulk-import.dto';
 import { CreateCandidateNoteDto, UpdateCandidateNoteDto } from './dto/candidate-note.dto';
 import { TransitionStageDto, RejectCandidateDto, StageTransitionResponseDto, StageHistoryEntryDto } from './dto/transition-stage.dto';
+import { ParseResumeDto, BulkParseResumesDto, ParsedResumeResponseDto, BulkParseResponseDto, CreateCandidateFromResumeDto } from './dto/resume-parser.dto';
 import { StageTransitionService } from './services/stage-transition.service';
+import { ResumeParserService } from './services/resume-parser.service';
 import { JwtAuthGuard } from '../auth/guards/jwt.guard';
 import { RbacGuard } from '../auth/guards/rbac.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -21,6 +23,7 @@ export class CandidatesController {
     constructor(
         private svc: CandidatesService,
         private stageTransitionService: StageTransitionService,
+        private resumeParserService: ResumeParserService,
     ) { }
 
     @Post()
@@ -163,6 +166,54 @@ export class CandidatesController {
         }
         // Fall back to URL-based import
         return this.svc.bulkImport(req.user.tenantId, req.user.sub, body);
+    }
+
+    // =====================================================
+    // RESUME PARSING
+    // =====================================================
+
+    @Post('resume/parse')
+    @RateLimited(RateLimitProfile.WRITE)
+    @Roles('ADMIN', 'MANAGER', 'RECRUITER')
+    @ApiOperation({ summary: 'Parse a resume file to extract candidate info' })
+    @ApiBody({ type: ParseResumeDto })
+    @ApiResponse({ status: 200, description: 'Resume parsed successfully', type: ParsedResumeResponseDto })
+    @ApiResponse({ status: 400, description: 'Invalid file type' })
+    @ApiResponse({ status: 404, description: 'File not found' })
+    async parseResume(@Req() req: any, @Body() dto: ParseResumeDto) {
+        const result = await this.resumeParserService.parseResume(req.user.tenantId, dto.fileId);
+
+        // Log parsing action for audit
+        await this.svc.logResumeParseAction(req.user.tenantId, req.user.sub, dto.fileId, result.status);
+
+        return result;
+    }
+
+    @Post('resume/parse-bulk')
+    @RateLimited(RateLimitProfile.BULK)
+    @Roles('ADMIN', 'MANAGER', 'RECRUITER')
+    @ApiOperation({ summary: 'Parse multiple resume files' })
+    @ApiBody({ type: BulkParseResumesDto })
+    @ApiResponse({ status: 200, description: 'Resumes parsed', type: BulkParseResponseDto })
+    async parseResumesBulk(@Req() req: any, @Body() dto: BulkParseResumesDto) {
+        const result = await this.resumeParserService.parseResumes(req.user.tenantId, dto.fileIds);
+
+        // Log bulk parsing for audit
+        await this.svc.logBulkResumeParseAction(req.user.tenantId, req.user.sub, dto.fileIds, result.summary);
+
+        return result;
+    }
+
+    @Post('from-resume')
+    @RateLimited(RateLimitProfile.WRITE)
+    @Roles('ADMIN', 'MANAGER', 'RECRUITER')
+    @ApiOperation({ summary: 'Create a candidate from parsed resume data (review-then-save)' })
+    @ApiBody({ type: CreateCandidateFromResumeDto })
+    @ApiResponse({ status: 201, description: 'Candidate created from resume' })
+    @ApiResponse({ status: 400, description: 'Invalid input' })
+    @ApiResponse({ status: 404, description: 'Resume file not found' })
+    async createFromResume(@Req() req: any, @Body() dto: CreateCandidateFromResumeDto) {
+        return this.svc.createFromResume(req.user.tenantId, req.user.sub, dto);
     }
 
     // =====================================================

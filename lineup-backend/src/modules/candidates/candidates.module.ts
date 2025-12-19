@@ -3,7 +3,9 @@ import { CandidatesService } from './candidates.service';
 import { CandidatesController } from './candidates.controller';
 import { CandidateImportProcessor } from './processors/candidate-import.processor';
 import { StageTransitionService } from './services/stage-transition.service';
+import { ResumeParserService } from './services/resume-parser.service';
 import { PrismaService } from '../../common/prisma.service';
+import { S3Service } from '../../common/s3.service';
 import { StorageService } from '../storage/storage.service';
 import { EmailService } from '../email/email.service';
 import { EmailModule } from '../email/email.module';
@@ -21,7 +23,7 @@ import { RecycleBinModule } from '../recycle-bin/recycle-bin.module';
     StorageModule,
   ],
   controllers: [CandidatesController],
-  providers: [CandidatesService, StageTransitionService, PrismaService, CandidateImportProcessor],
-  exports: [CandidatesService, StageTransitionService]
+  providers: [CandidatesService, StageTransitionService, ResumeParserService, PrismaService, S3Service, CandidateImportProcessor],
+  exports: [CandidatesService, StageTransitionService, ResumeParserService]
 })
 export class CandidatesModule { }

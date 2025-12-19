@@ -21,7 +21,9 @@ const update_candidate_dto_1 = require("./dto/update-candidate.dto");
 const list_candidates_dto_1 = require("./dto/list-candidates.dto");
 const candidate_note_dto_1 = require("./dto/candidate-note.dto");
 const transition_stage_dto_1 = require("./dto/transition-stage.dto");
+const resume_parser_dto_1 = require("./dto/resume-parser.dto");
 const stage_transition_service_1 = require("./services/stage-transition.service");
+const resume_parser_service_1 = require("./services/resume-parser.service");
 const jwt_guard_1 = require("../auth/guards/jwt.guard");
 const rbac_guard_1 = require("../auth/guards/rbac.guard");
 const roles_decorator_1 = require("../auth/decorators/roles.decorator");
@@ -29,9 +31,11 @@ const rate_limit_1 = require("../../common/rate-limit");
 let CandidatesController = class CandidatesController {
     svc;
     stageTransitionService;
-    constructor(svc, stageTransitionService) {
+    resumeParserService;
+    constructor(svc, stageTransitionService, resumeParserService) {
         this.svc = svc;
         this.stageTransitionService = stageTransitionService;
+        this.resumeParserService = resumeParserService;
     }
     create(req, dto) {
         return this.svc.create(req.user.tenantId, req.user.sub, dto);
@@ -77,6 +81,19 @@ let CandidatesController = class CandidatesController {
             return this.svc.directBulkImport(req.user.tenantId, req.user.sub, body.rows);
         }
         return this.svc.bulkImport(req.user.tenantId, req.user.sub, body);
+    }
+    async parseResume(req, dto) {
+        const result = await this.resumeParserService.parseResume(req.user.tenantId, dto.fileId);
+        await this.svc.logResumeParseAction(req.user.tenantId, req.user.sub, dto.fileId, result.status);
+        return result;
+    }
+    async parseResumesBulk(req, dto) {
+        const result = await this.resumeParserService.parseResumes(req.user.tenantId, dto.fileIds);
+        await this.svc.logBulkResumeParseAction(req.user.tenantId, req.user.sub, dto.fileIds, result.summary);
+        return result;
+    }
+    async createFromResume(req, dto) {
+        return this.svc.createFromResume(req.user.tenantId, req.user.sub, dto);
     }
     listDocuments(req, id) {
         return this.svc.listDocuments(req.user.tenantId, id);
@@ -243,6 +260,49 @@ __decorate([
     __metadata("design:returntype", void 0)
 ], CandidatesController.prototype, "bulkImport", null);
 __decorate([
+    (0, common_1.Post)('resume/parse'),
+    (0, rate_limit_1.RateLimited)(rate_limit_1.RateLimitProfile.WRITE),
+    (0, roles_decorator_1.Roles)('ADMIN', 'MANAGER', 'RECRUITER'),
+    (0, swagger_1.ApiOperation)({ summary: 'Parse a resume file to extract candidate info' }),
+    (0, swagger_1.ApiBody)({ type: resume_parser_dto_1.ParseResumeDto }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Resume parsed successfully', type: resume_parser_dto_1.ParsedResumeResponseDto }),
+    (0, swagger_1.ApiResponse)({ status: 400, description: 'Invalid file type' }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: 'File not found' }),
+    __param(0, (0, common_1.Req)()),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, resume_parser_dto_1.ParseResumeDto]),
+    __metadata("design:returntype", Promise)
+], CandidatesController.prototype, "parseResume", null);
+__decorate([
+    (0, common_1.Post)('resume/parse-bulk'),
+    (0, rate_limit_1.RateLimited)(rate_limit_1.RateLimitProfile.BULK),
+    (0, roles_decorator_1.Roles)('ADMIN', 'MANAGER', 'RECRUITER'),
+    (0, swagger_1.ApiOperation)({ summary: 'Parse multiple resume files' }),
+    (0, swagger_1.ApiBody)({ type: resume_parser_dto_1.BulkParseResumesDto }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Resumes parsed', type: resume_parser_dto_1.BulkParseResponseDto }),
+    __param(0, (0, common_1.Req)()),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, resume_parser_dto_1.BulkParseResumesDto]),
+    __metadata("design:returntype", Promise)
+], CandidatesController.prototype, "parseResumesBulk", null);
+__decorate([
+    (0, common_1.Post)('from-resume'),
+    (0, rate_limit_1.RateLimited)(rate_limit_1.RateLimitProfile.WRITE),
+    (0, roles_decorator_1.Roles)('ADMIN', 'MANAGER', 'RECRUITER'),
+    (0, swagger_1.ApiOperation)({ summary: 'Create a candidate from parsed resume data (review-then-save)' }),
+    (0, swagger_1.ApiBody)({ type: resume_parser_dto_1.CreateCandidateFromResumeDto }),
+    (0, swagger_1.ApiResponse)({ status: 201, description: 'Candidate created from resume' }),
+    (0, swagger_1.ApiResponse)({ status: 400, description: 'Invalid input' }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: 'Resume file not found' }),
+    __param(0, (0, common_1.Req)()),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, resume_parser_dto_1.CreateCandidateFromResumeDto]),
+    __metadata("design:returntype", Promise)
+], CandidatesController.prototype, "createFromResume", null);
+__decorate([
     (0, common_1.Get)(':id/documents'),
     (0, rate_limit_1.RateLimited)(rate_limit_1.RateLimitProfile.READ),
     (0, roles_decorator_1.Roles)('ADMIN', 'MANAGER', 'RECRUITER'),
@@ -319,6 +379,7 @@ exports.CandidatesController = CandidatesController = __decorate([
     (0, common_1.Controller)('api/v1/candidates'),
     (0, common_1.UseGuards)(jwt_guard_1.JwtAuthGuard, rbac_guard_1.RbacGuard),
     __metadata("design:paramtypes", [candidates_service_1.CandidatesService,
-        stage_transition_service_1.StageTransitionService])
+        stage_transition_service_1.StageTransitionService,
+        resume_parser_service_1.ResumeParserService])
 ], CandidatesController);
 //# sourceMappingURL=candidates.controller.js.map

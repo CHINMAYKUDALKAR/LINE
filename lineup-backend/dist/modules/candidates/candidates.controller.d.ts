@@ -4,11 +4,14 @@ import { UpdateCandidateDto } from './dto/update-candidate.dto';
 import { ListCandidatesDto } from './dto/list-candidates.dto';
 import { CreateCandidateNoteDto, UpdateCandidateNoteDto } from './dto/candidate-note.dto';
 import { TransitionStageDto, RejectCandidateDto } from './dto/transition-stage.dto';
+import { ParseResumeDto, BulkParseResumesDto, CreateCandidateFromResumeDto } from './dto/resume-parser.dto';
 import { StageTransitionService } from './services/stage-transition.service';
+import { ResumeParserService } from './services/resume-parser.service';
 export declare class CandidatesController {
     private svc;
     private stageTransitionService;
-    constructor(svc: CandidatesService, stageTransitionService: StageTransitionService);
+    private resumeParserService;
+    constructor(svc: CandidatesService, stageTransitionService: StageTransitionService, resumeParserService: ResumeParserService);
     create(req: any, dto: CreateCandidateDto): Promise<{
         id: string;
         tenantId: string;
@@ -124,6 +127,35 @@ export declare class CandidatesController {
         }[];
     }> | Promise<{
         message: string;
+    }>;
+    parseResume(req: any, dto: ParseResumeDto): Promise<import("./services/resume-parser.service").ParsedResume>;
+    parseResumesBulk(req: any, dto: BulkParseResumesDto): Promise<{
+        results: import("./services/resume-parser.service").ParsedResume[];
+        summary: {
+            total: number;
+            parsed: number;
+            partiallyParsed: number;
+            unparsable: number;
+        };
+    }>;
+    createFromResume(req: any, dto: CreateCandidateFromResumeDto): Promise<{
+        id: string;
+        tenantId: string;
+        name: string;
+        email: string | null;
+        phone: string | null;
+        roleTitle: string | null;
+        stage: string;
+        source: string | null;
+        resumeUrl: string | null;
+        notes: string | null;
+        tags: string[];
+        createdById: string | null;
+        overallScore: number | null;
+        lastFeedbackAt: Date | null;
+        createdAt: Date;
+        updatedAt: Date;
+        deletedAt: Date | null;
     }>;
     listDocuments(req: any, id: string): Promise<{
         data: {
