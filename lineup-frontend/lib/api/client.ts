@@ -1,7 +1,24 @@
 
 import { getAuthToken } from "@/lib/auth";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api/v1";
+// Dynamically determine API base URL for network access
+export const getApiBaseUrl = () => {
+    if (typeof window !== 'undefined') {
+        // In browser: use same hostname as the page (for network access from phone)
+        const hostname = window.location.hostname;
+        return process.env.NEXT_PUBLIC_API_URL || `http://${hostname}:4000`;
+    }
+    // Server-side: use localhost
+    return process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+};
+
+const API_BASE_URL = getApiBaseUrl();
+const API_BASE = `${API_BASE_URL}/api/v1`;
+
+if (typeof window !== 'undefined') {
+    console.log('[API Debug] Hostname:', window.location.hostname);
+    console.log('[API Debug] API_BASE_URL:', API_BASE_URL);
+}
 
 // Retry configuration
 const MAX_RETRIES = 3;

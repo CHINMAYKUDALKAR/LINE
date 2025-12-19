@@ -155,7 +155,7 @@ export function CandidateSelector({
                     {/* Info */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <p className="font-medium text-foreground truncate">{candidate.name}</p>
+                        <p className="font-medium text-foreground truncate text-sm sm:text-base">{candidate.name}</p>
                         {candidate.hasResume && (
                           <FileText className="h-3.5 w-3.5 text-primary flex-shrink-0" />
                         )}
@@ -163,8 +163,8 @@ export function CandidateSelector({
                       <p className="text-xs text-muted-foreground truncate">{candidate.email}</p>
                     </div>
 
-                    {/* Stage Badge */}
-                    <Badge variant="secondary" className="flex-shrink-0 text-xs">
+                    {/* Stage Badge - Hide on very small screens if needed, or allow wrap? keeping it shrinking for now */}
+                    <Badge variant="secondary" className="flex-shrink-0 text-xs hidden sm:inline-flex">
                       {candidate.stage}
                     </Badge>
                   </button>

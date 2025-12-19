@@ -113,16 +113,16 @@ function TemplatesContent() {
     }
 
     return (
-        <div className="p-6">
+        <div className="p-4 md:p-8 space-y-6">
             {/* Header */}
-            <div className="flex items-center justify-between mb-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
                     <h1 className="text-2xl font-bold text-slate-900">Message Templates</h1>
                     <p className="text-slate-600">Create and manage reusable message templates</p>
                 </div>
                 <button
                     onClick={() => router.push('/communication/templates/new')}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center justify-center gap-2 w-full sm:w-auto"
                 >
                     <Plus className="w-4 h-4" />
                     Create Template
@@ -130,8 +130,8 @@ function TemplatesContent() {
             </div>
 
             {/* Filters */}
-            <div className="bg-white rounded-xl border border-slate-200 p-4 mb-6">
-                <div className="flex flex-wrap gap-4 items-center">
+            <div className="bg-white rounded-xl border border-slate-200 p-4">
+                <div className="flex flex-col sm:flex-row gap-4 items-stretch sm:items-center">
                     <div className="relative flex-1 min-w-[200px]">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                         <input
@@ -143,12 +143,12 @@ function TemplatesContent() {
                         />
                     </div>
 
-                    <div className="flex gap-2">
+                    <div className="flex flex-wrap gap-2">
                         {([undefined, 'EMAIL', 'WHATSAPP', 'SMS'] as (Channel | undefined)[]).map((ch) => (
                             <button
                                 key={ch || 'all'}
                                 onClick={() => setChannelFilter(ch)}
-                                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${channelFilter === ch
+                                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex-1 sm:flex-none ${channelFilter === ch
                                     ? 'bg-blue-600 text-white'
                                     : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                                     }`}
@@ -158,7 +158,7 @@ function TemplatesContent() {
                         ))}
                     </div>
 
-                    <button onClick={() => refetch()} className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg">
+                    <button onClick={() => refetch()} className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg hidden sm:block">
                         <RefreshCw className={`w-5 h-5 ${isLoading ? 'animate-spin' : ''}`} />
                     </button>
                 </div>

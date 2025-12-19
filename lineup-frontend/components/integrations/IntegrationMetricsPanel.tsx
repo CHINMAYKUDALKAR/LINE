@@ -1,5 +1,6 @@
+import { useState, useEffect } from 'react';
 import { IntegrationMetrics } from '@/types/integrations';
-import { mockIntegrationMetrics } from '@/lib/integrations-mock-data';
+import { getMetrics } from '@/lib/api/integrations';
 import { cn } from '@/lib/utils';
 import { CheckCircle, XCircle, Clock, Activity, Layers, AlertTriangle } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -7,13 +8,43 @@ import { Progress } from '@/components/ui/progress';
 
 interface IntegrationMetricsPanelProps {
   integrationId: string;
+  provider: string;
   isLoading?: boolean;
 }
 
-export function IntegrationMetricsPanel({ integrationId, isLoading }: IntegrationMetricsPanelProps) {
-  const metrics = mockIntegrationMetrics;
+const defaultMetrics: IntegrationMetrics = {
+  integrationId: '',
+  period: 'Last 7 days',
+  totalSyncs: 0,
+  successfulSyncs: 0,
+  failedSyncs: 0,
+  successRate: 0,
+  avgLatencyMs: 0,
+  recordsProcessed: 0,
+  queuedJobs: 0,
+  lastError: undefined,
+};
 
-  if (isLoading) {
+export function IntegrationMetricsPanel({ integrationId, provider, isLoading: propIsLoading }: IntegrationMetricsPanelProps) {
+  const [metrics, setMetrics] = useState<IntegrationMetrics>(defaultMetrics);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const loadMetrics = async () => {
+      setIsLoading(true);
+      try {
+        const data = await getMetrics(provider);
+        if (data) setMetrics(data);
+      } catch (err) {
+        console.error('Failed to load metrics:', err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    loadMetrics();
+  }, [provider]);
+
+  if (isLoading || propIsLoading) {
     return (
       <div className="space-y-4">
         <Skeleton className="h-5 w-32" />

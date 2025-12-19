@@ -1,5 +1,5 @@
 import { format } from 'date-fns';
-import { Calendar, Clock, MapPin, User, Video, Phone, ExternalLink, X } from 'lucide-react';
+import { Calendar, Clock, MapPin, User, Video, Phone, ExternalLink, X, CheckCircle, MessageSquarePlus } from 'lucide-react';
 import { CalendarEvent } from '@/types/calendar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -13,6 +13,8 @@ interface CalendarEventPopoverProps {
   onClose: () => void;
   onReschedule: (event: CalendarEvent) => void;
   onCancel: (event: CalendarEvent) => void;
+  onComplete?: (event: CalendarEvent) => void;
+  onAddNote?: (event: CalendarEvent) => void;
 }
 
 const stageLabels: Record<string, string> = {
@@ -44,18 +46,20 @@ export function CalendarEventPopover({
   onClose,
   onReschedule,
   onCancel,
+  onComplete,
+  onAddNote,
 }: CalendarEventPopoverProps) {
   const router = useRouter();
   const canEdit = userRole !== 'interviewer';
   const ModeIcon = modeIcons[event.mode];
 
   const handleViewDetails = () => {
-    router.push(`/interview/${event.id}`);
+    router.push(`/interviews/${event.id}`);
     onClose();
   };
 
   const handleViewCandidate = () => {
-    router.push(`/candidate/${event.candidateId}`);
+    router.push(`/candidates/${event.candidateId}`);
     onClose();
   };
 
@@ -143,7 +147,29 @@ export function CalendarEventPopover({
                 Cancel
               </Button>
             </div>
+            {onComplete && (
+              <Button
+                variant="default"
+                size="sm"
+                onClick={() => onComplete(event)}
+                className="w-full gap-2 mt-1"
+              >
+                <CheckCircle className="h-4 w-4" />
+                Mark Complete
+              </Button>
+            )}
           </>
+        )}
+        {onAddNote && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => onAddNote(event)}
+            className="w-full gap-2 mt-1"
+          >
+            <MessageSquarePlus className="h-4 w-4" />
+            Add Note
+          </Button>
         )}
       </div>
     </div>

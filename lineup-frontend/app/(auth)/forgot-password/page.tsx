@@ -34,7 +34,11 @@ export default function ForgotPasswordPage() {
     const onSubmit = async (data: ForgotPasswordData) => {
         setIsLoading(true);
         try {
-            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/v1/auth/forgot-password`, {
+            const baseUrl = typeof window !== 'undefined'
+                ? (process.env.NEXT_PUBLIC_API_URL || `http://${window.location.hostname}:4000`)
+                : (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000');
+
+            const response = await fetch(`${baseUrl}/api/v1/auth/forgot-password`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(data),

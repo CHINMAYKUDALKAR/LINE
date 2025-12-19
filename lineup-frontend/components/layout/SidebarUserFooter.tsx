@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { CurrentUser } from '@/types/navigation';
 import { cn } from '@/lib/utils';
+import { ModeToggle } from '@/components/mode-toggle';
 
 interface SidebarUserFooterProps {
   user: CurrentUser;
@@ -41,7 +42,7 @@ export function SidebarUserFooter({
   return (
     <div className="mt-auto border-t border-border">
       {/* Collapse Button */}
-      <div className={cn('px-3 py-2', collapsed ? 'flex justify-center' : '')}>
+      <div className={cn('px-3 py-2 flex items-center justify-between', collapsed ? 'flex-col gap-2' : '')}>
         <Tooltip delayDuration={0}>
           <TooltipTrigger asChild>
             <Button
@@ -50,7 +51,7 @@ export function SidebarUserFooter({
               onClick={onToggleCollapse}
               className={cn(
                 'h-9 text-muted-foreground hover:text-foreground',
-                collapsed ? 'w-9 p-0' : 'w-full justify-start gap-2'
+                collapsed ? 'w-9 p-0' : 'justify-start gap-2'
               )}
             >
               {collapsed ? (
@@ -67,6 +68,8 @@ export function SidebarUserFooter({
             <TooltipContent side="right">Expand Sidebar</TooltipContent>
           )}
         </Tooltip>
+
+        <ModeToggle />
       </div>
 
       {/* User Menu */}

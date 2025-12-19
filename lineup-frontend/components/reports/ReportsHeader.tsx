@@ -102,60 +102,64 @@ export function ReportsHeader({ filters, onFiltersChange }: ReportsHeaderProps) 
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3 p-4 bg-card rounded-lg border border-border">
+        <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2 p-4 bg-card rounded-lg border border-border">
           {/* Date Range */}
-          <Select
-            value={filters.dateRange}
-            onValueChange={(value) => onFiltersChange({ ...filters, dateRange: value as ReportFilters['dateRange'] })}
-          >
-            <SelectTrigger className="w-[140px] h-9 text-sm">
-              <SelectValue placeholder="Date range" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="today">Today</SelectItem>
-              <SelectItem value="7days">Last 7 days</SelectItem>
-              <SelectItem value="30days">Last 30 days</SelectItem>
-              <SelectItem value="90days">Last 90 days</SelectItem>
-              <SelectItem value="custom">Custom range</SelectItem>
-            </SelectContent>
-          </Select>
+          <div className="col-span-2 sm:w-auto">
+            <Select
+              value={filters.dateRange}
+              onValueChange={(value) => onFiltersChange({ ...filters, dateRange: value as ReportFilters['dateRange'] })}
+            >
+              <SelectTrigger className="w-full sm:w-[140px] h-9 text-sm">
+                <SelectValue placeholder="Date range" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="today">Today</SelectItem>
+                <SelectItem value="7days">Last 7 days</SelectItem>
+                <SelectItem value="30days">Last 30 days</SelectItem>
+                <SelectItem value="90days">Last 90 days</SelectItem>
+                <SelectItem value="custom">Custom range</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
 
           {filters.dateRange === 'custom' && (
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className={cn(
-                    'justify-start text-left font-normal',
-                    !dateRange && 'text-muted-foreground'
-                  )}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {dateRange?.from ? (
-                    dateRange.to ? (
-                      <>
-                        {format(dateRange.from, 'LLL dd')} - {format(dateRange.to, 'LLL dd')}
-                      </>
+            <div className="col-span-2 sm:w-auto">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className={cn(
+                      'w-full sm:w-auto justify-start text-left font-normal',
+                      !dateRange && 'text-muted-foreground'
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {dateRange?.from ? (
+                      dateRange.to ? (
+                        <>
+                          {format(dateRange.from, 'LLL dd')} - {format(dateRange.to, 'LLL dd')}
+                        </>
+                      ) : (
+                        format(dateRange.from, 'LLL dd, y')
+                      )
                     ) : (
-                      format(dateRange.from, 'LLL dd, y')
-                    )
-                  ) : (
-                    <span>Pick dates</span>
-                  )}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  initialFocus
-                  mode="range"
-                  defaultMonth={dateRange?.from}
-                  selected={dateRange}
-                  onSelect={setDateRange}
-                  numberOfMonths={2}
-                />
-              </PopoverContent>
-            </Popover>
+                      <span>Pick dates</span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    initialFocus
+                    mode="range"
+                    defaultMonth={dateRange?.from}
+                    selected={dateRange}
+                    onSelect={setDateRange}
+                    numberOfMonths={2}
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
           )}
 
           <div className="h-6 w-px bg-border hidden sm:block" />
@@ -165,7 +169,7 @@ export function ReportsHeader({ filters, onFiltersChange }: ReportsHeaderProps) 
             value={filters.recruiterId || 'all'}
             onValueChange={(value) => onFiltersChange({ ...filters, recruiterId: value === 'all' ? undefined : value })}
           >
-            <SelectTrigger className="w-[150px] h-9 text-sm">
+            <SelectTrigger className="w-full sm:w-[150px] h-9 text-sm">
               <SelectValue placeholder="Recruiter" />
             </SelectTrigger>
             <SelectContent>
@@ -180,7 +184,7 @@ export function ReportsHeader({ filters, onFiltersChange }: ReportsHeaderProps) 
             value={filters.stage || 'all'}
             onValueChange={(value) => onFiltersChange({ ...filters, stage: value === 'all' ? undefined : value })}
           >
-            <SelectTrigger className="w-[130px] h-9 text-sm">
+            <SelectTrigger className="w-full sm:w-[130px] h-9 text-sm">
               <SelectValue placeholder="Stage" />
             </SelectTrigger>
             <SelectContent>
@@ -195,7 +199,7 @@ export function ReportsHeader({ filters, onFiltersChange }: ReportsHeaderProps) 
             value={filters.source || 'all'}
             onValueChange={(value) => onFiltersChange({ ...filters, source: value === 'all' ? undefined : value })}
           >
-            <SelectTrigger className="w-[130px] h-9 text-sm">
+            <SelectTrigger className="w-full sm:w-[130px] h-9 text-sm">
               <SelectValue placeholder="Source" />
             </SelectTrigger>
             <SelectContent>
@@ -210,7 +214,7 @@ export function ReportsHeader({ filters, onFiltersChange }: ReportsHeaderProps) 
             value={filters.role || 'all'}
             onValueChange={(value) => onFiltersChange({ ...filters, role: value === 'all' ? undefined : value })}
           >
-            <SelectTrigger className="w-[160px] h-9 text-sm">
+            <SelectTrigger className="w-full sm:w-[160px] h-9 text-sm">
               <SelectValue placeholder="Role" />
             </SelectTrigger>
             <SelectContent>

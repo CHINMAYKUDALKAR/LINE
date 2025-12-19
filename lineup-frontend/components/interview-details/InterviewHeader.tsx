@@ -23,6 +23,8 @@ const statusConfig: Record<InterviewStatus, { label: string; className: string }
   'pending-feedback': { label: 'Pending Feedback', className: 'bg-violet-500/10 text-violet-600 border-violet-500/20' },
 };
 
+const defaultStatusConfig = { label: 'Unknown', className: 'bg-muted text-muted-foreground border-muted' };
+
 export function InterviewHeader({
   status,
   userRole,
@@ -31,7 +33,7 @@ export function InterviewHeader({
   onCancel,
 }: InterviewHeaderProps) {
   const router = useRouter();
-  const config = statusConfig[status];
+  const config = statusConfig[status] || defaultStatusConfig;
   const canTakeActions = userRole !== 'interviewer';
 
   return (

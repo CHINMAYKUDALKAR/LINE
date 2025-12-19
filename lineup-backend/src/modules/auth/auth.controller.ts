@@ -76,7 +76,7 @@ export class AuthController {
     @ApiResponse({ status: 401, description: 'Invalid credentials' })
     @ApiBody({ type: LoginDto })
     async login(@Body() dto: LoginDto, @Req() req: express.Request, @Res({ passthrough: true }) res: express.Response) {
-        const result = await this.svc.login(dto.email, dto.password, req, dto.rememberMe);
+        const result = await this.svc.login(dto.email, dto.password, req);
 
         // Set refresh token as HTTPOnly cookie (30 days if rememberMe, 7 days otherwise)
         this.setRefreshTokenCookie(res, result.refreshToken, dto.rememberMe);

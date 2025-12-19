@@ -17,13 +17,15 @@ const common_1 = require("@nestjs/common");
 const prisma_service_1 = require("../../../common/prisma.service");
 const queues_1 = require("../queues");
 const client_1 = require("@prisma/client");
-const cuid2_1 = require("@paralleldrive/cuid2");
+const twilio_service_1 = require("../services/twilio.service");
 let SmsProcessor = SmsProcessor_1 = class SmsProcessor extends bullmq_1.WorkerHost {
     prisma;
+    twilioService;
     logger = new common_1.Logger(SmsProcessor_1.name);
-    constructor(prisma) {
+    constructor(prisma, twilioService) {
         super();
         this.prisma = prisma;
+        this.twilioService = twilioService;
     }
     async process(job) {
         const { messageLogId, tenantId, recipientPhone, body } = job.data;
@@ -31,16 +33,21 @@ let SmsProcessor = SmsProcessor_1 = class SmsProcessor extends bullmq_1.WorkerHo
         if (!recipientPhone) {
             throw new Error('No recipient phone provided');
         }
+        if (!this.twilioService.isValidPhoneNumber(recipientPhone)) {
+            this.logger.warn(`Invalid phone number format: ${recipientPhone}`);
+        }
         try {
-            await this.mockSmsSend(recipientPhone, body);
-            const externalId = `mock-sms-${(0, cuid2_1.createId)()}`;
-            this.logger.log(`SMS sent (mock): ${externalId}`);
+            const result = await this.twilioService.sendSms(recipientPhone, body);
+            if (!result.success) {
+                throw new Error(result.error || 'SMS send failed');
+            }
+            this.logger.log(`SMS sent: ${result.messageId}`);
             await this.prisma.messageLog.update({
                 where: { id: messageLogId },
                 data: {
                     status: client_1.MessageStatus.SENT,
                     sentAt: new Date(),
-                    externalId: externalId,
+                    externalId: result.messageId,
                 },
             });
         }
@@ -57,16 +64,6 @@ let SmsProcessor = SmsProcessor_1 = class SmsProcessor extends bullmq_1.WorkerHo
             });
             throw error;
         }
-    }
-    async mockSmsSend(phone, message) {
-        this.logger.debug(`[MOCK] Sending SMS to ${phone}: ${message.substring(0, 50)}...`);
-        await new Promise(resolve => setTimeout(resolve, 50));
-        console.log('[MOCK Twilio SMS]', {
-            to: phone,
-            from: process.env.TWILIO_FROM_NUMBER || '+1234567890',
-            body: message,
-            timestamp: new Date().toISOString(),
-        });
     }
     onFailed(job, error) {
         this.logger.error(`SMS job ${job.id} failed: ${error.message}`);
@@ -90,6 +87,8 @@ __decorate([
 ], SmsProcessor.prototype, "onCompleted", null);
 exports.SmsProcessor = SmsProcessor = SmsProcessor_1 = __decorate([
     (0, bullmq_1.Processor)(queues_1.COMMUNICATION_QUEUES.SMS),
-    __metadata("design:paramtypes", [prisma_service_1.PrismaService])
+    (0, common_1.Injectable)(),
+    __metadata("design:paramtypes", [prisma_service_1.PrismaService,
+        twilio_service_1.TwilioService])
 ], SmsProcessor);
 //# sourceMappingURL=sms.processor.js.map

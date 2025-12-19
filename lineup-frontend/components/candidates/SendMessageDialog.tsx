@@ -108,7 +108,7 @@ export function SendMessageDialog({
             if (!newOpen) resetForm();
             onOpenChange(newOpen);
         }}>
-            <DialogContent className="sm:max-w-lg">
+            <DialogContent className="w-screen h-[100dvh] max-w-none sm:max-w-lg sm:h-auto sm:rounded-lg">
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
                         <Send className="h-5 w-5" />

@@ -60,6 +60,18 @@ let IntegrationsController = class IntegrationsController {
         const userId = req.user.id;
         return this.integrationsService.disconnect(tenantId, body.provider, userId);
     }
+    async getWebhooks(req, provider, limit) {
+        const tenantId = req.user.tenantId;
+        return this.integrationsService.getWebhookEvents(tenantId, provider, parseInt(limit || '50'));
+    }
+    async getMetrics(req, provider) {
+        const tenantId = req.user.tenantId;
+        return this.integrationsService.getMetrics(tenantId, provider);
+    }
+    async getFields(req, provider) {
+        const tenantId = req.user.tenantId;
+        return this.integrationsService.getFieldSchemas(tenantId, provider);
+    }
 };
 exports.IntegrationsController = IntegrationsController;
 __decorate([
@@ -125,6 +137,34 @@ __decorate([
     __metadata("design:paramtypes", [Object, Object]),
     __metadata("design:returntype", Promise)
 ], IntegrationsController.prototype, "disconnect", null);
+__decorate([
+    (0, common_1.Get)(':provider/webhooks'),
+    (0, roles_decorator_1.Roles)(client_1.Role.ADMIN, client_1.Role.MANAGER),
+    __param(0, (0, common_1.Req)()),
+    __param(1, (0, common_1.Query)('provider')),
+    __param(2, (0, common_1.Query)('limit')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String, String]),
+    __metadata("design:returntype", Promise)
+], IntegrationsController.prototype, "getWebhooks", null);
+__decorate([
+    (0, common_1.Get)(':provider/metrics'),
+    (0, roles_decorator_1.Roles)(client_1.Role.ADMIN, client_1.Role.MANAGER),
+    __param(0, (0, common_1.Req)()),
+    __param(1, (0, common_1.Query)('provider')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:returntype", Promise)
+], IntegrationsController.prototype, "getMetrics", null);
+__decorate([
+    (0, common_1.Get)(':provider/fields'),
+    (0, roles_decorator_1.Roles)(client_1.Role.ADMIN, client_1.Role.MANAGER),
+    __param(0, (0, common_1.Req)()),
+    __param(1, (0, common_1.Query)('provider')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:returntype", Promise)
+], IntegrationsController.prototype, "getFields", null);
 exports.IntegrationsController = IntegrationsController = __decorate([
     (0, common_1.Controller)('api/v1/integrations'),
     (0, common_1.UseGuards)(jwt_guard_1.JwtAuthGuard, rbac_guard_1.RbacGuard),

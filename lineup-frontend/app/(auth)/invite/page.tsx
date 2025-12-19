@@ -15,7 +15,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/lib/auth-context";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+const getApiBaseUrl = () => {
+    if (typeof window !== 'undefined') {
+        const hostname = window.location.hostname;
+        return process.env.NEXT_PUBLIC_API_URL || `http://${hostname}:4000`;
+    }
+    return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+};
+
+const API_URL = getApiBaseUrl();
 
 const inviteSchema = z.object({
     name: z.string().min(2, "Name must be at least 2 characters").optional(),

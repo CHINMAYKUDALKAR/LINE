@@ -21,6 +21,7 @@ export default function InterviewsPage() {
         interviewerId: 'all',
         stage: 'all',
         status: 'all',
+        role: 'all',
     });
 
     const [events, setEvents] = useState<CalendarEvent[]>([]);
@@ -117,7 +118,7 @@ export default function InterviewsPage() {
     }
 
     return (
-        <div className="px-8 py-6 h-full space-y-8">
+        <div className="p-4 md:p-8 h-full space-y-6 md:space-y-8">
             <motion.main
                 initial="initial"
                 animate="animate"
@@ -136,7 +137,7 @@ export default function InterviewsPage() {
                         interviewers={interviewersData?.map(i => ({ id: i.id, name: i.name })) || []}
                         onClearFilters={() => {
                             setSearchQuery('');
-                            setFilters({ interviewerId: 'all', stage: 'all', status: 'all' });
+                            setFilters({ interviewerId: 'all', stage: 'all', status: 'all', role: 'all' });
                         }}
                     />
 

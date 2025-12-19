@@ -12,8 +12,13 @@ async function bootstrap() {
     app.use(cookieParser());
     app.use((0, express_1.json)({ limit: '50mb' }));
     app.use((0, express_1.urlencoded)({ extended: true, limit: '50mb' }));
+    const isDev = process.env.NODE_ENV !== 'production';
     app.enableCors({
-        origin: ['http://localhost:3000', 'http://127.0.0.1:3000'],
+        origin: isDev ? true : [
+            'http://localhost:3000',
+            'http://127.0.0.1:3000',
+            /^http:\/\/192\.168\.\d{1,3}\.\d{1,3}:3000$/,
+        ],
         credentials: true,
         methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
         allowedHeaders: ['Content-Type', 'Authorization', 'X-Tenant-Id'],
@@ -56,8 +61,9 @@ async function bootstrap() {
         customCss: '.swagger-ui .topbar { display: none }',
     });
     const port = process.env.PORT || 4000;
-    await app.listen(port);
-    console.log(`Application is running on: http://localhost:${port}`);
+    const host = process.env.HOST || '0.0.0.0';
+    await app.listen(port, host);
+    console.log(`Application is running on: http://${host}:${port}`);
     console.log(`API Documentation: http://localhost:${port}/api/docs`);
 }
 bootstrap();

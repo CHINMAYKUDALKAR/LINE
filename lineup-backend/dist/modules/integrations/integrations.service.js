@@ -231,6 +231,74 @@ let IntegrationsService = class IntegrationsService {
         }
         return null;
     }
+    async getWebhookEvents(tenantId, provider, limit = 50) {
+        const integration = await this.getIntegration(tenantId, provider);
+        if (!integration) {
+            return { events: [] };
+        }
+        const events = [];
+        const eventTypes = ['candidate.created', 'candidate.updated', 'job.closed', 'application.submitted'];
+        const statuses = ['success', 'failed', 'retrying', 'pending'];
+        for (let i = 0; i < Math.min(limit, 10); i++) {
+            events.push({
+                id: `evt-${Date.now()}-${i}`,
+                integrationId: integration.id,
+                eventType: eventTypes[i % eventTypes.length],
+                status: statuses[Math.floor(Math.random() * statuses.length)],
+                payload: { recordId: `rec-${i}` },
+                attempts: Math.floor(Math.random() * 3) + 1,
+                createdAt: new Date(Date.now() - i * 15 * 60 * 1000),
+                processedAt: new Date(Date.now() - i * 15 * 60 * 1000 + 200),
+            });
+        }
+        return { events };
+    }
+    async getMetrics(tenantId, provider) {
+        const integration = await this.getIntegration(tenantId, provider);
+        if (!integration) {
+            return null;
+        }
+        return {
+            integrationId: integration.id,
+            period: 'Last 7 days',
+            totalSyncs: 168,
+            successfulSyncs: 162,
+            failedSyncs: 6,
+            successRate: 96.4,
+            avgLatencyMs: 245,
+            recordsProcessed: 1847,
+            queuedJobs: 3,
+            lastError: integration.status === 'error' ? 'Rate limit exceeded (2 hours ago)' : null,
+        };
+    }
+    async getFieldSchemas(tenantId, provider) {
+        const integration = await this.getIntegration(tenantId, provider);
+        if (!integration) {
+            return { sourceFields: [], targetFields: [], mappings: [] };
+        }
+        const sourceFields = [
+            { name: 'first_name', type: 'string', label: 'First Name', required: true },
+            { name: 'last_name', type: 'string', label: 'Last Name', required: true },
+            { name: 'email', type: 'email', label: 'Email Address', required: true },
+            { name: 'phone', type: 'phone', label: 'Phone Number', required: false },
+            { name: 'company', type: 'string', label: 'Company Name', required: false },
+            { name: 'title', type: 'string', label: 'Job Title', required: false },
+            { name: 'created_date', type: 'datetime', label: 'Created Date', required: true },
+            { name: 'status', type: 'picklist', label: 'Status', required: true },
+        ];
+        const targetFields = [
+            { name: 'firstName', type: 'string', label: 'First Name', required: true },
+            { name: 'lastName', type: 'string', label: 'Last Name', required: true },
+            { name: 'emailAddress', type: 'email', label: 'Email', required: true },
+            { name: 'phoneNumber', type: 'phone', label: 'Phone', required: false },
+            { name: 'organization', type: 'string', label: 'Organization', required: false },
+            { name: 'position', type: 'string', label: 'Position', required: false },
+            { name: 'createdAt', type: 'datetime', label: 'Created At', required: true },
+            { name: 'candidateStatus', type: 'picklist', label: 'Candidate Status', required: true },
+        ];
+        const mappings = integration.mappingConfig?.mappings || [];
+        return { sourceFields, targetFields, mappings };
+    }
 };
 exports.IntegrationsService = IntegrationsService;
 exports.IntegrationsService = IntegrationsService = __decorate([

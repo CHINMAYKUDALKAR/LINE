@@ -3,6 +3,8 @@
  * Handles all API calls related to candidates including resume uploads
  */
 
+import { client } from './client';
+
 export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 
 interface UploadUrlResponse {
@@ -20,39 +22,22 @@ interface AttachResumeRequest {
 
 /**
  * Upload a resume for a candidate
- * This handles the complete 3-step upload flow:
- * 1. Request presigned upload URL
- * 2. Upload file to S3
- * 3. Confirm upload to backend
  */
 export async function uploadCandidateResume(
     candidateId: string,
     file: File,
-    token: string
+    token: string // kept for compat, client handles auth
 ): Promise<{ success: boolean; fileId: string }> {
     try {
         // Step 1: Request upload URL
-        const uploadUrlResponse = await fetch(
-            `${API_BASE_URL}/api/v1/candidates/${candidateId}/resume/upload-url`,
-            {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: `Bearer ${token}`,
-                },
-                body: JSON.stringify({
-                    filename: file.name,
-                }),
-            }
+        const uploadUrlResponse = await client.post<UploadUrlResponse>(
+            `/candidates/${candidateId}/resume/upload-url`,
+            { filename: file.name }
         );
 
-        if (!uploadUrlResponse.ok) {
-            throw new Error('Failed to get upload URL');
-        }
+        const { fileId, uploadUrl, s3Key } = uploadUrlResponse;
 
-        const { fileId, uploadUrl, s3Key }: UploadUrlResponse = await uploadUrlResponse.json();
-
-        // Step 2: Upload to S3
+        // Step 2: Upload to S3 - MUST use fetch to avoid adding custom headers
         const s3Response = await fetch(uploadUrl, {
             method: 'PUT',
             body: file,
@@ -73,23 +58,10 @@ export async function uploadCandidateResume(
             size: file.size,
         };
 
-        const attachResponse = await fetch(
-            `${API_BASE_URL}/api/v1/candidates/${candidateId}/resume/attach`,
-            {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: `Bearer ${token}`,
-                },
-                body: JSON.stringify(attachRequest),
-            }
+        const result = await client.post<{ fileId: string }>(
+            `/candidates/${candidateId}/resume/attach`,
+            attachRequest
         );
-
-        if (!attachResponse.ok) {
-            throw new Error('Failed to confirm upload');
-        }
-
-        const result = await attachResponse.json();
 
         return {
             success: true,
@@ -104,25 +76,15 @@ export async function uploadCandidateResume(
 /**
  * Get candidate details
  */
-export async function getCandidate(candidateId: string, token: string) {
-    const response = await fetch(`${API_BASE_URL}/api/v1/candidates/${candidateId}`, {
-        headers: {
-            Authorization: `Bearer ${token}`,
-        },
-    });
-
-    if (!response.ok) {
-        throw new Error('Failed to fetch candidate');
-    }
-
-    return response.json();
+export async function getCandidate(candidateId: string, token?: string) {
+    return client.get(`/candidates/${candidateId}`);
 }
 
 /**
  * List all candidates with filters
  */
 export async function listCandidates(
-    token: string,
+    token?: string,
     params?: {
         page?: number;
         perPage?: number;
@@ -131,27 +93,14 @@ export async function listCandidates(
         q?: string;
     }
 ) {
-    const queryParams = new URLSearchParams();
-    if (params?.page) queryParams.append('page', params.page.toString());
-    if (params?.perPage) queryParams.append('perPage', params.perPage.toString());
-    if (params?.stage) queryParams.append('stage', params.stage);
-    if (params?.source) queryParams.append('source', params.source);
-    if (params?.q) queryParams.append('q', params.q);
+    const backendParams: Record<string, any> = {};
+    if (params?.page) backendParams.page = params.page;
+    if (params?.perPage) backendParams.perPage = params.perPage;
+    if (params?.stage) backendParams.stage = params.stage;
+    if (params?.source) backendParams.source = params.source;
+    if (params?.q) backendParams.q = params.q;
 
-    const response = await fetch(
-        `${API_BASE_URL}/api/v1/candidates?${queryParams.toString()}`,
-        {
-            headers: {
-                Authorization: `Bearer ${token}`,
-            },
-        }
-    );
-
-    if (!response.ok) {
-        throw new Error('Failed to fetch candidates');
-    }
-
-    return response.json();
+    return client.get("/candidates", { params: backendParams });
 }
 
 // =====================================================
@@ -161,18 +110,8 @@ export async function listCandidates(
 /**
  * Get all documents for a candidate
  */
-export async function getCandidateDocuments(candidateId: string, token: string) {
-    const response = await fetch(`${API_BASE_URL}/api/v1/candidates/${candidateId}/documents`, {
-        headers: {
-            Authorization: `Bearer ${token}`,
-        },
-    });
-
-    if (!response.ok) {
-        throw new Error('Failed to fetch documents');
-    }
-
-    return response.json();
+export async function getCandidateDocuments(candidateId: string, token?: string) {
+    return client.get(`/candidates/${candidateId}/documents`);
 }
 
 // =====================================================
@@ -196,18 +135,8 @@ export interface CandidateNoteResponse {
 /**
  * Get all notes for a candidate
  */
-export async function getCandidateNotes(candidateId: string, token: string): Promise<{ data: CandidateNoteResponse[] }> {
-    const response = await fetch(`${API_BASE_URL}/api/v1/candidates/${candidateId}/notes`, {
-        headers: {
-            Authorization: `Bearer ${token}`,
-        },
-    });
-
-    if (!response.ok) {
-        throw new Error('Failed to fetch notes');
-    }
-
-    return response.json();
+export async function getCandidateNotes(candidateId: string, token?: string): Promise<{ data: CandidateNoteResponse[] }> {
+    return client.get(`/candidates/${candidateId}/notes`);
 }
 
 /**
@@ -216,22 +145,9 @@ export async function getCandidateNotes(candidateId: string, token: string): Pro
 export async function addCandidateNote(
     candidateId: string,
     content: string,
-    token: string
+    token?: string
 ): Promise<CandidateNoteResponse> {
-    const response = await fetch(`${API_BASE_URL}/api/v1/candidates/${candidateId}/notes`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ content }),
-    });
-
-    if (!response.ok) {
-        throw new Error('Failed to add note');
-    }
-
-    return response.json();
+    return client.post(`/candidates/${candidateId}/notes`, { content });
 }
 
 /**
@@ -241,22 +157,9 @@ export async function updateCandidateNote(
     candidateId: string,
     noteId: string,
     content: string,
-    token: string
+    token?: string
 ): Promise<CandidateNoteResponse> {
-    const response = await fetch(`${API_BASE_URL}/api/v1/candidates/${candidateId}/notes/${noteId}`, {
-        method: 'PATCH',
-        headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ content }),
-    });
-
-    if (!response.ok) {
-        throw new Error('Failed to update note');
-    }
-
-    return response.json();
+    return client.patch(`/candidates/${candidateId}/notes/${noteId}`, { content });
 }
 
 /**
@@ -265,18 +168,7 @@ export async function updateCandidateNote(
 export async function deleteCandidateNote(
     candidateId: string,
     noteId: string,
-    token: string
+    token?: string
 ): Promise<{ success: boolean }> {
-    const response = await fetch(`${API_BASE_URL}/api/v1/candidates/${candidateId}/notes/${noteId}`, {
-        method: 'DELETE',
-        headers: {
-            Authorization: `Bearer ${token}`,
-        },
-    });
-
-    if (!response.ok) {
-        throw new Error('Failed to delete note');
-    }
-
-    return response.json();
+    return client.delete(`/candidates/${candidateId}/notes/${noteId}`);
 }

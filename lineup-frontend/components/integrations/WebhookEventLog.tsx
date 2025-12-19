@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { WebhookEvent } from '@/types/integrations';
-import { mockWebhookEvents } from '@/lib/integrations-mock-data';
+import { getWebhookEvents } from '@/lib/api/integrations';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -14,6 +14,7 @@ import { toast } from 'sonner';
 
 interface WebhookEventLogProps {
   integrationId: string;
+  provider: string;
 }
 
 const statusConfig: Record<string, { variant: 'default' | 'secondary' | 'destructive' | 'outline'; icon: React.ComponentType<{ className?: string }> }> = {
@@ -23,12 +24,29 @@ const statusConfig: Record<string, { variant: 'default' | 'secondary' | 'destruc
   retrying: { variant: 'outline', icon: Loader2 },
 };
 
-export function WebhookEventLog({ integrationId }: WebhookEventLogProps) {
-  const [events, setEvents] = useState<WebhookEvent[]>(mockWebhookEvents);
+export function WebhookEventLog({ integrationId, provider }: WebhookEventLogProps) {
+  const [events, setEvents] = useState<WebhookEvent[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [selectedEvent, setSelectedEvent] = useState<WebhookEvent | null>(null);
   const [isRetrying, setIsRetrying] = useState<string | null>(null);
+
+  const loadEvents = async () => {
+    setIsLoading(true);
+    try {
+      const response = await getWebhookEvents(provider);
+      setEvents(response.events || []);
+    } catch (error) {
+      console.error('Failed to load webhook events:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadEvents();
+  }, [provider]);
 
   const filteredEvents = events.filter((event) => {
     const matchesSearch = event.eventType.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -40,11 +58,11 @@ export function WebhookEventLog({ integrationId }: WebhookEventLogProps) {
   const handleRetry = async (eventId: string) => {
     setIsRetrying(eventId);
     await new Promise((resolve) => setTimeout(resolve, 1500));
-    
+
     setEvents(events.map((e) =>
       e.id === eventId ? { ...e, status: 'pending', attempts: e.attempts + 1 } : e
     ));
-    
+
     toast.success('Retry initiated', { description: 'The event will be reprocessed shortly.' });
     setIsRetrying(null);
   };
@@ -99,7 +117,7 @@ export function WebhookEventLog({ integrationId }: WebhookEventLogProps) {
           {filteredEvents.map((event) => {
             const status = statusConfig[event.status];
             const StatusIcon = status.icon;
-            
+
             return (
               <div
                 key={event.id}
@@ -160,7 +178,7 @@ export function WebhookEventLog({ integrationId }: WebhookEventLogProps) {
 
       {/* Event Detail Dialog */}
       <Dialog open={!!selectedEvent} onOpenChange={() => setSelectedEvent(null)}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="w-screen h-[100dvh] max-w-none md:max-w-2xl md:h-auto md:rounded-lg">
           <DialogHeader>
             <DialogTitle>Event Details</DialogTitle>
           </DialogHeader>

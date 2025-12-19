@@ -69,7 +69,7 @@ export function SendMessageModal({ open, onOpenChange, defaultRecipient }: SendM
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-[600px]">
+            <DialogContent className="w-screen h-[100dvh] max-w-none sm:max-w-[600px] sm:h-auto sm:rounded-lg">
                 <DialogHeader>
                     <DialogTitle>Compose Message</DialogTitle>
                 </DialogHeader>

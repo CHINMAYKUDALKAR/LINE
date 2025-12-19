@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AppSidebar } from './AppSidebar';
+import { MobileHeader } from './MobileHeader';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { toast } from '@/hooks/use-toast';
 import {
@@ -44,7 +45,9 @@ export function AppShell({ children }: AppShellProps) {
 
   return (
     <TooltipProvider>
-      <div className="flex h-screen w-full overflow-hidden bg-background">
+      <div className="flex flex-col md:flex-row h-screen w-full overflow-hidden bg-background">
+        <MobileHeader />
+
         <AppSidebar
           tenants={mockTenants}
           currentTenantId={currentTenantId}
@@ -54,7 +57,8 @@ export function AppShell({ children }: AppShellProps) {
           onTenantChange={handleTenantChange}
           onLogout={handleLogout}
         />
-        <main className="flex-1 overflow-y-auto bg-slate-50 transition-colors">
+
+        <main className="flex-1 overflow-y-auto bg-slate-50 transition-colors relative">
           {children}
         </main>
       </div>

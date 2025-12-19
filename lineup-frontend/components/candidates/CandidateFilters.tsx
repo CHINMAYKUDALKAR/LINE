@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { CandidateListFilters } from '@/types/candidate-list';
-import { mockRecruiters, mockSources } from '@/lib/candidate-list-mock-data';
+import { getUsers, User } from '@/lib/api/users';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 
@@ -34,12 +34,26 @@ const experienceOptions = [
   { value: '9+', label: '9+ years' },
 ];
 
+// Static source options (no backend endpoint yet)
+const sourceOptions = ['LinkedIn', 'Indeed', 'Referral', 'Company Website', 'Job Board', 'Other'];
+
 export function CandidateFilters({ filters, onFiltersChange }: CandidateFiltersProps) {
   const [searchValue, setSearchValue] = useState(filters.search);
+  const [recruiters, setRecruiters] = useState<{ id: string; name: string }[]>([]);
 
   // Use refs to store latest values to avoid stale closures
   const filtersRef = useRef(filters);
   const onFiltersChangeRef = useRef(onFiltersChange);
+
+  // Load recruiters from API on mount
+  useEffect(() => {
+    getUsers({ role: 'RECRUITER' })
+      .then((res) => {
+        const mapped = (res.data || []).map((u: User) => ({ id: u.id, name: u.name }));
+        setRecruiters(mapped);
+      })
+      .catch((err) => console.error('Failed to load recruiters:', err));
+  }, []);
 
   // Keep refs updated
   useEffect(() => {
@@ -125,7 +139,7 @@ export function CandidateFilters({ filters, onFiltersChange }: CandidateFiltersP
   if (filters.recruiterId !== 'all') {
     activeFilterChips.push({
       key: 'recruiter',
-      label: mockRecruiters.find((r) => r.id === filters.recruiterId)?.name || 'Recruiter',
+      label: recruiters.find((r) => r.id === filters.recruiterId)?.name || 'Recruiter',
       onRemove: () => onFiltersChange({ ...filters, recruiterId: 'all' }),
     });
   }
@@ -159,14 +173,14 @@ export function CandidateFilters({ filters, onFiltersChange }: CandidateFiltersP
         </div>
 
         {/* Filter Dropdowns */}
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2 w-full">
           <Select
             value={filters.stage}
             onValueChange={(value) =>
               onFiltersChange({ ...filters, stage: value as CandidateListFilters['stage'] })
             }
           >
-            <SelectTrigger className="w-[140px] bg-background">
+            <SelectTrigger className="w-full sm:w-[140px] bg-background">
               <SelectValue placeholder="Stage" />
             </SelectTrigger>
             <SelectContent className="bg-popover">
@@ -182,12 +196,12 @@ export function CandidateFilters({ filters, onFiltersChange }: CandidateFiltersP
             value={filters.source}
             onValueChange={(value) => onFiltersChange({ ...filters, source: value })}
           >
-            <SelectTrigger className="w-[140px] bg-background">
+            <SelectTrigger className="w-full sm:w-[140px] bg-background">
               <SelectValue placeholder="Source" />
             </SelectTrigger>
             <SelectContent className="bg-popover">
               <SelectItem value="all">All Sources</SelectItem>
-              {mockSources.map((source) => (
+              {sourceOptions.map((source) => (
                 <SelectItem key={source} value={source}>
                   {source}
                 </SelectItem>
@@ -199,12 +213,12 @@ export function CandidateFilters({ filters, onFiltersChange }: CandidateFiltersP
             value={filters.recruiterId}
             onValueChange={(value) => onFiltersChange({ ...filters, recruiterId: value })}
           >
-            <SelectTrigger className="w-[160px] bg-background">
+            <SelectTrigger className="w-full sm:w-[160px] bg-background">
               <SelectValue placeholder="Recruiter" />
             </SelectTrigger>
             <SelectContent className="bg-popover">
               <SelectItem value="all">All Recruiters</SelectItem>
-              {mockRecruiters.map((recruiter) => (
+              {recruiters.map((recruiter) => (
                 <SelectItem key={recruiter.id} value={recruiter.id}>
                   {recruiter.name}
                 </SelectItem>
@@ -213,7 +227,7 @@ export function CandidateFilters({ filters, onFiltersChange }: CandidateFiltersP
           </Select>
 
           <Select value={getExperienceValue()} onValueChange={handleExperienceChange}>
-            <SelectTrigger className="w-[140px] bg-background">
+            <SelectTrigger className="w-full sm:w-[140px] bg-background">
               <SelectValue placeholder="Experience" />
             </SelectTrigger>
             <SelectContent className="bg-popover">
@@ -227,7 +241,7 @@ export function CandidateFilters({ filters, onFiltersChange }: CandidateFiltersP
 
           <Popover>
             <PopoverTrigger asChild>
-              <Button variant="outline" className="gap-2 bg-background">
+              <Button variant="outline" className="gap-2 bg-background w-full sm:w-auto col-span-2 sm:col-span-1">
                 <Filter className="h-4 w-4" />
                 Date Added
               </Button>

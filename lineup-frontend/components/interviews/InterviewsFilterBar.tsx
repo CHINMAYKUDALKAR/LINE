@@ -37,23 +37,25 @@ export function InterviewsFilterBar({
     return (
         <div className="flex flex-col lg:flex-row gap-4">
             {/* Search */}
-            <div className="relative flex-1 min-w-[240px]">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input
-                    placeholder="Search by candidate or interviewer..."
-                    value={searchQuery}
-                    onChange={(e) => onSearchChange(e.target.value)}
-                    className="pl-9 bg-background"
-                />
+            <div className="flex-1 w-full lg:w-auto">
+                <div className="relative w-full">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input
+                        placeholder="Search by candidate or interviewer..."
+                        value={searchQuery}
+                        onChange={(e) => onSearchChange(e.target.value)}
+                        className="pl-9 bg-background w-full"
+                    />
+                </div>
             </div>
 
             {/* Filters */}
-            <div className="flex flex-wrap gap-3 items-center">
+            <div className="grid grid-cols-2 sm:flex flex-wrap gap-3 items-center w-full lg:w-auto">
                 <Select
                     value={filters.stage}
                     onValueChange={(value) => onFilterChange('stage', value)}
                 >
-                    <SelectTrigger className="w-[160px] bg-background">
+                    <SelectTrigger className="w-full sm:w-[160px] bg-background">
                         <SelectValue placeholder="Stage" />
                     </SelectTrigger>
                     <SelectContent>
@@ -70,7 +72,7 @@ export function InterviewsFilterBar({
                     value={filters.status}
                     onValueChange={(value) => onFilterChange('status', value)}
                 >
-                    <SelectTrigger className="w-[160px] bg-background">
+                    <SelectTrigger className="w-full sm:w-[160px] bg-background">
                         <SelectValue placeholder="Status" />
                     </SelectTrigger>
                     <SelectContent>
@@ -86,7 +88,7 @@ export function InterviewsFilterBar({
                     value={filters.interviewerId}
                     onValueChange={(value) => onFilterChange('interviewerId', value)}
                 >
-                    <SelectTrigger className="w-[180px] bg-background">
+                    <SelectTrigger className="w-full sm:w-[180px] bg-background">
                         <SelectValue placeholder="Interviewer" />
                     </SelectTrigger>
                     <SelectContent>

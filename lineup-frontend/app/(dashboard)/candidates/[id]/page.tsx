@@ -100,7 +100,7 @@ export default function CandidateProfile() {
         try {
             if (token) {
                 // Fetch real candidate data from API
-                const apiData = await getCandidate(id, token);
+                const apiData = await getCandidate(id, token) as any;
                 const candidateProfile = mapApiToProfile(apiData);
 
                 setCandidate(candidateProfile);
@@ -108,14 +108,15 @@ export default function CandidateProfile() {
 
                 // Fetch documents and notes from real API endpoints
                 try {
-                    const docsResponse = await getCandidateDocuments(id, token);
-                    const frontendDocs = (docsResponse.data || []).map((doc: any) => ({
+                    const docsResponse = await getCandidateDocuments(id, token) as { data: any[] };
+                    const frontendDocs: CandidateDocument[] = (docsResponse.data || []).map((doc: any) => ({
                         id: doc.id,
-                        type: doc.mimeType?.includes('pdf') ? 'resume' : 'other' as const,
+                        type: (doc.mimeType?.includes('pdf') ? 'resume' : 'other') as CandidateDocument['type'],
                         name: doc.filename,
                         url: `${API_BASE_URL}/api/v1/storage/${doc.id}/download`,
                         uploadedAt: doc.createdAt,
                         uploadedBy: 'System',
+                        size: doc.size || 0,
                     }));
                     setDocuments(frontendDocs);
                 } catch (e) {

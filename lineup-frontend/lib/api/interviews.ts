@@ -51,9 +51,11 @@ export interface InterviewListResponse {
 export async function getInterviews(params?: {
     page?: number;
     perPage?: number;
-    date?: string;
+    from?: string;
+    to?: string;
     status?: string;
     candidateId?: string;
+    interviewerId?: string;
 }): Promise<InterviewListResponse> {
     try {
         const response = await client.get<InterviewListResponse>('/interviews', {
@@ -95,10 +97,40 @@ export async function createInterview(data: {
     notes?: string;
 }): Promise<Interview> {
     try {
-        const response = await client.post<Interview>('/interviews', data);
+        // Transform date + startTime to startAt ISO format
+        const { date, startTime, durationMins = 60, type, interviewerIds = [], ...rest } = data;
+
+        // Parse date and time to create startAt
+        let startAt: string;
+        if (startTime && date) {
+            // Combine date and time: "2024-01-15" + "09:00" -> ISO string
+            startAt = new Date(`${date}T${startTime}:00`).toISOString();
+        } else if (date) {
+            // Just date, default to 9 AM
+            startAt = new Date(`${date}T09:00:00`).toISOString();
+        } else {
+            throw new Error('Date is required');
+        }
+
+        // Build payload with only fields the backend DTO accepts
+        const payload = {
+            candidateId: rest.candidateId,
+            interviewerIds,
+            startAt,
+            durationMins,
+            stage: rest.stage,
+            location: rest.location,
+            meetingLink: rest.meetingLink,
+            notes: rest.notes,
+        };
+
+        const response = await client.post<Interview>('/interviews', payload);
         return response;
-    } catch (error) {
-        console.error('Failed to create interview:', error);
+    } catch (error: any) {
+        // Only log non-conflict errors to console - conflicts are expected and handled in UI
+        if (!error?.message?.toLowerCase()?.includes('conflict')) {
+            console.error('Failed to create interview:', error);
+        }
         throw error;
     }
 }

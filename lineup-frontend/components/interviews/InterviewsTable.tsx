@@ -119,10 +119,69 @@ export function InterviewsTable({
                 </div>
             )}
 
-            <div className="rounded-md border border-border bg-card overflow-hidden">
-                {/* Responsive: horizontal scroll on mobile */}
+            {/* Mobile Card View */}
+            <div className="md:hidden space-y-4">
+                {events.map((event) => (
+                    <div
+                        key={event.id}
+                        className={cn(
+                            "rounded-lg border bg-card p-4 space-y-3",
+                            selectedIds.has(event.id) && "border-primary/50 bg-primary/5"
+                        )}
+                    >
+                        <div className="flex justify-between items-start">
+                            <div className="flex items-center gap-3">
+                                <Checkbox
+                                    checked={selectedIds.has(event.id)}
+                                    onCheckedChange={() => toggleSelect(event.id)}
+                                    className="data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
+                                />
+                                <Avatar className="h-10 w-10 bg-primary/10 text-primary">
+                                    <AvatarFallback>
+                                        {event.candidateName.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                                    </AvatarFallback>
+                                </Avatar>
+                                <div>
+                                    <div className="font-medium text-sm">{event.candidateName}</div>
+                                    <div className="text-xs text-muted-foreground">{event.role}</div>
+                                </div>
+                            </div>
+                            <InterviewRowActions
+                                event={event}
+                                onAction={onAction}
+                                disabled={userRole === 'interviewer'}
+                            />
+                        </div>
+
+                        <div className="grid grid-cols-1 gap-2 text-sm pl-9">
+                            <div className="flex items-center gap-2 text-muted-foreground">
+                                <CalendarClock className="h-3.5 w-3.5" />
+                                <span>{format(new Date(event.startTime), 'MMM d, h:mm a')}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <div className="w-5 h-5 rounded-full bg-secondary flex items-center justify-center text-[10px] font-medium text-muted-foreground">
+                                    {event.interviewerInitials}
+                                </div>
+                                <span className="text-muted-foreground">{event.interviewerName}</span>
+                            </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 pl-9 pt-1">
+                            <Badge variant="outline" className={cn("font-normal capitalize text-xs", stageColors[event.stage])}>
+                                {event.stage.replace('-', ' ')}
+                            </Badge>
+                            <Badge variant="secondary" className={cn("font-normal capitalize text-xs", statusColors[event.status])}>
+                                {event.status}
+                            </Badge>
+                        </div>
+                    </div>
+                ))}
+            </div>
+
+            {/* Desktop Table View */}
+            <div className="hidden md:block rounded-md border border-border bg-card overflow-hidden">
                 <div className="overflow-x-auto">
-                    <Table className="min-w-[700px]">
+                    <Table>
                         <TableHeader className="bg-muted/30">
                             <TableRow>
                                 <TableHead className="w-[40px] pl-4">
@@ -133,11 +192,9 @@ export function InterviewsTable({
                                     />
                                 </TableHead>
                                 <TableHead>Candidate</TableHead>
-                                {/* Hidden on mobile: Interviewer */}
-                                <TableHead className="hidden md:table-cell">Interviewer</TableHead>
+                                <TableHead>Interviewer</TableHead>
                                 <TableHead>Date & Time</TableHead>
-                                {/* Hidden on smaller screens: Stage */}
-                                <TableHead className="hidden sm:table-cell">Stage</TableHead>
+                                <TableHead>Stage</TableHead>
                                 <TableHead>Status</TableHead>
                                 <TableHead className="w-[50px]"></TableHead>
                             </TableRow>
@@ -170,8 +227,7 @@ export function InterviewsTable({
                                             </div>
                                         </div>
                                     </TableCell>
-                                    {/* Hidden on mobile: Interviewer */}
-                                    <TableCell className="hidden md:table-cell">
+                                    <TableCell>
                                         <div className="flex items-center gap-2">
                                             <div className="w-6 h-6 rounded-full bg-secondary flex items-center justify-center text-[10px] font-medium text-muted-foreground">
                                                 {event.interviewerInitials}
@@ -189,8 +245,7 @@ export function InterviewsTable({
                                             </span>
                                         </div>
                                     </TableCell>
-                                    {/* Hidden on smaller screens: Stage */}
-                                    <TableCell className="hidden sm:table-cell">
+                                    <TableCell>
                                         <Badge
                                             variant="outline"
                                             className={cn("font-normal capitalize", stageColors[event.stage])}

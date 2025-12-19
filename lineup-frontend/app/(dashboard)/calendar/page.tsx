@@ -1,18 +1,23 @@
 "use client";
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { CalendarView, CalendarFilters, CalendarEvent } from '@/types/calendar';
 import { CalendarHeader } from '@/components/calendar/CalendarHeader';
 import { CalendarMonthView } from '@/components/calendar/CalendarMonthView';
 import { CalendarWeekView } from '@/components/calendar/CalendarWeekView';
 import { CalendarDayView } from '@/components/calendar/CalendarDayView';
-import { CreateSlotModal } from '@/components/calendar/CreateSlotModal';
-import { useSlots, useCancelSlot, useRescheduleSlot } from '@/lib/hooks/useCalendar';
-import { slotsToCalendarEvents, getCalendarDateRange } from '@/lib/calendar-utils';
+import { ScheduleInterviewModal } from '@/components/scheduling/ScheduleInterviewModal';
+import { BulkScheduleModal } from '@/components/scheduling/BulkScheduleModal';
+import { useSlots, useCancelSlot, useRescheduleSlot, calendarKeys } from '@/lib/hooks/useCalendar';
+import { useQueryClient, useQuery } from '@tanstack/react-query';
+import { slotsToCalendarEvents, getCalendarDateRange, interviewsToCalendarEvents } from '@/lib/calendar-utils';
+import { getInterviews } from '@/lib/api/interviews';
 import { useAuth } from '@/lib/auth-context';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from '@/hooks/use-toast';
+import { getUsers } from '@/lib/api/users';
 import {
     AlertDialog,
     AlertDialogAction,
@@ -32,18 +37,34 @@ export default function Calendar() {
     const { activeTenantId, tenants } = useAuth();
     const activeTenant = tenants.find(t => t.id === activeTenantId);
     const userRole = (activeTenant?.role?.toLowerCase() as any) || 'recruiter';
+    const queryClient = useQueryClient();
+    const router = useRouter();
 
     const [view, setView] = useState<CalendarView>('week');
     const [currentDate, setCurrentDate] = useState(new Date());
     const [filters, setFilters] = useState<CalendarFilters>({
         interviewerId: 'all',
         stage: 'all',
+        status: 'all',
+        role: 'all',
     });
     const [isCreateSlotOpen, setIsCreateSlotOpen] = useState(false);
+    const [isBulkScheduleOpen, setIsBulkScheduleOpen] = useState(false);
     const [selectedSlotDate, setSelectedSlotDate] = useState<Date | undefined>(undefined);
     const [rescheduleEvent, setRescheduleEvent] = useState<CalendarEvent | null>(null);
     const [cancelEvent, setCancelEvent] = useState<CalendarEvent | null>(null);
     const [rescheduleDateTime, setRescheduleDateTime] = useState('');
+    const [interviewers, setInterviewers] = useState<{ id: string; name: string }[]>([]);
+
+    // Load interviewers from API on mount
+    useEffect(() => {
+        getUsers({ role: 'INTERVIEWER' })
+            .then((res) => {
+                const mapped = (res.data || []).map((u: any) => ({ id: u.id, name: u.name }));
+                setInterviewers(mapped);
+            })
+            .catch((err) => console.error('Failed to load interviewers:', err));
+    }, []);
 
     // Calculate date range for the current view
     const dateRange = useMemo(() => getCalendarDateRange(currentDate, view), [currentDate, view]);
@@ -51,33 +72,64 @@ export default function Calendar() {
     // Fetch slots from API
     const {
         data: slotsData,
-        isLoading,
-        error,
+        isLoading: slotsLoading,
+        error: slotsError,
     } = useSlots({
         start: dateRange.start.toISOString(),
         end: dateRange.end.toISOString(),
     });
 
+    // Fetch interviews from API
+    const {
+        data: interviewsData,
+        isLoading: interviewsLoading,
+        error: interviewsError,
+    } = useQuery({
+        queryKey: ['interviews', 'calendar', dateRange.start.toISOString(), dateRange.end.toISOString()],
+        queryFn: () => getInterviews({
+            from: dateRange.start.toISOString(),
+            to: dateRange.end.toISOString(),
+        }),
+    });
+
+    const isLoading = slotsLoading || interviewsLoading;
+    const error = slotsError || interviewsError;
+
     // Cancel and reschedule mutations
     const cancelSlotMutation = useCancelSlot();
     const rescheduleSlotMutation = useRescheduleSlot();
 
-    // Transform slots to calendar events and apply filters
+    // Transform slots and interviews to calendar events and apply filters
     const filteredEvents = useMemo(() => {
-        if (!slotsData?.items) return [];
+        // Get events from slots
+        const slotEvents = slotsData?.items ? slotsToCalendarEvents(slotsData.items) : [];
 
-        const events = slotsToCalendarEvents(slotsData.items);
+        // Get events from interviews
+        const interviewEvents = interviewsData?.data ? interviewsToCalendarEvents(interviewsData.data) : [];
 
-        return events.filter((event) => {
+        // Merge events (interviews take priority, filter out duplicate slots if interview exists)
+        const interviewIds = new Set(interviewEvents.map(e => e.id));
+        const mergedEvents = [
+            ...interviewEvents,
+            ...slotEvents.filter(e => !interviewIds.has(e.id)),
+        ];
+
+        return mergedEvents.filter((event) => {
             if (filters.interviewerId !== 'all' && event.interviewerId !== filters.interviewerId) {
                 return false;
             }
             if (filters.stage !== 'all' && event.stage !== filters.stage) {
                 return false;
             }
+            if (filters.status !== 'all' && event.status !== filters.status) {
+                return false;
+            }
+            if (filters.role !== 'all' && !event.role?.toLowerCase().includes(filters.role.toLowerCase())) {
+                return false;
+            }
             return true;
         });
-    }, [slotsData, filters]);
+    }, [slotsData, interviewsData, filters]);
 
     const handleEmptySlotClick = (date: Date) => {
         if (userRole === 'interviewer') return;
@@ -90,9 +142,43 @@ export default function Calendar() {
         setIsCreateSlotOpen(true);
     };
 
-    const handleReschedule = (event: CalendarEvent) => {
+    // Called from DnD/Resize with modified event data - auto-save
+    const handleReschedule = async (event: CalendarEvent) => {
+        // For DnD/Resize operations, event already has the new startTime or duration
+        // Call API directly to update
+        try {
+            const newStartAt = new Date(event.startTime);
+            const duration = event.duration;
+            const newEndAt = new Date(newStartAt.getTime() + duration * 60000);
+
+            await rescheduleSlotMutation.mutateAsync({
+                id: event.id,
+                data: {
+                    newStartAt: newStartAt.toISOString(),
+                    newEndAt: newEndAt.toISOString(),
+                    reason: 'Updated via calendar',
+                },
+            });
+
+            // Invalidate interview queries to ensure data consistency
+            queryClient.invalidateQueries({ queryKey: ['interviews'] });
+
+            toast({
+                title: 'Interview Updated',
+                description: `Interview with ${event.candidateName} has been updated.`,
+            });
+        } catch (err: any) {
+            toast({
+                title: 'Update Failed',
+                description: err.message || 'Could not update the interview.',
+                variant: 'destructive',
+            });
+        }
+    };
+
+    // For manual reschedule via button click - opens dialog
+    const handleManualReschedule = (event: CalendarEvent) => {
         setRescheduleEvent(event);
-        // Pre-fill with new time (1 hour later)
         const currentStart = new Date(event.startTime);
         const suggestedStart = addHours(currentStart, 1);
         setRescheduleDateTime(format(suggestedStart, "yyyy-MM-dd'T'HH:mm"));
@@ -115,6 +201,9 @@ export default function Calendar() {
                 },
             });
 
+            // Invalidate interview queries
+            queryClient.invalidateQueries({ queryKey: ['interviews'] });
+
             toast({
                 title: 'Interview Rescheduled',
                 description: `Interview with ${rescheduleEvent.candidateName} has been rescheduled to ${format(newStartAt, 'PPp')}.`,
@@ -132,6 +221,32 @@ export default function Calendar() {
 
     const handleCancel = (event: CalendarEvent) => {
         setCancelEvent(event);
+    };
+
+    const handleComplete = async (event: CalendarEvent) => {
+        try {
+            // Import and call complete API
+            const { completeInterview } = await import('@/lib/api/interviews');
+            await completeInterview(event.id);
+            // Invalidate queries to refresh calendar
+            queryClient.invalidateQueries({ queryKey: ['interviews'] });
+            queryClient.invalidateQueries({ queryKey: calendarKeys.slots() });
+            toast({
+                title: 'Interview Completed',
+                description: `Interview with ${event.candidateName} marked as complete.`,
+            });
+        } catch (err: any) {
+            toast({
+                title: 'Failed to Complete',
+                description: err.message || 'Could not mark interview as complete.',
+                variant: 'destructive',
+            });
+        }
+    };
+
+    const handleAddNote = (event: CalendarEvent) => {
+        // Navigate to interview details page where notes can be added
+        router.push(`/interviews/${event.id}`);
     };
 
     const handleConfirmCancel = async () => {
@@ -181,7 +296,7 @@ export default function Calendar() {
     }
 
     return (
-        <div className="px-8 py-6 h-full flex flex-col">
+        <div className="p-4 md:p-8 h-full flex flex-col">
             <motion.div
                 className="flex flex-col h-full space-y-4"
                 initial="initial"
@@ -195,10 +310,12 @@ export default function Calendar() {
                             currentDate={currentDate}
                             filters={filters}
                             userRole={userRole}
+                            interviewers={interviewers}
                             onViewChange={setView}
                             onDateChange={setCurrentDate}
                             onFiltersChange={setFilters}
                             onScheduleClick={handleScheduleClick}
+                            onBulkScheduleClick={() => setIsBulkScheduleOpen(true)}
                         />
                     </motion.div>
 
@@ -210,6 +327,8 @@ export default function Calendar() {
                             onEmptySlotClick={handleEmptySlotClick}
                             onReschedule={handleReschedule}
                             onCancel={handleCancel}
+                            onComplete={handleComplete}
+                            onAddNote={handleAddNote}
                         />
                     )}
 
@@ -220,7 +339,10 @@ export default function Calendar() {
                             userRole={userRole}
                             onEmptySlotClick={handleEmptySlotClick}
                             onReschedule={handleReschedule}
+                            onManualReschedule={handleManualReschedule}
                             onCancel={handleCancel}
+                            onComplete={handleComplete}
+                            onAddNote={handleAddNote}
                         />
                     )}
 
@@ -232,13 +354,30 @@ export default function Calendar() {
                             onEmptySlotClick={handleEmptySlotClick}
                             onReschedule={handleReschedule}
                             onCancel={handleCancel}
+                            onComplete={handleComplete}
+                            onAddNote={handleAddNote}
                         />
                     )}
 
-                    <CreateSlotModal
+                    <ScheduleInterviewModal
                         open={isCreateSlotOpen}
                         onOpenChange={setIsCreateSlotOpen}
-                        initialDate={selectedSlotDate}
+                        onSuccess={() => {
+                            // Invalidate calendar and interview queries to refetch and show new interview
+                            queryClient.invalidateQueries({ queryKey: calendarKeys.slots() });
+                            queryClient.invalidateQueries({ queryKey: ['interviews'] });
+                            toast({ title: 'Interview Scheduled', description: 'The interview has been created and is now visible on the calendar.' });
+                        }}
+                    />
+
+                    <BulkScheduleModal
+                        open={isBulkScheduleOpen}
+                        onOpenChange={setIsBulkScheduleOpen}
+                        onSuccess={() => {
+                            queryClient.invalidateQueries({ queryKey: calendarKeys.slots() });
+                            queryClient.invalidateQueries({ queryKey: ['interviews'] });
+                            toast({ title: 'Bulk Scheduling Complete', description: 'Interviews have been scheduled and are now visible on the calendar.' });
+                        }}
                     />
 
                     {/* Reschedule Dialog */}

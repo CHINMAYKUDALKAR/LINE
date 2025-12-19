@@ -123,8 +123,8 @@ export function CreateSlotModal({
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-[500px]">
-                <DialogHeader>
+            <DialogContent className="w-screen h-[100dvh] max-w-none sm:max-w-[500px] sm:h-auto sm:rounded-lg flex flex-col sm:block gap-0 sm:gap-4 p-0 sm:p-6">
+                <DialogHeader className="p-6 sm:p-0 flex-shrink-0">
                     <DialogTitle className="flex items-center gap-2">
                         <Plus className="h-5 w-5" />
                         Create Available Slot
@@ -134,7 +134,7 @@ export function CreateSlotModal({
                     </DialogDescription>
                 </DialogHeader>
 
-                <div className="space-y-6 py-4">
+                <div className="space-y-6 px-6 py-2 flex-1 overflow-y-auto sm:p-0 sm:overflow-visible">
                     {/* Mode Selector */}
                     <div className="flex gap-2">
                         <Button
@@ -317,7 +317,7 @@ export function CreateSlotModal({
                     </div>
                 </div>
 
-                <DialogFooter>
+                <DialogFooter className="p-6 sm:p-0 border-t sm:border-0 flex-shrink-0 bg-background">
                     <Button variant="outline" onClick={() => onOpenChange(false)}>
                         Cancel
                     </Button>

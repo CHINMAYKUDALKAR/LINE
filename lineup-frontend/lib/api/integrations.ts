@@ -5,6 +5,9 @@ import {
     IntegrationConfig,
     SyncDirection,
     ConflictResolution,
+    WebhookEvent,
+    IntegrationMetrics,
+    IntegrationField,
 } from '@/types/integrations';
 
 // =============================================================================
@@ -149,6 +152,58 @@ export async function triggerSync(
         return response;
     } catch (error) {
         console.error(`Failed to trigger sync for ${provider}:`, error);
+        throw error;
+    }
+}
+
+/**
+ * Get webhook events for an integration
+ */
+export async function getWebhookEvents(
+    provider: string,
+    limit: number = 50
+): Promise<{ events: WebhookEvent[] }> {
+    try {
+        const response = await client.get<{ events: WebhookEvent[] }>(`/integrations/${provider}/webhooks`, {
+            params: { limit },
+        });
+        return response;
+    } catch (error) {
+        console.error(`Failed to fetch webhook events for ${provider}:`, error);
+        throw error;
+    }
+}
+
+/**
+ * Get sync metrics for an integration
+ */
+export async function getMetrics(provider: string): Promise<IntegrationMetrics | null> {
+    try {
+        const response = await client.get<IntegrationMetrics>(`/integrations/${provider}/metrics`);
+        return response;
+    } catch (error) {
+        console.error(`Failed to fetch metrics for ${provider}:`, error);
+        throw error;
+    }
+}
+
+/**
+ * Get field schemas for mapping configuration
+ */
+export async function getFieldSchemas(provider: string): Promise<{
+    sourceFields: IntegrationField[];
+    targetFields: IntegrationField[];
+    mappings: FieldMapping[];
+}> {
+    try {
+        const response = await client.get<{
+            sourceFields: IntegrationField[];
+            targetFields: IntegrationField[];
+            mappings: FieldMapping[];
+        }>(`/integrations/${provider}/fields`);
+        return response;
+    } catch (error) {
+        console.error(`Failed to fetch field schemas for ${provider}:`, error);
         throw error;
     }
 }

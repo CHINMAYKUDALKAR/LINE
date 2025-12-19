@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { FieldMapping, IntegrationField } from '@/types/integrations';
-import { mockSourceFields, mockTargetFields, mockFieldMappings } from '@/lib/integrations-mock-data';
+import { getFieldSchemas } from '@/lib/api/integrations';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
@@ -13,15 +13,33 @@ import { toast } from 'sonner';
 
 interface FieldMappingPanelProps {
   integrationId: string;
+  provider: string;
 }
 
-export function FieldMappingPanel({ integrationId }: FieldMappingPanelProps) {
-  const [mappings, setMappings] = useState<FieldMapping[]>(mockFieldMappings);
+export function FieldMappingPanel({ integrationId, provider }: FieldMappingPanelProps) {
+  const [mappings, setMappings] = useState<FieldMapping[]>([]);
+  const [sourceFields, setSourceFields] = useState<IntegrationField[]>([]);
+  const [targetFields, setTargetFields] = useState<IntegrationField[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [isValidating, setIsValidating] = useState(false);
   const [validationResult, setValidationResult] = useState<{ valid: boolean; errors: string[] } | null>(null);
 
-  const sourceFields = mockSourceFields;
-  const targetFields = mockTargetFields;
+  useEffect(() => {
+    const loadFields = async () => {
+      setIsLoading(true);
+      try {
+        const data = await getFieldSchemas(provider);
+        setSourceFields(data.sourceFields || []);
+        setTargetFields(data.targetFields || []);
+        setMappings(data.mappings || []);
+      } catch (err) {
+        console.error('Failed to load field schemas:', err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    loadFields();
+  }, [provider]);
 
   const handleAddMapping = () => {
     const newMapping: FieldMapping = {

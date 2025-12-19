@@ -153,7 +153,7 @@ export function ScheduleReportModal({ open, onOpenChange }: ScheduleReportModalP
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+            <DialogContent className="w-screen h-[100dvh] max-w-none md:max-w-2xl md:h-auto md:max-h-[85vh] md:rounded-lg overflow-y-auto">
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
                         <Calendar className="h-5 w-5 text-primary" />

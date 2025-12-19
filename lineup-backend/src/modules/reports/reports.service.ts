@@ -1,5 +1,6 @@
 import { Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../common/prisma.service';
+import { Prisma } from '@prisma/client';
 import { loadSQL } from '../../common/sql.util';
 import { getCached, setCached } from '../../common/cache.util';
 import { CreateScheduledReportDto, ReportType, ScheduleFrequency } from './dto/scheduled-report.dto';
@@ -21,8 +22,10 @@ export class ReportsService {
         }
 
         try {
-            const sql = loadSQL(`${name}.sql`);
-            const result = await this.prisma.$queryRawUnsafe(sql, tenantId);
+            const sqlTemplate = loadSQL(`${name}.sql`);
+            // Use $queryRawUnsafe with the tenantId as parameter
+            // The SQL files use $1 as placeholder for tenantId
+            const result = await this.prisma.$queryRawUnsafe(sqlTemplate, tenantId);
 
             // Cache for 30 minutes
             await setCached(cacheKey, result, 1800);

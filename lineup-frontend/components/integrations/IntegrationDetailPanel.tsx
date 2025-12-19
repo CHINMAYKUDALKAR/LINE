@@ -170,15 +170,15 @@ export function IntegrationDetailPanel({ integration, isOpen, onClose, onUpdate,
               </TabsContent>
 
               <TabsContent value="mapping">
-                <FieldMappingPanel integrationId={integration.id} />
+                <FieldMappingPanel integrationId={integration.id} provider={integration.provider} />
               </TabsContent>
 
               <TabsContent value="events">
-                <WebhookEventLog integrationId={integration.id} />
+                <WebhookEventLog integrationId={integration.id} provider={integration.provider} />
               </TabsContent>
 
               <TabsContent value="metrics">
-                <IntegrationMetricsPanel integrationId={integration.id} />
+                <IntegrationMetricsPanel integrationId={integration.id} provider={integration.provider} />
               </TabsContent>
             </Tabs>
           )}

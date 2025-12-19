@@ -31,7 +31,7 @@ export default function SystemMetricsPage() {
         tenantUsageMetrics.error;
 
     return (
-        <div className="px-8 py-6 h-full space-y-6">
+        <div className="p-4 md:p-8 h-full space-y-6">
             {/* Admin Access Badge */}
             <Alert className="mb-6 bg-blue-50 border-blue-200">
                 <ShieldCheck className="h-4 w-4 text-blue-600" />
@@ -63,11 +63,11 @@ export default function SystemMetricsPage() {
 
             {/* Tabbed Sections */}
             <Tabs defaultValue="queues" className="space-y-4">
-                <TabsList className="grid grid-cols-4 w-full max-w-lg">
-                    <TabsTrigger value="queues">Queues</TabsTrigger>
-                    <TabsTrigger value="communication">Communication</TabsTrigger>
-                    <TabsTrigger value="scheduling">Scheduling</TabsTrigger>
-                    <TabsTrigger value="tenants">Tenants</TabsTrigger>
+                <TabsList className="flex flex-wrap h-auto gap-2 w-full max-w-full bg-muted/50 p-1">
+                    <TabsTrigger value="queues" className="flex-1 min-w-[100px]">Queues</TabsTrigger>
+                    <TabsTrigger value="communication" className="flex-1 min-w-[100px]">Communication</TabsTrigger>
+                    <TabsTrigger value="scheduling" className="flex-1 min-w-[100px]">Scheduling</TabsTrigger>
+                    <TabsTrigger value="tenants" className="flex-1 min-w-[100px]">Tenants</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="queues" className="space-y-4">

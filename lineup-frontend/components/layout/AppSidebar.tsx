@@ -161,20 +161,6 @@ export function AppSidebar({
 
   return (
     <>
-      {/* Mobile Menu Button */}
-      <div className="fixed top-4 left-4 z-50 md:hidden">
-        <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
-          <SheetTrigger asChild>
-            <Button variant="outline" size="icon" className="bg-card shadow-sm">
-              <Menu className="h-5 w-5" />
-            </Button>
-          </SheetTrigger>
-          <SheetContent side="left" className="w-72 p-0 bg-card">
-            <SidebarContent isMobile />
-          </SheetContent>
-        </Sheet>
-      </div>
-
       {/* Desktop Sidebar */}
       <aside
         className={cn(

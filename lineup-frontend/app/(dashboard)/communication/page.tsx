@@ -173,21 +173,21 @@ export default function CommunicationOverviewPage() {
     ];
 
     return (
-        <div className="p-6 max-w-7xl mx-auto space-y-8">
+        <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-8 pb-24">
             {/* Header */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                     <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Communication Overview</h1>
                     <p className="text-slate-500">Monitor your messaging performance and channel health.</p>
                 </div>
-                <div className="flex items-center gap-2">
-                    <Button asChild variant="outline" className="gap-2">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full md:w-auto">
+                    <Button asChild variant="outline" className="gap-2 justify-center">
                         <Link href="/communication/channels">
                             <Settings className="w-4 h-4" />
                             Settings
                         </Link>
                     </Button>
-                    <Button asChild className="gap-2">
+                    <Button asChild className="gap-2 justify-center">
                         <Link href="/communication/messages?action=compose">
                             <Plus className="w-4 h-4" />
                             New Message
@@ -277,7 +277,7 @@ export default function CommunicationOverviewPage() {
                 {/* Left Column (2/3) */}
                 <div className="lg:col-span-2 space-y-8">
                     {/* Activity Feed */}
-                    <Card className="h-full">
+                    <Card>
                         <CardHeader className="flex flex-row items-center justify-between pb-2">
                             <div>
                                 <CardTitle>Recent Activity</CardTitle>
@@ -396,7 +396,7 @@ export default function CommunicationOverviewPage() {
                 {/* Right Column (1/3) */}
                 <div className="space-y-8">
                     {/* Channel Distribution */}
-                    <Card className="h-fit">
+                    <Card>
                         <CardHeader>
                             <CardTitle>Channel Usage</CardTitle>
                             <CardDescription>Distribution of messages sent</CardDescription>

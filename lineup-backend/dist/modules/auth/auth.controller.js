@@ -88,7 +88,7 @@ let AuthController = class AuthController {
         return this.svc.checkPassword(dto.password);
     }
     async login(dto, req, res) {
-        const result = await this.svc.login(dto.email, dto.password, req, dto.rememberMe);
+        const result = await this.svc.login(dto.email, dto.password, req);
         this.setRefreshTokenCookie(res, result.refreshToken, dto.rememberMe);
         return {
             accessToken: result.accessToken,

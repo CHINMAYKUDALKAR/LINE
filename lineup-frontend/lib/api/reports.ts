@@ -96,65 +96,65 @@ export async function getInterviewerLoad(refresh = false): Promise<InterviewerLo
 
 // ─── Export Functions ────────────────────────────────────────────────────────
 
+// Helper to get dynamic API URL (same as client.ts)
+const getApiBaseUrl = () => {
+    if (typeof window !== 'undefined') {
+        const hostname = window.location.hostname;
+        return process.env.NEXT_PUBLIC_API_URL || `http://${hostname}:4000`;
+    }
+    return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+};
+
+import { getAuthToken } from "@/lib/auth";
+
 export async function exportReportCsv(reportType: ReportType): Promise<void> {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
-    const token = localStorage.getItem('accessToken');
-    const tenantId = localStorage.getItem('activeTenantId');
+    const apiUrl = getApiBaseUrl();
+    const token = getAuthToken();
 
-    console.log('[Export CSV] Starting export for:', reportType);
-    console.log('[Export CSV] Token present:', !!token);
-    console.log('[Export CSV] Tenant ID:', tenantId);
-
+    // Use correct API path structure (api/v1 prefix and path param)
     const response = await fetch(`${apiUrl}/api/v1/reports/export/csv/${reportType}`, {
         method: 'GET',
         headers: {
             'Authorization': `Bearer ${token}`,
-            'X-Tenant-Id': tenantId || '',
         },
-        credentials: 'include',
     });
 
-    console.log('[Export CSV] Response status:', response.status);
-
     if (!response.ok) {
-        const errorText = await response.text();
-        console.error('[Export CSV] Error:', errorText);
-        throw new Error(`Failed to export report: ${response.status} ${errorText}`);
+        const errorText = await response.text().catch(() => 'Unknown error');
+        console.error(`Export failed: ${response.status} ${response.statusText}`, errorText);
+        throw new Error(`Failed to export CSV: ${response.statusText} (${response.status})`);
     }
-
-    const contentDisposition = response.headers.get('Content-Disposition');
-    const filenameMatch = contentDisposition?.match(/filename="(.+)"/);
-    const filename = filenameMatch ? filenameMatch[1] : `${reportType}-report.csv`;
 
     const blob = await response.blob();
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = filename;
+    a.download = `report-${reportType}-${new Date().toISOString().split('T')[0]}.csv`;
     document.body.appendChild(a);
     a.click();
     window.URL.revokeObjectURL(url);
     document.body.removeChild(a);
-    console.log('[Export CSV] Download complete:', filename);
 }
 
 export async function exportReportPdf(reportType: ReportType): Promise<void> {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+    const apiUrl = getApiBaseUrl();
+    const token = getAuthToken();
+
+    // Use correct API path structure (api/v1 prefix and path param)
     const response = await fetch(`${apiUrl}/api/v1/reports/export/pdf/${reportType}`, {
         method: 'GET',
         headers: {
-            'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
-            'X-Tenant-Id': localStorage.getItem('activeTenantId') || '',
+            'Authorization': `Bearer ${token}`,
         },
-        credentials: 'include',
     });
 
     if (!response.ok) {
-        throw new Error('Failed to export report');
+        const errorText = await response.text().catch(() => 'Unknown error');
+        console.error(`Export failed: ${response.status} ${response.statusText}`, errorText);
+        throw new Error(`Failed to export PDF: ${response.statusText} (${response.status})`);
     }
 
     const html = await response.text();
-    const filename = response.headers.get('X-Filename') || `${reportType}-report.pdf`;
 
     const printWindow = window.open('', '_blank');
     if (printWindow) {

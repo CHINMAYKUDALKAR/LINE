@@ -10,15 +10,17 @@ exports.SettingsModule = void 0;
 const common_1 = require("@nestjs/common");
 const settings_service_1 = require("./settings.service");
 const settings_controller_1 = require("./settings.controller");
+const hiring_stages_service_1 = require("./services/hiring-stages.service");
+const hiring_stages_controller_1 = require("./controllers/hiring-stages.controller");
 const prisma_service_1 = require("../../common/prisma.service");
 let SettingsModule = class SettingsModule {
 };
 exports.SettingsModule = SettingsModule;
 exports.SettingsModule = SettingsModule = __decorate([
     (0, common_1.Module)({
-        controllers: [settings_controller_1.SettingsController],
-        providers: [settings_service_1.SettingsService, prisma_service_1.PrismaService],
-        exports: [settings_service_1.SettingsService],
+        controllers: [settings_controller_1.SettingsController, hiring_stages_controller_1.HiringStagesController],
+        providers: [settings_service_1.SettingsService, hiring_stages_service_1.HiringStagesService, prisma_service_1.PrismaService],
+        exports: [settings_service_1.SettingsService, hiring_stages_service_1.HiringStagesService],
     })
 ], SettingsModule);
 //# sourceMappingURL=settings.module.js.map

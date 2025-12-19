@@ -18,6 +18,17 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Users, Calendar, FileText, Trash2 } from 'lucide-react';
 
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+
 export default function RecycleBinPage() {
     const { accessToken: token, tenants, activeTenantId } = useAuth();
     const { toast } = useToast();
@@ -27,6 +38,7 @@ export default function RecycleBinPage() {
     const [restoringId, setRestoringId] = useState<string | null>(null);
     const [purgingId, setPurgingId] = useState<string | null>(null);
     const [filters, setFilters] = useState<RecycleBinFilters>({});
+    const [itemToDelete, setItemToDelete] = useState<RecycleBinItem | null>(null);
 
     // Get current tenant role
     const activeTenant = tenants.find(t => t.id === activeTenantId);
@@ -81,15 +93,16 @@ export default function RecycleBinPage() {
         }
     };
 
-    const handlePurge = async (item: RecycleBinItem) => {
-        if (!token) return;
-        if (!confirm('Are you sure you want to permanently delete this item? This cannot be undone.')) {
-            return;
-        }
+    const handlePurge = (item: RecycleBinItem) => {
+        setItemToDelete(item);
+    };
+
+    const confirmPurge = async () => {
+        if (!token || !itemToDelete) return;
 
         try {
-            setPurgingId(item.id);
-            await purgeRecycleBinItem(item.id, token);
+            setPurgingId(itemToDelete.id);
+            await purgeRecycleBinItem(itemToDelete.id, token);
             toast({
                 title: 'Deleted',
                 description: 'Item has been permanently deleted',
@@ -103,6 +116,7 @@ export default function RecycleBinPage() {
             });
         } finally {
             setPurgingId(null);
+            setItemToDelete(null);
         }
     };
 
@@ -122,9 +136,9 @@ export default function RecycleBinPage() {
     };
 
     return (
-        <div className="flex-1 space-y-6 p-8 pt-6">
+        <div className="flex-1 space-y-6 p-4 md:p-8">
             {/* Header */}
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div>
                     <h2 className="text-3xl font-bold tracking-tight flex items-center gap-2">
                         <Trash2 className="h-8 w-8" />
@@ -141,7 +155,7 @@ export default function RecycleBinPage() {
 
             {/* Stats Cards */}
             {stats && (
-                <div className="grid gap-4 md:grid-cols-4">
+                <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
                     <Card>
                         <CardContent className="p-4">
                             <div className="flex items-center justify-between">
@@ -212,6 +226,23 @@ export default function RecycleBinPage() {
                     isAdmin={isAdmin}
                 />
             )}
+
+            <AlertDialog open={!!itemToDelete} onOpenChange={(open) => !open && setItemToDelete(null)}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            This action cannot be undone. This will permanently delete the item from our servers.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={confirmPurge} className="bg-red-600 hover:bg-red-700">
+                            Delete Forever
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 }

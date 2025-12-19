@@ -54,6 +54,31 @@ model Tenant {
   
   // SSO / Identity Providers
   identityProviders    IdentityProvider[]
+  
+  // Hiring Pipeline
+  hiringStages         HiringStage[]
+}
+
+// Tenant-configurable hiring stages for the recruitment pipeline
+model HiringStage {
+  id        String   @id @default(cuid())
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  
+  name      String   // Display name: "Screening"
+  key       String   // Stable key: "SCREENING" (used in Candidate.stage)
+  order     Int      // Pipeline order (1, 2, 3...)
+  color     String?  // Optional UI color hex code
+  
+  isActive  Boolean  @default(true)
+  isDefault Boolean  @default(false) // Only one per tenant
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([tenantId, key])
+  @@index([tenantId, order])
+  @@index([tenantId, isActive])
 }
 
 // Security policy per tenant for IP allowlist, password policies, etc.

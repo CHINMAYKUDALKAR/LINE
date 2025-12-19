@@ -30,8 +30,8 @@ let ReportsService = ReportsService_1 = class ReportsService {
                 return cached;
         }
         try {
-            const sql = (0, sql_util_1.loadSQL)(`${name}.sql`);
-            const result = await this.prisma.$queryRawUnsafe(sql, tenantId);
+            const sqlTemplate = (0, sql_util_1.loadSQL)(`${name}.sql`);
+            const result = await this.prisma.$queryRawUnsafe(sqlTemplate, tenantId);
             await (0, cache_util_1.setCached)(cacheKey, result, 1800);
             return result;
         }

@@ -205,8 +205,8 @@ export function UploadCandidatesModal({ open, onOpenChange, onSuccess }: UploadC
 
     return (
         <Dialog open={open} onOpenChange={handleClose}>
-            <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-hidden flex flex-col">
-                <DialogHeader>
+            <DialogContent className="w-screen h-[100dvh] max-w-none sm:max-w-[800px] sm:h-auto sm:max-h-[90vh] sm:rounded-lg flex flex-col gap-0 p-0">
+                <DialogHeader className="p-6 pb-2 sm:pb-6 flex-shrink-0">
                     <DialogTitle className="flex items-center gap-2">
                         <FileSpreadsheet className="h-5 w-5" />
                         Import Candidates from CSV
@@ -220,7 +220,7 @@ export function UploadCandidatesModal({ open, onOpenChange, onSuccess }: UploadC
                     </DialogDescription>
                 </DialogHeader>
 
-                <div className="flex-1 overflow-hidden">
+                <div className="flex-1 overflow-y-auto p-6 pt-2 sm:pt-0">
                     {/* Step 1: Upload */}
                     {step === 'upload' && (
                         <div
@@ -447,7 +447,7 @@ export function UploadCandidatesModal({ open, onOpenChange, onSuccess }: UploadC
                     )}
                 </div>
 
-                <DialogFooter>
+                <DialogFooter className="p-6 border-t bg-background mt-auto flex-shrink-0">
                     {step === 'upload' && (
                         <Button variant="outline" onClick={handleClose}>
                             Cancel

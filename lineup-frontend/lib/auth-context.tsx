@@ -52,8 +52,16 @@ interface AcceptInviteData {
     name?: string;
 }
 
-// API base URL
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+// Dynamically determine API base URL for network access
+const getApiBaseUrl = () => {
+    if (typeof window !== 'undefined') {
+        const hostname = window.location.hostname;
+        return process.env.NEXT_PUBLIC_API_URL || `http://${hostname}:4000`;
+    }
+    return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+};
+
+const API_URL = getApiBaseUrl();
 
 // Create context with default values
 const AuthContext = createContext<AuthContextType | undefined>(undefined);

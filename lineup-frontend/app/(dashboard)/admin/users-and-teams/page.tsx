@@ -298,7 +298,7 @@ export default function UsersTeams() {
       <motion.div initial="initial" animate="animate" variants={staggerContainer}>
         {/* Header */}
         <motion.div variants={fadeInUp} className="border-b border-[#E5E7EB] bg-[#FFFFFF]">
-          <div className="w-full px-8 py-8">
+          <div className="w-full p-4 md:px-8 md:py-8">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div>
                 <h1 className="text-3xl font-bold text-foreground">
@@ -308,17 +308,18 @@ export default function UsersTeams() {
                   Manage your organization's members, roles, and team assignments.
                 </p>
               </div>
-              <div className="flex gap-3">
+              <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
                 <Button
                   variant="outline"
                   onClick={() => setCreateTeamModalOpen(true)}
+                  className="w-full sm:w-auto"
                 >
                   <Plus className="w-4 h-4 mr-2" />
                   Create Team
                 </Button>
                 <Button
                   onClick={() => setInviteModalOpen(true)}
-                  className="bg-[#0066CC] hover:bg-[#0052A3] text-white"
+                  className="bg-[#0066CC] hover:bg-[#0052A3] text-white w-full sm:w-auto"
                 >
                   <Mail className="w-4 h-4 mr-2" />
                   Invite User
@@ -327,10 +328,10 @@ export default function UsersTeams() {
             </div>
 
             {/* Tabs */}
-            <div className="flex gap-8 mt-6 border-t border-[#E5E7EB] pt-0">
+            <div className="flex gap-8 mt-6 border-t border-[#E5E7EB] pt-0 overflow-x-auto">
               <button
                 onClick={() => setActiveTab("users")}
-                className={`pb-3 pt-3 px-1 border-b-2 text-sm font-medium transition-colors ${activeTab === "users"
+                className={`pb-3 pt-3 px-1 border-b-2 text-sm font-medium transition-colors whitespace-nowrap ${activeTab === "users"
                   ? "border-[#0066CC] text-[#0066CC]"
                   : "border-transparent text-gray-500 hover:text-foreground"
                   }`}
@@ -340,7 +341,7 @@ export default function UsersTeams() {
               </button>
               <button
                 onClick={() => setActiveTab("teams")}
-                className={`pb-3 pt-3 px-1 border-b-2 text-sm font-medium transition-colors ${activeTab === "teams"
+                className={`pb-3 pt-3 px-1 border-b-2 text-sm font-medium transition-colors whitespace-nowrap ${activeTab === "teams"
                   ? "border-[#0066CC] text-[#0066CC]"
                   : "border-transparent text-gray-500 hover:text-foreground"
                   }`}
@@ -353,7 +354,7 @@ export default function UsersTeams() {
         </motion.div>
 
         {/* Content */}
-        <motion.div variants={staggerItem} className="w-full px-8 py-8">
+        <motion.div variants={staggerItem} className="w-full p-4 md:px-8 md:py-8">
           {activeTab === "users" && (
             <div className="space-y-6">
               {/* Search and Filters */}
@@ -405,23 +406,24 @@ export default function UsersTeams() {
 
               {/* Bulk Actions */}
               {selectedUsers.size > 0 && (
-                <div className="bg-[#FFFFFF] rounded-lg border border-[#E5E7EB] p-4 flex items-center justify-between">
+                <div className="bg-[#FFFFFF] rounded-lg border border-[#E5E7EB] p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
                   <p className="text-sm text-foreground">
                     {selectedUsers.size} user{selectedUsers.size !== 1 ? "s" : ""}{" "}
                     selected
                   </p>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 w-full sm:w-auto">
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => setSelectedUsers(new Set())}
+                      className="flex-1 sm:flex-none"
                     >
                       Deselect
                     </Button>
                     <Button
                       variant="outline"
                       size="sm"
-                      className="text-destructive hover:text-destructive"
+                      className="text-destructive hover:text-destructive flex-1 sm:flex-none"
                       onClick={handleDeleteSelected}
                     >
                       Delete / Deactivate
@@ -430,8 +432,72 @@ export default function UsersTeams() {
                 </div>
               )}
 
-              {/* Users Table */}
-              <div className="bg-[#FFFFFF] rounded-lg border border-[#E5E7EB] overflow-hidden">
+              {/* Users List - Mobile Cards */}
+              <div className="md:hidden space-y-4">
+                {usersLoading ? (
+                  <div className="flex justify-center py-8">
+                    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                  </div>
+                ) : users.length === 0 ? (
+                  <div className="text-center py-8">
+                    <Users className="w-12 h-12 mx-auto mb-4 text-muted-foreground opacity-40" />
+                    <p className="text-muted-foreground">No users found</p>
+                  </div>
+                ) : (
+                  users.map((user) => (
+                    <div key={user.id} className="bg-white p-4 rounded-lg border shadow-sm space-y-3">
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full bg-[#0066CC] text-white flex items-center justify-center text-sm font-semibold">
+                            {user.name?.charAt(0) || user.email.charAt(0)}
+                          </div>
+                          <div>
+                            <p className="font-medium">{user.name || "Pending Invite"}</p>
+                            <p className="text-xs text-muted-foreground">{user.email}</p>
+                          </div>
+                        </div>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                              <MoreHorizontal className="w-4 h-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem>View Profile</DropdownMenuItem>
+                            <DropdownMenuItem>Change Role</DropdownMenuItem>
+                            {user.status !== 'inactive' ? (
+                              <DropdownMenuItem
+                                className="text-destructive"
+                                onClick={() => deleteUserMutation.mutate(user.id)}
+                              >
+                                Deactivate
+                              </DropdownMenuItem>
+                            ) : (
+                              <DropdownMenuItem className="text-green-600">
+                                Activate
+                              </DropdownMenuItem>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                      <div className="flex gap-2">
+                        <Badge className={getRoleColor(user.role)}>
+                          {user.role.charAt(0).toUpperCase() + user.role.slice(1)}
+                        </Badge>
+                        <Badge className={getStatusColor(user.status)}>
+                          {user.status.charAt(0).toUpperCase() + user.status.slice(1)}
+                        </Badge>
+                      </div>
+                      <div className="text-xs text-muted-foreground pt-2 border-t">
+                        Last login: {formatDate(user.lastLogin)}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              {/* Users Table - Desktop */}
+              <div className="hidden md:block bg-[#FFFFFF] rounded-lg border border-[#E5E7EB] overflow-hidden">
                 <Table>
                   <TableHeader className="bg-[#F7F9FC] border-b border-[#E5E7EB]">
                     <TableRow>

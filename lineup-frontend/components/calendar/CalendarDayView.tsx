@@ -20,6 +20,8 @@ interface CalendarDayViewProps {
   onEmptySlotClick: (date: Date) => void;
   onReschedule: (event: CalendarEvent) => void;
   onCancel: (event: CalendarEvent) => void;
+  onComplete?: (event: CalendarEvent) => void;
+  onAddNote?: (event: CalendarEvent) => void;
 }
 
 const HOURS = Array.from({ length: 12 }, (_, i) => i + 8);
@@ -49,6 +51,8 @@ export function CalendarDayView({
   onEmptySlotClick,
   onReschedule,
   onCancel,
+  onComplete,
+  onAddNote,
 }: CalendarDayViewProps) {
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
 
@@ -61,10 +65,10 @@ export function CalendarDayView({
     const startHour = getHours(startDate);
     const startMinutes = getMinutes(startDate);
     const durationMinutes = differenceInMinutes(new Date(event.endTime), startDate);
-    
+
     const top = ((startHour - 8) * HOUR_HEIGHT) + ((startMinutes / 60) * HOUR_HEIGHT);
     const height = (durationMinutes / 60) * HOUR_HEIGHT;
-    
+
     return { top, height: Math.max(height, 50) };
   };
 
@@ -170,6 +174,8 @@ export function CalendarDayView({
                       onClose={() => setSelectedEvent(null)}
                       onReschedule={onReschedule}
                       onCancel={onCancel}
+                      onComplete={onComplete}
+                      onAddNote={onAddNote}
                     />
                   </PopoverContent>
                 </Popover>

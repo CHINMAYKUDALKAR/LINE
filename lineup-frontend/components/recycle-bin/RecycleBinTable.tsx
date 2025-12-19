@@ -79,36 +79,92 @@ export function RecycleBinTable({
         return colors[module] || 'bg-gray-100 text-gray-700';
     };
 
+    if (items.length === 0) {
+        return (
+            <div className="flex flex-col items-center justify-center p-12 border-2 border-dashed rounded-lg bg-muted/5">
+                <Trash2 className="h-12 w-12 text-muted-foreground/50 mb-4" />
+                <p className="text-lg font-medium text-muted-foreground">No items in recycle bin</p>
+                <p className="text-sm text-muted-foreground/70">
+                    Deleted items will appear here
+                </p>
+            </div>
+        );
+    }
+
     return (
-        <div className="rounded-lg border bg-card overflow-hidden">
-            {/* Responsive: horizontal scroll on mobile */}
-            <div className="overflow-x-auto">
-                <Table className="min-w-[500px]">
-                    <TableHeader>
-                        <TableRow className="hover:bg-transparent">
-                            <TableHead className="w-[60px]">Type</TableHead>
-                            <TableHead>Name / Details</TableHead>
-                            {/* Hidden on mobile: Deleted column details */}
-                            <TableHead className="hidden sm:table-cell">Deleted</TableHead>
-                            {isAdmin && <TableHead className="hidden md:table-cell">Deleted By</TableHead>}
-                            <TableHead className="text-right">Actions</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {items.length === 0 ? (
-                            <TableRow>
-                                <TableCell colSpan={isAdmin ? 5 : 4} className="h-32 text-center">
-                                    <div className="flex flex-col items-center gap-2">
-                                        <Trash2 className="h-12 w-12 text-muted-foreground/50" />
-                                        <p className="text-muted-foreground">No items in recycle bin</p>
-                                        <p className="text-sm text-muted-foreground/70">
-                                            Deleted items will appear here
-                                        </p>
-                                    </div>
-                                </TableCell>
+        <>
+            {/* Mobile View: Cards */}
+            <div className="block sm:hidden space-y-4">
+                {items.map((item) => (
+                    <div key={item.id} className="bg-card rounded-lg border shadow-sm p-4 space-y-4">
+                        <div className="flex items-start gap-3">
+                            <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-muted shrink-0">
+                                {getIcon(item.module)}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                                <p className="font-medium text-sm truncate">{getDisplayName(item)}</p>
+                                <div className="flex items-center gap-2 mt-1">
+                                    <Badge variant="secondary" className={`text-[10px] px-1.5 py-0.5 ${getModuleBadgeColor(item.module)}`}>
+                                        {getModuleLabel(item.module)}
+                                    </Badge>
+                                    <span className="text-xs text-muted-foreground">
+                                        {formatDistanceToNow(new Date(item.deletedAt), { addSuffix: true })}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="flex gap-2 pt-2">
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                className="flex-1 h-9 text-xs"
+                                onClick={() => onRestore(item)}
+                                disabled={!!isRestoring || !!isPurging}
+                            >
+                                {isRestoring === item.id ? (
+                                    <div className="animate-spin h-3 w-3 border border-current border-t-transparent rounded-full mr-1" />
+                                ) : (
+                                    <RefreshCcw className="h-3 w-3 mr-1" />
+                                )}
+                                Restore
+                            </Button>
+                            {isAdmin && (
+                                <Button
+                                    variant="destructive"
+                                    size="sm"
+                                    className="flex-1 h-9 text-xs"
+                                    onClick={() => onPurge(item)}
+                                    disabled={!!isRestoring || !!isPurging}
+                                >
+                                    {isPurging === item.id ? (
+                                        <div className="animate-spin h-3 w-3 border border-current border-t-transparent rounded-full mr-1" />
+                                    ) : (
+                                        <Trash2 className="h-3 w-3 mr-1" />
+                                    )}
+                                    Delete
+                                </Button>
+                            )}
+                        </div>
+                    </div>
+                ))}
+            </div>
+
+            {/* Desktop View: Table */}
+            <div className="hidden sm:block rounded-lg border bg-card overflow-hidden">
+                <div className="overflow-x-auto">
+                    <Table className="min-w-[500px]">
+                        <TableHeader>
+                            <TableRow className="hover:bg-transparent">
+                                <TableHead className="w-[60px]">Type</TableHead>
+                                <TableHead>Name / Details</TableHead>
+                                <TableHead className="hidden lg:table-cell">Deleted</TableHead>
+                                {isAdmin && <TableHead className="hidden xl:table-cell">Deleted By</TableHead>}
+                                <TableHead className="text-right">Actions</TableHead>
                             </TableRow>
-                        ) : (
-                            items.map((item) => (
+                        </TableHeader>
+                        <TableBody>
+                            {items.map((item) => (
                                 <TableRow key={item.id} className="group">
                                     <TableCell>
                                         <Tooltip>
@@ -130,8 +186,7 @@ export function RecycleBinTable({
                                             </Badge>
                                         </div>
                                     </TableCell>
-                                    {/* Hidden on mobile: Deleted date */}
-                                    <TableCell className="hidden sm:table-cell">
+                                    <TableCell className="hidden lg:table-cell">
                                         <div className="flex flex-col">
                                             <span className="text-sm">
                                                 {new Date(item.deletedAt).toLocaleDateString()}
@@ -142,7 +197,7 @@ export function RecycleBinTable({
                                         </div>
                                     </TableCell>
                                     {isAdmin && (
-                                        <TableCell className="hidden md:table-cell text-sm text-muted-foreground">
+                                        <TableCell className="hidden xl:table-cell text-sm text-muted-foreground">
                                             {item.deletedBy || 'Unknown'}
                                         </TableCell>
                                     )}
@@ -179,11 +234,11 @@ export function RecycleBinTable({
                                         </div>
                                     </TableCell>
                                 </TableRow>
-                            ))
-                        )}
-                    </TableBody>
-                </Table>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </div>
             </div>
-        </div>
+        </>
     );
 }

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useCallback, useEffect, useRef } from 'react';
 import {
   startOfWeek,
   endOfWeek,
@@ -24,7 +24,10 @@ interface CalendarWeekViewProps {
   userRole: UserRole;
   onEmptySlotClick: (date: Date) => void;
   onReschedule: (event: CalendarEvent) => void;
+  onManualReschedule?: (event: CalendarEvent) => void;
   onCancel: (event: CalendarEvent) => void;
+  onComplete?: (event: CalendarEvent) => void;
+  onAddNote?: (event: CalendarEvent) => void;
 }
 
 const HOURS = Array.from({ length: 12 }, (_, i) => i + 8); // 8 AM to 7 PM
@@ -45,10 +48,15 @@ export function CalendarWeekView({
   userRole,
   onEmptySlotClick,
   onReschedule,
+  onManualReschedule,
   onCancel,
+  onComplete,
+  onAddNote,
 }: CalendarWeekViewProps) {
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const [draggedEvent, setDraggedEvent] = useState<CalendarEvent | null>(null);
+  const [resizingEvent, setResizingEvent] = useState<{ id: string; originalDuration: number; startY: number; newDuration: number } | null>(null);
+  const weekContainerRef = useRef<HTMLDivElement>(null);
 
   const days = useMemo(() => {
     const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 });
@@ -67,7 +75,9 @@ export function CalendarWeekView({
     const durationMinutes = differenceInMinutes(new Date(event.endTime), startDate);
 
     const top = ((startHour - 8) * HOUR_HEIGHT) + ((startMinutes / 60) * HOUR_HEIGHT);
-    const height = (durationMinutes / 60) * HOUR_HEIGHT;
+    // Use resizing duration if available
+    const displayDuration = resizingEvent?.id === event.id ? resizingEvent.newDuration : durationMinutes;
+    const height = (displayDuration / 60) * HOUR_HEIGHT;
 
     return { top, height: Math.max(height, 34) };
   };
@@ -88,157 +98,221 @@ export function CalendarWeekView({
     e.preventDefault();
     if (draggedEvent && userRole !== 'interviewer') {
       const newDate = setHours(day, hour);
+      // Call onReschedule with the updated startTime - this will trigger auto-save
       onReschedule({ ...draggedEvent, startTime: newDate.toISOString() });
     }
     setDraggedEvent(null);
   };
 
+  // Resize Handling
+  const handleResizeStart = (e: React.MouseEvent, event: CalendarEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    if (userRole === 'interviewer') return;
+
+    setResizingEvent({
+      id: event.id,
+      originalDuration: event.duration,
+      startY: e.clientY,
+      newDuration: event.duration
+    });
+  };
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!resizingEvent) return;
+
+      const deltaY = e.clientY - resizingEvent.startY;
+      // Calculate minutes based on pixels (HOUR_HEIGHT = 60 mins)
+      const deltaMinutes = Math.round((deltaY / HOUR_HEIGHT) * 60);
+      // Snap to 15 minute increments
+      const snappedDelta = Math.round(deltaMinutes / 15) * 15;
+
+      const newDuration = Math.max(15, resizingEvent.originalDuration + snappedDelta);
+      setResizingEvent(prev => prev ? { ...prev, newDuration } : null);
+    };
+
+    const handleMouseUp = () => {
+      if (!resizingEvent) return;
+
+      if (resizingEvent.newDuration !== resizingEvent.originalDuration) {
+        const eventToUpdate = events.find((ev: CalendarEvent) => ev.id === resizingEvent.id);
+        if (eventToUpdate) {
+          // Update event with new duration - onReschedule will handle the backend update
+          onReschedule({ ...eventToUpdate, duration: resizingEvent.newDuration });
+        }
+      }
+      setResizingEvent(null);
+    };
+
+    if (resizingEvent) {
+      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mouseup', handleMouseUp);
+    }
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [resizingEvent, events, onReschedule]);
+
   return (
     <div className="bg-background rounded-xl border border-border shadow-sm overflow-hidden flex flex-col h-[calc(100vh-240px)]">
       {/* Day Headers */}
-      <div className="grid grid-cols-[60px_repeat(7,1fr)] border-b border-border bg-muted/30">
-        <div className="py-4 border-r border-border/50" />
-        {days.map((day) => (
-          <div
-            key={day.toISOString()}
-            className={cn(
-              'py-3 text-center border-r border-border/50 last:border-r-0',
-              isToday(day) ? 'bg-primary/5' : '',
-              isWeekend(day) ? 'bg-muted/30' : ''
-            )}
-          >
-            <div className={cn(
-              "text-xs font-medium uppercase mb-1",
-              isToday(day) ? "text-primary" : "text-muted-foreground"
-            )}>
-              {format(day, 'EEE')}
-            </div>
+      <div className="overflow-x-auto custom-scrollbar flex-1 flex flex-col">
+        <div className="min-w-[800px] grid grid-cols-[60px_repeat(7,1fr)] border-b border-border bg-muted/30 flex-none z-10 sticky top-0">
+          <div className="py-4 border-r border-border/50" />
+          {days.map((day) => (
             <div
+              key={day.toISOString()}
               className={cn(
-                'text-xl font-semibold inline-flex items-center justify-center w-8 h-8 rounded-full',
-                isToday(day)
-                  ? 'bg-primary text-primary-foreground shadow-sm'
-                  : 'text-foreground'
+                'py-3 text-center border-r border-border/50 last:border-r-0',
+                isToday(day) ? 'bg-primary/5' : '',
+                isWeekend(day) ? 'bg-muted/30' : ''
               )}
             >
-              {format(day, 'd')}
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Time Grid */}
-      <div className="overflow-y-auto flex-1 custom-scrollbar">
-        <div className="grid grid-cols-[60px_repeat(7,1fr)] min-h-full">
-          {/* Hour Labels */}
-          <div className="border-r border-border/50 bg-background sticky left-0 z-20">
-            {HOURS.map((hour) => (
-              <div
-                key={hour}
-                className="relative h-[64px]"
-              >
-                <span className="absolute -top-2.5 right-3 text-xs font-medium text-muted-foreground/70">
-                  {format(setHours(new Date(), hour), 'h a')}
-                </span>
+              <div className={cn(
+                "text-xs font-medium uppercase mb-1",
+                isToday(day) ? "text-primary" : "text-muted-foreground"
+              )}>
+                {format(day, 'EEE')}
               </div>
-            ))}
-          </div>
-
-          {/* Day Columns */}
-          {days.map((day) => {
-            const dayEvents = getEventsForDay(day);
-            const isDayToday = isToday(day);
-
-            return (
               <div
-                key={day.toISOString()}
                 className={cn(
-                  'relative border-r border-border/50 last:border-r-0 min-h-full',
-                  isDayToday ? 'bg-primary/[0.02]' : '',
-                  isWeekend(day) ? 'bg-muted/20' : ''
+                  'text-xl font-semibold inline-flex items-center justify-center w-8 h-8 rounded-full',
+                  isToday(day)
+                    ? 'bg-primary text-primary-foreground shadow-sm'
+                    : 'text-foreground'
                 )}
               >
-                {/* Hour Slots */}
-                {HOURS.map((hour) => (
-                  <div
-                    key={hour}
-                    className="h-[64px] border-b border-dashed border-border/40 hover:bg-muted/40 cursor-pointer transition-colors"
-                    onDragOver={handleDragOver}
-                    onDrop={(e) => handleDrop(e, day, hour)}
-                    onClick={() => onEmptySlotClick(setHours(day, hour))}
-                  />
-                ))}
-
-                {/* Current Time Indicator */}
-                {isDayToday && (
-                  <div
-                    className="absolute w-full border-t-2 border-red-500 z-10 pointer-events-none flex items-center"
-                    style={{
-                      top: `${((getHours(new Date()) - 8) * HOUR_HEIGHT) + ((getMinutes(new Date()) / 60) * HOUR_HEIGHT)}px`
-                    }}
-                  >
-                    <div className="w-2 h-2 bg-red-500 rounded-full -ml-1" />
-                  </div>
-                )}
-
-                {/* Events */}
-                {dayEvents.map((event) => {
-                  const { top, height } = getEventPosition(event);
-                  const stageStyle = stageColors[event.stage] || stageColors.received;
-
-                  return (
-                    <Popover
-                      key={event.id}
-                      open={selectedEvent?.id === event.id}
-                      onOpenChange={(open) => setSelectedEvent(open ? event : null)}
-                    >
-                      <PopoverTrigger asChild>
-                        <div
-                          draggable={userRole !== 'interviewer'}
-                          onDragStart={(e) => handleDragStart(e, event)}
-                          className={cn(
-                            'absolute left-1 right-1 rounded-md border-l-4 px-2 py-1.5 cursor-pointer transition-all duration-200',
-                            'shadow-sm hover:shadow-md hover:-translate-y-0.5',
-                            'focus:outline-none focus:ring-2 focus:ring-primary/50',
-                            stageStyle,
-                            draggedEvent?.id === event.id && 'opacity-50 scale-95'
-                          )}
-                          style={{ top: `${top}px`, height: `${height}px` }}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedEvent(event);
-                          }}
-                        >
-                          <div className="font-semibold text-xs leading-tight truncate">
-                            {event.candidateName}
-                          </div>
-                          {height > 40 && (
-                            <div className="text-[11px] opacity-80 truncate mt-0.5 font-medium">
-                              {event.role}
-                            </div>
-                          )}
-                          {height > 55 && (
-                            <div className="text-[10px] opacity-70 truncate mt-0.5">
-                              {format(new Date(event.startTime), 'h:mm a')}
-                            </div>
-                          )}
-                        </div>
-                      </PopoverTrigger>
-                      <PopoverContent className="p-0 w-auto border-none shadow-xl" align="start" sideOffset={5}>
-                        <CalendarEventPopover
-                          event={event}
-                          userRole={userRole}
-                          onClose={() => setSelectedEvent(null)}
-                          onReschedule={onReschedule}
-                          onCancel={onCancel}
-                        />
-                      </PopoverContent>
-                    </Popover>
-                  );
-                })}
+                {format(day, 'd')}
               </div>
-            );
-          })}
+            </div>
+          ))}
+        </div>
+
+        {/* Time Grid */}
+        <div className="flex-1 overflow-y-auto">
+          <div className="grid grid-cols-[60px_repeat(7,1fr)] min-w-[800px] min-h-full">
+            {/* Hour Labels */}
+            <div className="border-r border-border/50 bg-background sticky left-0 z-20">
+              {HOURS.map((hour) => (
+                <div
+                  key={hour}
+                  className="relative h-[64px]"
+                >
+                  <span className="absolute -top-2.5 right-3 text-xs font-medium text-muted-foreground/70">
+                    {format(setHours(new Date(), hour), 'h a')}
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            {/* Day Columns */}
+            {days.map((day) => {
+              const dayEvents = getEventsForDay(day);
+              const isDayToday = isToday(day);
+
+              return (
+                <div
+                  key={day.toISOString()}
+                  className={cn(
+                    'relative border-r border-border/50 last:border-r-0 min-h-full',
+                    isDayToday ? 'bg-primary/[0.02]' : '',
+                    isWeekend(day) ? 'bg-muted/20' : ''
+                  )}
+                >
+                  {/* Hour Slots */}
+                  {HOURS.map((hour) => (
+                    <div
+                      key={hour}
+                      className="h-[64px] border-b border-dashed border-border/40 hover:bg-muted/40 cursor-pointer transition-colors"
+                      onDragOver={handleDragOver}
+                      onDrop={(e) => handleDrop(e, day, hour)}
+                      onClick={() => onEmptySlotClick(setHours(day, hour))}
+                    />
+                  ))}
+
+                  {/* Current Time Indicator */}
+                  {isDayToday && (
+                    <div
+                      className="absolute w-full border-t-2 border-red-500 z-10 pointer-events-none flex items-center"
+                      style={{
+                        top: `${((getHours(new Date()) - 8) * HOUR_HEIGHT) + ((getMinutes(new Date()) / 60) * HOUR_HEIGHT)}px`
+                      }}
+                    >
+                      <div className="w-2 h-2 bg-red-500 rounded-full -ml-1" />
+                    </div>
+                  )}
+
+                  {/* Events */}
+                  {dayEvents.map((event) => {
+                    const { top, height } = getEventPosition(event);
+                    const stageStyle = stageColors[event.stage] || stageColors.received;
+
+                    return (
+                      <Popover
+                        key={event.id}
+                        open={selectedEvent?.id === event.id}
+                        onOpenChange={(open) => setSelectedEvent(open ? event : null)}
+                      >
+                        <PopoverTrigger asChild>
+                          <div
+                            draggable={userRole !== 'interviewer'}
+                            onDragStart={(e) => handleDragStart(e, event)}
+                            className={cn(
+                              'absolute left-1 right-1 rounded-md border-l-4 px-2 py-1.5 cursor-pointer transition-all duration-200',
+                              'shadow-sm hover:shadow-md hover:-translate-y-0.5',
+                              'focus:outline-none focus:ring-2 focus:ring-primary/50',
+                              stageStyle,
+                              draggedEvent?.id === event.id && 'opacity-50 scale-95'
+                            )}
+                            style={{ top: `${top}px`, height: `${height}px` }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedEvent(event);
+                            }}
+                          >
+                            <div className="font-semibold text-xs leading-tight truncate">
+                              {event.candidateName}
+                            </div>
+                            {height > 40 && (
+                              <div className="text-[11px] opacity-80 truncate mt-0.5 font-medium">
+                                {event.role}
+                              </div>
+                            )}
+                            {height > 55 && (
+                              <div className="text-[10px] opacity-70 truncate mt-0.5">
+                                {format(new Date(event.startTime), 'h:mm a')}
+                              </div>
+                            )}
+                          </div>
+                        </PopoverTrigger>
+                        {/* Resize Handle */}
+                        {userRole !== 'interviewer' && (
+                          <div
+                            className="absolute bottom-0 left-0 right-0 h-1.5 cursor-ns-resize hover:bg-black/10 z-10"
+                            onMouseDown={(e) => handleResizeStart(e, event)}
+                          />
+                        )}
+                        <PopoverContent className="p-0 w-auto border-none shadow-xl" align="start" sideOffset={5}>
+                          <CalendarEventPopover
+                            event={event}
+                            userRole={userRole}
+                            onClose={() => setSelectedEvent(null)}
+                            onReschedule={onManualReschedule || onReschedule}
+                            onCancel={onCancel}
+                            onComplete={onComplete}
+                            onAddNote={onAddNote}
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    );
+                  })}
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
     </div>

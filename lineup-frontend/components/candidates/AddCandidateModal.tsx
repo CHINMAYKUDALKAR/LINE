@@ -179,8 +179,8 @@ export function AddCandidateModal({ open, onOpenChange, onSuccess }: AddCandidat
 
     return (
         <Dialog open={open} onOpenChange={handleClose}>
-            <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
+            <DialogContent className="w-screen h-[100dvh] max-w-none sm:max-w-[600px] sm:h-auto sm:max-h-[90vh] sm:rounded-lg flex flex-col gap-0 p-0">
+                <DialogHeader className="p-6 pb-2 sm:pb-6 flex-shrink-0">
                     <DialogTitle className="flex items-center gap-2">
                         <User className="h-5 w-5" />
                         Add New Candidate
@@ -190,183 +190,185 @@ export function AddCandidateModal({ open, onOpenChange, onSuccess }: AddCandidat
                     </DialogDescription>
                 </DialogHeader>
 
-                <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-                    {/* Name - Required */}
-                    <div className="space-y-2">
-                        <Label htmlFor="name">
-                            Name <span className="text-destructive">*</span>
-                        </Label>
-                        <Input
-                            id="name"
-                            placeholder="Full name"
-                            {...register('name', { required: 'Name is required' })}
-                        />
-                        {errors.name && (
-                            <p className="text-sm text-destructive">{errors.name.message}</p>
-                        )}
-                    </div>
-
-                    {/* Email & Phone - Side by side */}
-                    <div className="grid grid-cols-2 gap-4">
+                <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col flex-1 min-h-0">
+                    <div className="flex-1 overflow-y-auto p-6 pt-2 sm:pt-0 space-y-4">
+                        {/* Name - Required */}
                         <div className="space-y-2">
-                            <Label htmlFor="email">Email</Label>
+                            <Label htmlFor="name">
+                                Name <span className="text-destructive">*</span>
+                            </Label>
                             <Input
-                                id="email"
-                                type="email"
-                                placeholder="email@example.com"
-                                {...register('email', {
-                                    pattern: {
-                                        value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
-                                        message: 'Invalid email format',
-                                    },
-                                })}
+                                id="name"
+                                placeholder="Full name"
+                                {...register('name', { required: 'Name is required' })}
                             />
-                            {errors.email && (
-                                <p className="text-sm text-destructive">{errors.email.message}</p>
+                            {errors.name && (
+                                <p className="text-sm text-destructive">{errors.name.message}</p>
                             )}
                         </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="phone">Phone</Label>
-                            <Input
-                                id="phone"
-                                placeholder="+1 (555) 000-0000"
-                                {...register('phone')}
-                            />
-                        </div>
-                    </div>
 
-                    {/* Role & Source - Side by side */}
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                            <Label htmlFor="roleTitle">Role / Position</Label>
-                            <Input
-                                id="roleTitle"
-                                placeholder="e.g. Software Engineer"
-                                {...register('roleTitle')}
-                            />
+                        {/* Email & Phone - Side by side */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="email">Email</Label>
+                                <Input
+                                    id="email"
+                                    type="email"
+                                    placeholder="email@example.com"
+                                    {...register('email', {
+                                        pattern: {
+                                            value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+                                            message: 'Invalid email format',
+                                        },
+                                    })}
+                                />
+                                {errors.email && (
+                                    <p className="text-sm text-destructive">{errors.email.message}</p>
+                                )}
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="phone">Phone</Label>
+                                <Input
+                                    id="phone"
+                                    placeholder="+1 (555) 000-0000"
+                                    {...register('phone')}
+                                />
+                            </div>
                         </div>
+
+                        {/* Role & Source - Side by side */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="roleTitle">Role / Position</Label>
+                                <Input
+                                    id="roleTitle"
+                                    placeholder="e.g. Software Engineer"
+                                    {...register('roleTitle')}
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label>Source</Label>
+                                <Select
+                                    value={watch('source')}
+                                    onValueChange={(value) => setValue('source', value)}
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select source" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {SOURCES.map((source) => (
+                                            <SelectItem key={source} value={source}>
+                                                {source}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        </div>
+
+                        {/* Stage */}
                         <div className="space-y-2">
-                            <Label>Source</Label>
+                            <Label>Stage</Label>
                             <Select
-                                value={watch('source')}
-                                onValueChange={(value) => setValue('source', value)}
+                                value={watch('stage')}
+                                onValueChange={(value) => setValue('stage', value)}
                             >
                                 <SelectTrigger>
-                                    <SelectValue placeholder="Select source" />
+                                    <SelectValue placeholder="Select stage" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    {SOURCES.map((source) => (
-                                        <SelectItem key={source} value={source}>
-                                            {source}
+                                    {STAGES.map((stage) => (
+                                        <SelectItem key={stage} value={stage}>
+                                            {stage.charAt(0).toUpperCase() + stage.slice(1)}
                                         </SelectItem>
                                     ))}
                                 </SelectContent>
                             </Select>
                         </div>
-                    </div>
 
-                    {/* Stage */}
-                    <div className="space-y-2">
-                        <Label>Stage</Label>
-                        <Select
-                            value={watch('stage')}
-                            onValueChange={(value) => setValue('stage', value)}
-                        >
-                            <SelectTrigger>
-                                <SelectValue placeholder="Select stage" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {STAGES.map((stage) => (
-                                    <SelectItem key={stage} value={stage}>
-                                        {stage.charAt(0).toUpperCase() + stage.slice(1)}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </div>
-
-                    {/* Tags */}
-                    <div className="space-y-2">
-                        <Label>Tags</Label>
-                        <div className="flex gap-2">
-                            <Input
-                                value={tagInput}
-                                onChange={(e) => setTagInput(e.target.value)}
-                                onKeyDown={handleKeyDown}
-                                placeholder="Add a tag and press Enter"
-                            />
-                            <Button
-                                type="button"
-                                variant="secondary"
-                                onClick={handleAddTag}
-                                disabled={!tagInput.trim()}
-                            >
-                                Add
-                            </Button>
-                        </div>
-                        {tags.length > 0 && (
-                            <div className="flex flex-wrap gap-2 mt-2">
-                                {tags.map((tag) => (
-                                    <Badge key={tag} variant="secondary" className="gap-1">
-                                        {tag}
-                                        <button
-                                            type="button"
-                                            onClick={() => handleRemoveTag(tag)}
-                                            className="hover:text-destructive"
-                                        >
-                                            <X className="h-3 w-3" />
-                                        </button>
-                                    </Badge>
-                                ))}
+                        {/* Tags */}
+                        <div className="space-y-2">
+                            <Label>Tags</Label>
+                            <div className="flex gap-2">
+                                <Input
+                                    value={tagInput}
+                                    onChange={(e) => setTagInput(e.target.value)}
+                                    onKeyDown={handleKeyDown}
+                                    placeholder="Add a tag and press Enter"
+                                />
+                                <Button
+                                    type="button"
+                                    variant="secondary"
+                                    onClick={handleAddTag}
+                                    disabled={!tagInput.trim()}
+                                >
+                                    Add
+                                </Button>
                             </div>
-                        )}
-                    </div>
-
-                    {/* Resume Upload */}
-                    <div className="space-y-2">
-                        <Label>Resume</Label>
-                        <div className="border-2 border-dashed rounded-lg p-4 text-center">
-                            {resumeFile ? (
-                                <div className="flex items-center justify-between">
-                                    <span className="text-sm truncate">{resumeFile.name}</span>
-                                    <Button
-                                        type="button"
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={() => setResumeFile(null)}
-                                    >
-                                        <X className="h-4 w-4" />
-                                    </Button>
+                            {tags.length > 0 && (
+                                <div className="flex flex-wrap gap-2 mt-2">
+                                    {tags.map((tag) => (
+                                        <Badge key={tag} variant="secondary" className="gap-1">
+                                            {tag}
+                                            <button
+                                                type="button"
+                                                onClick={() => handleRemoveTag(tag)}
+                                                className="hover:text-destructive"
+                                            >
+                                                <X className="h-3 w-3" />
+                                            </button>
+                                        </Badge>
+                                    ))}
                                 </div>
-                            ) : (
-                                <label className="cursor-pointer block">
-                                    <Upload className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-                                    <span className="text-sm text-muted-foreground">
-                                        Click to upload resume (PDF, DOC, DOCX)
-                                    </span>
-                                    <input
-                                        type="file"
-                                        className="hidden"
-                                        accept=".pdf,.doc,.docx"
-                                        onChange={handleFileChange}
-                                    />
-                                </label>
                             )}
                         </div>
+
+                        {/* Resume Upload */}
+                        <div className="space-y-2">
+                            <Label>Resume</Label>
+                            <div className="border-2 border-dashed rounded-lg p-4 text-center">
+                                {resumeFile ? (
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-sm truncate">{resumeFile.name}</span>
+                                        <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => setResumeFile(null)}
+                                        >
+                                            <X className="h-4 w-4" />
+                                        </Button>
+                                    </div>
+                                ) : (
+                                    <label className="cursor-pointer block">
+                                        <Upload className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
+                                        <span className="text-sm text-muted-foreground">
+                                            Click to upload resume (PDF, DOC, DOCX)
+                                        </span>
+                                        <input
+                                            type="file"
+                                            className="hidden"
+                                            accept=".pdf,.doc,.docx"
+                                            onChange={handleFileChange}
+                                        />
+                                    </label>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Notes */}
+                        <div className="space-y-2">
+                            <Label htmlFor="notes">Notes</Label>
+                            <Textarea
+                                id="notes"
+                                placeholder="Additional notes about the candidate..."
+                                rows={3}
+                                {...register('notes')}
+                            />
+                        </div>
                     </div>
 
-                    {/* Notes */}
-                    <div className="space-y-2">
-                        <Label htmlFor="notes">Notes</Label>
-                        <Textarea
-                            id="notes"
-                            placeholder="Additional notes about the candidate..."
-                            rows={3}
-                            {...register('notes')}
-                        />
-                    </div>
-
-                    <DialogFooter>
+                    <DialogFooter className="p-6 border-t bg-background mt-auto">
                         <Button type="button" variant="outline" onClick={handleClose}>
                             Cancel
                         </Button>

@@ -116,7 +116,7 @@ else
     
     # Start backend in background
     echo -e "${BLUE}Starting NestJS backend...${NC}"
-    npm run start:dev > /tmp/lineup-backend.log 2>&1 &
+    npm run start:dev -- --host 0.0.0.0 > /tmp/lineup-backend.log 2>&1 &
     BACKEND_PID=$!
     
     # Wait for backend to be ready
@@ -149,7 +149,7 @@ else
     
     # Start frontend in background
     echo -e "${BLUE}Starting Next.js frontend...${NC}"
-    npm run dev > /tmp/lineup-frontend.log 2>&1 &
+    npm run dev -- --hostname 0.0.0.0 > /tmp/lineup-frontend.log 2>&1 &
     FRONTEND_PID=$!
     
     # Wait for frontend to be ready
@@ -166,14 +166,18 @@ fi
 # =========================================
 # 6. Summary
 # =========================================
+# Get local IP for network access
+LOCAL_IP=$(ipconfig getifaddr en0 2>/dev/null || hostname -I 2>/dev/null | awk '{print $1}' || echo "localhost")
+
 echo ""
 echo -e "${BLUE}=========================================${NC}"
 echo -e "${GREEN}   ✅ Lineup is ready!${NC}"
 echo -e "${BLUE}=========================================${NC}"
 echo ""
-echo -e "🌐 Frontend:    ${GREEN}http://localhost:3000${NC}"
-echo -e "🔌 Backend API: ${GREEN}http://localhost:4000${NC}"
-echo -e "📧 MailHog:     ${GREEN}http://localhost:8025${NC}"
+echo -e "🌐 Frontend (local):   ${GREEN}http://localhost:3000${NC}"
+echo -e "🌐 Frontend (network): ${GREEN}http://$LOCAL_IP:3000${NC}"
+echo -e "🔌 Backend API:        ${GREEN}http://$LOCAL_IP:4000${NC}"
+echo -e "📧 MailHog:            ${GREEN}http://localhost:8025${NC}"
 echo ""
 echo -e "📝 Login: ${YELLOW}admin@mintskill.com${NC} / ${YELLOW}password123${NC}"
 echo ""

@@ -6,8 +6,13 @@ import { cn } from '@/lib/utils';
 import { CandidateSelector } from './CandidateSelector';
 import { InterviewDetailsForm } from './InterviewDetailsForm';
 import { NotificationsStep } from './NotificationsStep';
-import { mockCandidates, mockInterviewers, mockTimeSlots } from '@/lib/scheduling-mock-data';
+import { durationOptions } from '@/lib/scheduling-mock-data';
 import { toast } from '@/hooks/use-toast';
+import { listCandidates } from '@/lib/api/candidates';
+import { getUsers } from '@/lib/api/users';
+import { createInterview } from '@/lib/api/interviews';
+import { getAuthToken } from '@/lib/auth';
+import { Candidate, Interviewer, TimeSlot } from '@/types/scheduling';
 
 interface ScheduleInterviewModalProps {
   open: boolean;
@@ -23,10 +28,30 @@ const steps = [
   { id: 3 as const, label: 'Notifications', icon: Bell },
 ];
 
+// Generate time slots for the day
+const generateTimeSlots = (): TimeSlot[] => {
+  const slots: TimeSlot[] = [];
+  for (let hour = 9; hour <= 17; hour++) {
+    for (const minute of ['00', '30']) {
+      slots.push({
+        time: `${hour.toString().padStart(2, '0')}:${minute}`,
+        available: true,
+        recommended: hour === 10 || hour === 14,
+      });
+    }
+  }
+  return slots;
+};
+
 export function ScheduleInterviewModal({ open, onOpenChange, onSuccess }: ScheduleInterviewModalProps) {
   const [currentStep, setCurrentStep] = useState<Step>(1);
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Data from API
+  const [candidates, setCandidates] = useState<Candidate[]>([]);
+  const [interviewers, setInterviewers] = useState<Interviewer[]>([]);
+  const timeSlots = generateTimeSlots();
 
   // Step 1: Candidates
   const [selectedCandidateIds, setSelectedCandidateIds] = useState<string[]>([]);
@@ -46,12 +71,51 @@ export function ScheduleInterviewModal({ open, onOpenChange, onSuccess }: Schedu
   const [smsReminder, setSmsReminder] = useState(false);
   const [notes, setNotes] = useState('');
 
-  // Simulate loading on open
+  // Load real data when modal opens
   useEffect(() => {
     if (open) {
       setIsLoading(true);
-      const timer = setTimeout(() => setIsLoading(false), 800);
-      return () => clearTimeout(timer);
+      const token = getAuthToken();
+
+      Promise.all([
+        listCandidates(token || '', { perPage: 100 }),
+        getUsers({ role: 'INTERVIEWER' }),
+      ])
+        .then(([candidatesRes, usersRes]: [any, any]) => {
+          // Map backend candidates to scheduling Candidate type
+          const mappedCandidates: Candidate[] = (candidatesRes.data || []).map((c: any) => ({
+            id: c.id,
+            name: c.name,
+            email: c.email,
+            phone: c.phone,
+            role: c.roleApplied || c.position || 'Unknown Role',
+            stage: c.stage || 'applied',
+            hasResume: !!c.resumeUrl,
+            priorInterviews: c.interviewCount || 0,
+            appliedDate: c.createdAt,
+          }));
+          setCandidates(mappedCandidates);
+
+          // Map backend users to Interviewer type
+          const mappedInterviewers: Interviewer[] = (usersRes.data || []).map((u: any) => ({
+            id: u.id,
+            name: u.name,
+            email: u.email,
+            role: u.role,
+            department: 'Hiring Team',
+            availability: 'available',
+          }));
+          setInterviewers(mappedInterviewers);
+        })
+        .catch((err) => {
+          console.error('Failed to load data details:', err);
+          toast({
+            title: 'Error Loading Data',
+            description: err instanceof Error ? err.message : 'Failed to load candidates and interviewers',
+            variant: 'destructive',
+          });
+        })
+        .finally(() => setIsLoading(false));
     }
   }, [open]);
 
@@ -102,49 +166,65 @@ export function ScheduleInterviewModal({ open, onOpenChange, onSuccess }: Schedu
   const handleSubmit = async () => {
     setIsSubmitting(true);
 
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1500));
+    try {
+      // Create an interview for each selected candidate
+      const interviewPromises = selectedCandidateIds.map((candidateId) =>
+        createInterview({
+          candidateId,
+          date: selectedDate?.toISOString().split('T')[0] || '',
+          startTime: selectedTime,
+          durationMins: duration,
+          stage: 'SCREENING',
+          type: interviewMode === 'online' ? 'VIDEO' : interviewMode === 'phone' ? 'PHONE' : 'IN_PERSON',
+          location: interviewMode === 'offline' ? location : undefined,
+          meetingLink: interviewMode === 'online' ? meetingLink : undefined,
+          interviewerIds: selectedInterviewerIds,
+          notes,
+        })
+      );
 
-    const payload = {
-      tenantId: 'tenant-1',
-      candidateIds: selectedCandidateIds,
-      interviewerIds: selectedInterviewerIds,
-      interviewMode,
-      date: selectedDate?.toISOString(),
-      startTime: selectedTime,
-      duration,
-      location: interviewMode === 'offline' ? location : undefined,
-      meetingLink: interviewMode === 'online' ? meetingLink : undefined,
-      notifications: {
-        emailCandidate,
-        emailInterviewers,
-        smsReminder,
-      },
-      notes,
-    };
+      await Promise.all(interviewPromises);
 
-    console.log('Submitting interview:', payload);
+      toast({
+        title: 'Interview Scheduled',
+        description: `Successfully scheduled ${selectedCandidateIds.length} interview(s)`,
+      });
+      onOpenChange(false);
+      onSuccess?.();
+    } catch (error: any) {
+      const errorMessage = error?.message || '';
 
-    setIsSubmitting(false);
-    toast({
-      title: 'Interview Scheduled',
-      description: `Successfully scheduled ${selectedCandidateIds.length} interview(s)`,
-    });
-    onOpenChange(false);
-    onSuccess?.();
+      // Check for conflict error and show as warning, not error
+      if (errorMessage.toLowerCase().includes('conflict')) {
+        toast({
+          title: 'Scheduling Conflict',
+          description: 'One or more interviewers are not available at this time. Please choose a different time slot or select different interviewers.',
+          variant: 'destructive',
+        });
+      } else {
+        console.error('Failed to schedule interview:', error);
+        toast({
+          title: 'Scheduling Failed',
+          description: errorMessage || 'Failed to schedule interview. Please try again.',
+          variant: 'destructive',
+        });
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="max-w-4xl h-[85vh] max-h-[720px] p-0 gap-0 overflow-hidden bg-background [&>button:last-child]:hidden"
+        className="w-screen h-[100dvh] max-w-none md:max-w-4xl md:h-[85vh] md:max-h-[720px] p-0 gap-0 overflow-hidden bg-background [&>button:last-child]:hidden"
         aria-describedby={undefined}
       >
         <DialogTitle className="sr-only">Schedule Interview</DialogTitle>
 
-        <div className="flex h-full min-h-0">
-          {/* Sidebar Stepper */}
-          <div className="w-56 flex-shrink-0 bg-muted/30 border-r border-border p-6 flex flex-col">
+        <div className="flex h-full min-h-0 flex-col md:flex-row">
+          {/* Sidebar Stepper - Hidden on mobile */}
+          <div className="hidden md:flex w-56 flex-shrink-0 bg-muted/30 border-r border-border p-6 flex-col">
             <h2 className="text-lg font-semibold text-foreground mb-1">Schedule Interview</h2>
             <p className="text-xs text-muted-foreground mb-8">Set up a new interview session</p>
 
@@ -214,6 +294,14 @@ export function ScheduleInterviewModal({ open, onOpenChange, onSuccess }: Schedu
             {/* Header */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-border flex-shrink-0">
               <div>
+                <div className="flex items-center gap-2 md:hidden mb-1">
+                  <div className="flex gap-1">
+                    {[1, 2, 3].map(i => (
+                      <div key={i} className={cn("h-1 w-6 rounded-full", currentStep >= i ? "bg-primary" : "bg-muted")} />
+                    ))}
+                  </div>
+                  <span className="text-xs text-muted-foreground">Step {currentStep} of 3</span>
+                </div>
                 <h3 className="text-base font-semibold text-foreground">
                   {steps.find((s) => s.id === currentStep)?.label}
                 </h3>
@@ -240,7 +328,7 @@ export function ScheduleInterviewModal({ open, onOpenChange, onSuccess }: Schedu
             )}>
               {currentStep === 1 && (
                 <CandidateSelector
-                  candidates={mockCandidates}
+                  candidates={candidates}
                   selectedIds={selectedCandidateIds}
                   onSelectionChange={setSelectedCandidateIds}
                   isLoading={isLoading}
@@ -249,8 +337,8 @@ export function ScheduleInterviewModal({ open, onOpenChange, onSuccess }: Schedu
 
               {currentStep === 2 && (
                 <InterviewDetailsForm
-                  interviewers={mockInterviewers}
-                  timeSlots={mockTimeSlots}
+                  interviewers={interviewers}
+                  timeSlots={timeSlots}
                   selectedInterviewerIds={selectedInterviewerIds}
                   onInterviewerChange={setSelectedInterviewerIds}
                   interviewMode={interviewMode}
@@ -284,22 +372,22 @@ export function ScheduleInterviewModal({ open, onOpenChange, onSuccess }: Schedu
             </div>
 
             {/* Sticky Footer */}
-            <div className="flex items-center justify-between px-6 py-4 border-t border-border bg-background flex-shrink-0">
-              <div className="flex items-center gap-2">
+            <div className="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between px-4 sm:px-6 py-4 border-t border-border bg-background flex-shrink-0 gap-3 sm:gap-0">
+              <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-start">
                 {currentStep > 1 && (
-                  <Button variant="ghost" onClick={handleBack}>
+                  <Button variant="ghost" onClick={handleBack} className="flex-1 sm:flex-none">
                     Back
                   </Button>
                 )}
               </div>
 
-              <div className="flex items-center gap-2">
-                <Button variant="ghost" onClick={() => onOpenChange(false)}>
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <Button variant="ghost" onClick={() => onOpenChange(false)} className="flex-1 sm:flex-none">
                   Cancel
                 </Button>
 
                 {currentStep < 3 ? (
-                  <Button onClick={handleNext} disabled={!canProceed()} className="gap-2">
+                  <Button onClick={handleNext} disabled={!canProceed()} className="flex-1 sm:flex-none gap-2">
                     Continue
                     <ChevronRight className="h-4 w-4" />
                   </Button>
@@ -307,7 +395,7 @@ export function ScheduleInterviewModal({ open, onOpenChange, onSuccess }: Schedu
                   <Button
                     onClick={handleSubmit}
                     disabled={isSubmitting}
-                    className="gap-2 min-w-[140px]"
+                    className="flex-1 sm:flex-none gap-2 min-w-[140px]"
                   >
                     {isSubmitting ? (
                       <>
@@ -317,7 +405,7 @@ export function ScheduleInterviewModal({ open, onOpenChange, onSuccess }: Schedu
                     ) : (
                       <>
                         <Check className="h-4 w-4" />
-                        Schedule Interview
+                        Schedule
                       </>
                     )}
                   </Button>

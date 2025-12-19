@@ -86,11 +86,15 @@ export function getCalendarDateRange(
         start.setHours(0, 0, 0, 0);
         end.setHours(23, 59, 59, 999);
     } else if (view === 'week') {
-        // Start from Sunday of the week
+        // Start from the beginning of the week (Monday to match CalendarWeekView)
         const dayOfWeek = start.getDay();
-        start.setDate(start.getDate() - dayOfWeek);
+        // If Sunday (0), go back 6 days; otherwise go back (dayOfWeek - 1) days
+        const daysToSubtract = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+        start.setDate(start.getDate() - daysToSubtract);
         start.setHours(0, 0, 0, 0);
-        end.setDate(start.getDate() + 6);
+        // End is 6 days after start
+        end.setTime(start.getTime());
+        end.setDate(end.getDate() + 6);
         end.setHours(23, 59, 59, 999);
     } else if (view === 'month') {
         // Start from 1st of the month
@@ -104,3 +108,105 @@ export function getCalendarDateRange(
 
     return { start, end };
 }
+
+/**
+ * Transform an Interview from the API to the CalendarEvent format
+ */
+export function interviewToCalendarEvent(interview: {
+    id: string;
+    candidateId: string;
+    candidate?: { name?: string; role?: string };
+    startAt?: string;
+    endAt?: string;
+    durationMins?: number;
+    stage?: string;
+    status?: string;
+    type?: string;
+    location?: string;
+    meetingLink?: string;
+    interviewers?: Array<{ id: string; name: string; email?: string }>;
+    tenantId: string;
+}): CalendarEvent {
+    // Parse start and end times from ISO strings
+    const startAt = interview.startAt
+        ? new Date(interview.startAt)
+        : new Date();
+    const endAt = interview.endAt
+        ? new Date(interview.endAt)
+        : new Date(startAt.getTime() + (interview.durationMins || 60) * 60000);
+
+    // Get primary interviewer
+    const primaryInterviewer = interview.interviewers?.[0];
+
+    // Generate initials from name
+    const getInitials = (name?: string) => {
+        if (!name) return 'UN';
+        return name
+            .split(' ')
+            .map(n => n[0])
+            .join('')
+            .toUpperCase()
+            .slice(0, 2);
+    };
+
+    // Map interview status
+    const getStatus = (status?: string): CalendarEvent['status'] => {
+        if (!status) return 'scheduled';
+        switch (status.toUpperCase()) {
+            case 'SCHEDULED':
+                return 'scheduled';
+            case 'COMPLETED':
+                return 'completed';
+            case 'CANCELLED':
+                return 'cancelled';
+            case 'NO_SHOW':
+                return 'no-show';
+            case 'PENDING_FEEDBACK':
+                return 'pending-feedback';
+            default:
+                return 'scheduled';
+        }
+    };
+
+    // Map interview type to mode
+    const getMode = (type?: string): CalendarEvent['mode'] => {
+        if (!type) return 'video';
+        switch (type.toUpperCase()) {
+            case 'VIDEO':
+                return 'video';
+            case 'PHONE':
+                return 'phone';
+            case 'IN_PERSON':
+                return 'in-person';
+            default:
+                return 'video';
+        }
+    };
+
+    return {
+        id: interview.id,
+        candidateId: interview.candidateId,
+        candidateName: interview.candidate?.name || 'Unknown Candidate',
+        interviewerId: primaryInterviewer?.id || '',
+        interviewerName: primaryInterviewer?.name || 'Unknown',
+        interviewerInitials: getInitials(primaryInterviewer?.name),
+        role: interview.candidate?.role || 'Interview',
+        stage: (interview.stage?.toLowerCase() || 'screening') as CalendarEvent['stage'],
+        status: getStatus(interview.status),
+        startTime: startAt.toISOString(),
+        endTime: endAt.toISOString(),
+        duration: interview.durationMins || 60,
+        mode: getMode(interview.type),
+        meetingLink: interview.meetingLink,
+        location: interview.location,
+        tenantId: interview.tenantId,
+    };
+}
+
+/**
+ * Transform multiple interviews to calendar events
+ */
+export function interviewsToCalendarEvents(interviews: any[]): CalendarEvent[] {
+    return interviews.map(interviewToCalendarEvent);
+}
+

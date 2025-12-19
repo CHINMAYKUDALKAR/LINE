@@ -115,4 +115,44 @@ export class IntegrationsController {
         const userId = req.user.id;
         return this.integrationsService.disconnect(tenantId, body.provider, userId);
     }
+
+    /**
+     * Get webhook events for an integration
+     */
+    @Get(':provider/webhooks')
+    @Roles(Role.ADMIN, Role.MANAGER)
+    async getWebhooks(
+        @Req() req: any,
+        @Query('provider') provider: string,
+        @Query('limit') limit?: string,
+    ) {
+        const tenantId = req.user.tenantId;
+        return this.integrationsService.getWebhookEvents(tenantId, provider, parseInt(limit || '50'));
+    }
+
+    /**
+     * Get sync metrics for an integration
+     */
+    @Get(':provider/metrics')
+    @Roles(Role.ADMIN, Role.MANAGER)
+    async getMetrics(
+        @Req() req: any,
+        @Query('provider') provider: string,
+    ) {
+        const tenantId = req.user.tenantId;
+        return this.integrationsService.getMetrics(tenantId, provider);
+    }
+
+    /**
+     * Get field schemas for mapping
+     */
+    @Get(':provider/fields')
+    @Roles(Role.ADMIN, Role.MANAGER)
+    async getFields(
+        @Req() req: any,
+        @Query('provider') provider: string,
+    ) {
+        const tenantId = req.user.tenantId;
+        return this.integrationsService.getFieldSchemas(tenantId, provider);
+    }
 }

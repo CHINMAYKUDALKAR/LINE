@@ -232,7 +232,7 @@ export default function InterviewDetails() {
     }
 
     return (
-        <div className="px-8 py-6 h-full">
+        <div className="p-4 md:p-8 h-full">
             <motion.main
                 initial="initial"
                 animate="animate"

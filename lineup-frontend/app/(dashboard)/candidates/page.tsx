@@ -8,6 +8,8 @@ import { CandidateTable } from '@/components/candidates/CandidateTable';
 import { CandidateBoard } from '@/components/candidates/CandidateBoard';
 import { SendMessageDialog, MessageChannel } from '@/components/candidates/SendMessageDialog';
 import { ScheduleInterviewModal } from '@/components/scheduling/ScheduleInterviewModal';
+import { AddCandidateModal } from '@/components/candidates/AddCandidateModal';
+import { UploadCandidatesModal } from '@/components/candidates/UploadCandidatesModal';
 import { CandidateListFilters, CandidateBulkAction, CandidateListItem } from '@/types/candidate-list';
 import { currentUserRole } from '@/lib/navigation-mock-data';
 import { toast } from '@/hooks/use-toast';
@@ -42,6 +44,8 @@ export default function Candidates() {
     const [view, setView] = useState<ViewType>('list');
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
     const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
+    const [isAddCandidateOpen, setIsAddCandidateOpen] = useState(false);
+    const [isUploadCandidatesOpen, setIsUploadCandidatesOpen] = useState(false);
     const [deleteCandidate, setDeleteCandidate] = useState<CandidateListItem | null>(null);
     const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false);
     const deleteCandidateMutation = useDeleteCandidate();
@@ -134,17 +138,11 @@ export default function Candidates() {
 
 
     const handleAddCandidate = () => {
-        toast({
-            title: 'Add Candidate',
-            description: 'Add candidate modal would open here.',
-        });
+        setIsAddCandidateOpen(true);
     };
 
     const handleUploadSpreadsheet = () => {
-        toast({
-            title: 'Upload Spreadsheet',
-            description: 'Spreadsheet upload modal would open here.',
-        });
+        setIsUploadCandidatesOpen(true);
     };
 
     const handleUploadResume = () => {
@@ -295,7 +293,7 @@ export default function Candidates() {
     }
 
     return (
-        <div className="px-8 py-6 h-full">
+        <div className="p-4 md:p-8 h-full">
             <motion.main
                 initial="initial"
                 animate="animate"
@@ -451,6 +449,16 @@ export default function Candidates() {
                             defaultChannel={messageChannel}
                         />
                     )}
+
+                    <AddCandidateModal
+                        open={isAddCandidateOpen}
+                        onOpenChange={setIsAddCandidateOpen}
+                    />
+
+                    <UploadCandidatesModal
+                        open={isUploadCandidatesOpen}
+                        onOpenChange={setIsUploadCandidatesOpen}
+                    />
                 </motion.div>
             </motion.main>
         </div>

@@ -24,6 +24,8 @@ export interface CalendarEvent {
 export interface CalendarFilters {
   interviewerId: string | 'all';
   stage: InterviewStage | 'all';
+  status: InterviewStatus | 'all';
+  role: string | 'all';
 }
 
 export interface CalendarState {

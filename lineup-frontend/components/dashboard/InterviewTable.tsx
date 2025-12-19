@@ -370,8 +370,116 @@ export function InterviewTable({ interviews, isLoading, hasError, onRetry, onAct
         </div>
       )}
 
-      {/* Table */}
-      <div className="overflow-x-auto">
+      {/* Mobile Card View */}
+      <div className="md:hidden">
+        <div className="p-3 border-b border-border bg-muted/50 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Checkbox
+              checked={paginated.length > 0 && selectedIds.size === paginated.length}
+              onCheckedChange={toggleAll}
+            />
+            <span className="text-sm font-medium text-muted-foreground">Select All</span>
+          </div>
+          <span className="text-xs text-muted-foreground">{filtered.length} results</span>
+        </div>
+
+        {paginated.length === 0 ? (
+          <EmptyState
+            title="No interviews found"
+            description={hasActiveFilters
+              ? "Try adjusting your filters to find what you're looking for."
+              : "Get started by scheduling your first interview."
+            }
+            action={hasActiveFilters ? (
+              <Button variant="outline" size="sm" onClick={clearFilters}>
+                Clear filters
+              </Button>
+            ) : undefined}
+          />
+        ) : (
+          <div className="divide-y divide-border">
+            {paginated.map((interview) => (
+              <div
+                key={interview.id}
+                onClick={(e) => handleRowClick(interview, e)}
+                className={cn(
+                  "p-4 cursor-pointer transition-colors",
+                  selectedIds.has(interview.id) && "bg-primary/5"
+                )}
+              >
+                <div className="flex items-start justify-between gap-3 mb-2">
+                  <div className="flex items-start gap-3">
+                    <Checkbox
+                      checked={selectedIds.has(interview.id)}
+                      onCheckedChange={() => toggleSelect(interview.id)}
+                      className="mt-1"
+                    />
+                    <div>
+                      <div
+                        className="font-semibold text-foreground"
+                        onClick={(e) => handleCandidateClick(e, interview.candidateId)}
+                      >
+                        {interview.candidateName}
+                      </div>
+                      <p className="text-sm text-muted-foreground">{interview.role}</p>
+                    </div>
+                  </div>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-8 w-8">
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-48">
+                      <DropdownMenuItem onClick={() => onAction?.('view', interview)}>
+                        <Eye className="h-4 w-4 mr-2" />
+                        View Details
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => onAction?.('join', interview)}>
+                        <Video className="h-4 w-4 mr-2" />
+                        Join Meeting
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => onAction?.('edit', interview)}>
+                        <Edit className="h-4 w-4 mr-2" />
+                        Edit Interview
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        onClick={() => onAction?.('cancel', interview)}
+                        className="text-destructive focus:text-destructive"
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Cancel Interview
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+
+                <div className="pl-8 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className={cn(
+                      "px-2 py-0.5 text-xs font-medium rounded border",
+                      statusStyles[interview.status]
+                    )}>
+                      {statusLabels[interview.status]}
+                    </span>
+                    <span className="text-xs text-muted-foreground" suppressHydrationWarning>
+                      {format(new Date(interview.dateTime), 'MMM d, h:mm a')}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-xs text-muted-foreground">
+                    <span>{interview.interviewerName}</span>
+                    <span>{stageLabels[interview.stage]}</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Desktop Table */}
+      <div className="hidden md:block overflow-x-auto">
         <Table>
           <TableHeader className="sticky top-0 bg-card z-10">
             <TableRow className="hover:bg-transparent">
@@ -512,9 +620,9 @@ export function InterviewTable({ interviews, isLoading, hasError, onRetry, onAct
       </div>
 
       {/* Pagination */}
-      <div className="p-4 border-t border-border flex items-center justify-between">
-        <span className="text-sm text-muted-foreground">
-          Showing {filtered.length > 0 ? ((page - 1) * pageSize) + 1 : 0}-{Math.min(page * pageSize, filtered.length)} of {filtered.length} interviews
+      <div className="p-3 sm:p-4 border-t border-border flex flex-col sm:flex-row items-center justify-between gap-3">
+        <span className="text-xs sm:text-sm text-muted-foreground">
+          {filtered.length > 0 ? ((page - 1) * pageSize) + 1 : 0}-{Math.min(page * pageSize, filtered.length)} of {filtered.length}
         </span>
         <div className="flex items-center gap-2">
           <Button
@@ -523,11 +631,11 @@ export function InterviewTable({ interviews, isLoading, hasError, onRetry, onAct
             disabled={page === 1}
             onClick={() => setPage(page - 1)}
           >
-            <ChevronLeft className="h-4 w-4 mr-1" />
-            Previous
+            <ChevronLeft className="h-4 w-4" />
+            <span className="hidden sm:inline ml-1">Previous</span>
           </Button>
-          <span className="text-sm text-muted-foreground px-2">
-            Page {page} of {totalPages || 1}
+          <span className="text-xs sm:text-sm text-muted-foreground px-2">
+            {page} / {totalPages || 1}
           </span>
           <Button
             variant="outline"
@@ -535,8 +643,8 @@ export function InterviewTable({ interviews, isLoading, hasError, onRetry, onAct
             disabled={page === totalPages || totalPages === 0}
             onClick={() => setPage(page + 1)}
           >
-            Next
-            <ChevronRight className="h-4 w-4 ml-1" />
+            <span className="hidden sm:inline mr-1">Next</span>
+            <ChevronRight className="h-4 w-4" />
           </Button>
         </div>
       </div>

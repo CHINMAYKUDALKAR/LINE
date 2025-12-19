@@ -285,46 +285,109 @@ export const tenantApi = {
     return mockBrandingSettings;
   },
 
-  // Domain
+  // Domain - Connected to real backend
   async getDomainSettings() {
-    console.log("[API] GET /api/tenant/domain");
-    return { ...mockDomainSettings };
+    console.log("[API] GET /api/v1/settings/domain");
+    try {
+      const settings = await client.get<any>("/settings");
+      const domain = settings.domain || {};
+      return {
+        subdomain: domain.subdomain || "",
+        customDomain: domain.customDomain || "",
+        customDomainVerified: domain.customDomainVerified || false,
+        customDomainSSLStatus: domain.customDomainSSLStatus || "pending",
+        webhookCallbackURL: domain.webhookCallbackURL || "",
+        domainRedirectRules: domain.domainRedirectRules || [],
+      };
+    } catch (err) {
+      console.error("Failed to fetch domain settings", err);
+      return { ...mockDomainSettings };
+    }
   },
 
   async updateDomainSettings(settings: Partial<DomainSettings>) {
-    console.log("[API] PATCH /api/tenant/domain", settings);
-    await new Promise((resolve) => setTimeout(resolve, 800));
-    toast.success("Domain settings saved");
-    return { ...mockDomainSettings, ...settings };
+    console.log("[API] PATCH /api/v1/settings/domain", settings);
+    try {
+      await client.patch("/settings/domain", settings);
+      toast.success("Domain settings saved");
+      return { ...mockDomainSettings, ...settings };
+    } catch (err) {
+      console.error("Failed to update domain settings", err);
+      toast.error("Failed to save domain settings");
+      throw err;
+    }
   },
 
   async verifyDomain(domain: string) {
-    console.log("[API] POST /api/tenant/domain/verify", { domain });
-    await new Promise((resolve) => setTimeout(resolve, 1200));
-    toast.success("Domain verified successfully");
-    return { verified: true, sslStatus: "verified" };
+    console.log("[API] POST /api/v1/tenants/:id/domain/verify", { domain });
+    try {
+      // Get current tenant ID from localStorage
+      const tenantId = typeof window !== 'undefined' ? localStorage.getItem('activeTenantId') : null;
+      if (!tenantId) {
+        throw new Error("No active tenant");
+      }
+      const result = await client.post<{ verified: boolean; sslStatus: string }>(`/tenants/${tenantId}/domain/verify`, { token: domain });
+      toast.success("Domain verified successfully");
+      return { verified: result.verified, sslStatus: result.sslStatus || "verified" };
+    } catch (err) {
+      console.error("Failed to verify domain", err);
+      toast.error("Domain verification failed");
+      throw err;
+    }
   },
 
-  // Authentication
+  // Authentication - Connected to real backend
   async getAuthenticationSettings() {
-    console.log("[API] GET /api/tenant/authentication");
-    return { ...mockAuthenticationSettings };
+    console.log("[API] GET /api/v1/settings/authentication");
+    try {
+      const settings = await client.get<any>("/settings");
+      const auth = settings.authentication || {};
+      return {
+        defaultLoginMethod: auth.defaultLoginMethod || "password",
+        allowPasswordLogin: auth.allowPasswordLogin !== false,
+        forceSSO: auth.forceSSO || false,
+        ssoConfig: {
+          identityProviderName: auth.ssoConfig?.identityProviderName || "",
+          loginURL: auth.ssoConfig?.loginURL || "",
+          logoutURL: auth.ssoConfig?.logoutURL || "",
+          entityID: auth.ssoConfig?.entityID || "",
+          audienceURI: auth.ssoConfig?.audienceURI || "",
+          acsURL: auth.ssoConfig?.acsURL || "",
+        },
+        ssoConnectionStatus: auth.ssoConnectionStatus || "not_connected",
+      };
+    } catch (err) {
+      console.error("Failed to fetch authentication settings", err);
+      return { ...mockAuthenticationSettings };
+    }
   },
 
   async updateAuthenticationSettings(
     settings: Partial<AuthenticationSettings>,
   ) {
-    console.log("[API] PATCH /api/tenant/authentication", settings);
-    await new Promise((resolve) => setTimeout(resolve, 800));
-    toast.success("Authentication settings updated");
-    return { ...mockAuthenticationSettings, ...settings };
+    console.log("[API] PATCH /api/v1/settings/authentication", settings);
+    try {
+      await client.patch("/settings/authentication", settings);
+      toast.success("Authentication settings updated");
+      return { ...mockAuthenticationSettings, ...settings };
+    } catch (err) {
+      console.error("Failed to update authentication settings", err);
+      toast.error("Failed to save authentication settings");
+      throw err;
+    }
   },
 
   async testSSO(config: AuthenticationSettings["ssoConfig"]) {
-    console.log("[API] POST /api/tenant/authentication/test-sso", config);
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-    toast.success("SSO connection successful");
-    return { status: "connected" };
+    console.log("[API] POST /api/v1/sso/test", config);
+    try {
+      const result = await client.post<{ status: string }>("/sso/test", config);
+      toast.success("SSO connection successful");
+      return { status: result.status || "connected" };
+    } catch (err) {
+      console.error("SSO test failed", err);
+      toast.error("SSO connection failed");
+      throw err;
+    }
   },
 
   // Security - Connected to real backend

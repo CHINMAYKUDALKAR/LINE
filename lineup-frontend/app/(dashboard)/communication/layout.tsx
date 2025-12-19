@@ -32,14 +32,17 @@ export default function CommunicationLayout({ children }: { children: ReactNode 
     return (
         <div className="min-h-screen bg-slate-50">
             {/* Sub-navigation */}
-            <div className="bg-white border-b border-slate-200 sticky top-0 z-10">
-                <div className="px-6">
-                    <nav className="flex gap-1 py-2">
+            <div className="bg-white border-b border-slate-200 sticky top-0 z-30">
+                <div className="max-w-7xl mx-auto px-4 md:px-8">
+                    <nav
+                        className="flex items-center gap-2 py-2 overflow-x-auto w-full [&::-webkit-scrollbar]:hidden"
+                        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+                    >
                         {tabs.map((tab) => (
                             <Link
                                 key={tab.href}
                                 href={tab.href}
-                                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${isActive(tab.href)
+                                className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap flex-shrink-0 ${isActive(tab.href)
                                     ? 'bg-blue-50 text-blue-600'
                                     : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
                                     }`}

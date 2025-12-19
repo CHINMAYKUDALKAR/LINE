@@ -16,6 +16,7 @@ import EmailTab from "./(tabs)/EmailTab";
 import ApiKeysTab from "./(tabs)/ApiKeysTab";
 import AuditLogsTab from "./(tabs)/AuditLogsTab";
 import CalendarSchedulingTab from "./(tabs)/CalendarSchedulingTab";
+import HiringStagesTab from "./(tabs)/HiringStagesTab";
 
 export default function TenantSettings() {
   const { isManager } = useUserRole();
@@ -47,8 +48,9 @@ export default function TenantSettings() {
         variants={staggerContainer}
       >
         {/* Header */}
+        {/* Header */}
         <motion.div variants={fadeInUp} className="border-b border-[#E5E7EB] bg-[#FFFFFF]">
-          <div className="w-full px-8 py-8">
+          <div className="w-full p-4 md:px-8 md:py-8">
             <h1 className="text-3xl font-bold text-foreground">
               Tenant Settings
             </h1>
@@ -60,17 +62,18 @@ export default function TenantSettings() {
         </motion.div>
 
         {/* Content */}
-        <motion.div variants={staggerItem} className="w-full px-8 py-8">
+        <motion.div variants={staggerItem} className="w-full p-4 md:px-8 md:py-8">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-2 lg:grid-cols-4 mb-8 bg-[#FFFFFF] border border-[#E5E7EB] h-auto p-1">
-              <TabsTrigger value="branding" className="py-2">Branding</TabsTrigger>
-              <TabsTrigger value="domain" className="py-2">Domain & URLs</TabsTrigger>
-              <TabsTrigger value="auth" className="py-2">Auth & SSO</TabsTrigger>
-              <TabsTrigger value="security" className="py-2">Security</TabsTrigger>
-              <TabsTrigger value="email" className="py-2">Email/SMTP</TabsTrigger>
-              <TabsTrigger value="calendar" className="py-2">Calendar</TabsTrigger>
-              <TabsTrigger value="api-keys" className="py-2">API Keys</TabsTrigger>
-              <TabsTrigger value="audit" className="py-2">Audit Logs</TabsTrigger>
+            <TabsList className="flex flex-wrap h-auto gap-2 p-1 bg-[#FFFFFF] border border-[#E5E7EB] mb-8">
+              <TabsTrigger value="branding" className="flex-1 min-w-[120px] py-2">Branding</TabsTrigger>
+              <TabsTrigger value="domain" className="flex-1 min-w-[120px] py-2">Domain & URLs</TabsTrigger>
+              <TabsTrigger value="auth" className="flex-1 min-w-[120px] py-2">Auth & SSO</TabsTrigger>
+              <TabsTrigger value="security" className="flex-1 min-w-[120px] py-2">Security</TabsTrigger>
+              <TabsTrigger value="email" className="flex-1 min-w-[120px] py-2">Email/SMTP</TabsTrigger>
+              <TabsTrigger value="calendar" className="flex-1 min-w-[120px] py-2">Calendar</TabsTrigger>
+              <TabsTrigger value="hiring-stages" className="flex-1 min-w-[120px] py-2">Hiring Stages</TabsTrigger>
+              <TabsTrigger value="api-keys" className="flex-1 min-w-[120px] py-2">API Keys</TabsTrigger>
+              <TabsTrigger value="audit" className="flex-1 min-w-[120px] py-2">Audit Logs</TabsTrigger>
             </TabsList>
 
             <TabsContent value="branding">
@@ -97,6 +100,10 @@ export default function TenantSettings() {
               <CalendarSchedulingTab />
             </TabsContent>
 
+            <TabsContent value="hiring-stages">
+              <HiringStagesTab />
+            </TabsContent>
+
             <TabsContent value="api-keys">
               <ApiKeysTab />
             </TabsContent>
@@ -110,3 +117,4 @@ export default function TenantSettings() {
     </div>
   );
 }
+

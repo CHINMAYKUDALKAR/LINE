@@ -90,7 +90,7 @@ const Dashboard = () => {
             const [overviewData, funnelData, interviewsData] = await Promise.allSettled([
                 getOverview(),
                 getFunnel(),
-                getInterviews({ perPage: 10 }),
+                getInterviews({ perPage: 50 }), // Fetch all statuses for client-side filtering
             ]);
 
             // Process overview data for KPI cards
@@ -111,13 +111,37 @@ const Dashboard = () => {
             // Process funnel data for stage pipeline
             if (funnelData.status === 'fulfilled') {
                 const funnel = funnelData.value;
-                const newStageCounts = funnel.map(s => ({
-                    stage: s.stage as InterviewStage,
-                    label: s.stage.replace('-', ' ').replace(/\b\w/g, c => c.toUpperCase()),
-                    count: s.count,
-                    pending: Math.floor(s.count / 2),
-                    completed: Math.ceil(s.count / 2),
-                }));
+                // Normalize funnel stages to match interview stage format (lowercase-hyphenated)
+                const normalizeStage = (stage: string): string => {
+                    if (!stage) return 'interview-1';
+                    return stage.toLowerCase().replace(/_/g, '-');
+                };
+
+                // Aggregate counts by normalized stage to avoid duplicate keys
+                const aggregatedStages = funnel.reduce((acc, s) => {
+                    const normalizedStage = normalizeStage(s.stage) as InterviewStage;
+
+                    if (!acc[normalizedStage]) {
+                        acc[normalizedStage] = {
+                            stage: normalizedStage,
+                            // Ensure label is nicely formatted (Title Case) regardless of input casing
+                            label: s.stage.toLowerCase().replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
+                            count: 0,
+                            pending: 0,
+                            completed: 0,
+                        };
+                    }
+
+                    acc[normalizedStage].count += s.count;
+                    // Distribute pending/completed counts roughly 50/50 as per original logic
+                    acc[normalizedStage].pending += Math.floor(s.count / 2);
+                    acc[normalizedStage].completed += Math.ceil(s.count / 2);
+
+                    return acc;
+                }, {} as Record<InterviewStage, StageCount>);
+
+                const newStageCounts = Object.values(aggregatedStages);
+
                 if (newStageCounts.length > 0) {
                     setStageCounts(newStageCounts);
                 }
@@ -126,22 +150,41 @@ const Dashboard = () => {
             // Process interviews data
             if (interviewsData.status === 'fulfilled') {
                 const data = interviewsData.value;
-                const mappedInterviews = data.data.map((i) => ({
+
+                // Helper to convert backend status to frontend format
+                const normalizeStatus = (status: string): string => {
+                    const statusMap: Record<string, string> = {
+                        'SCHEDULED': 'scheduled',
+                        'COMPLETED': 'completed',
+                        'CANCELLED': 'cancelled',
+                        'NO_SHOW': 'no-show',
+                        'PENDING_FEEDBACK': 'pending-feedback',
+                        'RESCHEDULED': 'scheduled', // Map rescheduled to scheduled
+                    };
+                    return statusMap[status?.toUpperCase()] || status?.toLowerCase() || 'scheduled';
+                };
+
+                // Simple stage normalization - backend uses uppercase, frontend displays lowercase-hyphenated
+                const normalizeStage = (stage: string): string => {
+                    if (!stage) return 'interview-1';
+                    // Convert INTERVIEW_1 → interview-1, HR_ROUND → hr-round, etc.
+                    return stage.toLowerCase().replace(/_/g, '-');
+                };
+
+                const mappedInterviews = data.data.map((i: any) => ({
                     id: i.id,
                     candidateId: i.candidateId,
-                    candidateName: i.candidateName || 'Unknown',
-                    candidateEmail: i.candidateEmail || '',
+                    candidateName: i.candidateName || i.candidate?.name || 'Unknown',
+                    candidateEmail: i.candidateEmail || i.candidate?.email || '',
                     interviewerName: i.interviewers?.[0]?.name || '',
                     interviewerEmail: i.interviewers?.[0]?.email || '',
-                    role: i.roleTitle || '',
+                    role: i.roleTitle || i.stage || 'Interview',
                     dateTime: i.date,
-                    stage: i.stage as InterviewStage,
-                    status: i.status as any,
+                    stage: normalizeStage(i.stage) as InterviewStage,
+                    status: normalizeStatus(i.status) as any,
                     tenantId: i.tenantId,
                 }));
-                if (mappedInterviews.length > 0) {
-                    setInterviews(mappedInterviews);
-                }
+                setInterviews(mappedInterviews);
             }
         } catch (error) {
             console.error('Failed to load dashboard data:', error);
@@ -194,7 +237,7 @@ const Dashboard = () => {
     };
 
     return (
-        <div className="px-8 py-6 h-full">
+        <div className="px-4 sm:px-6 lg:px-8 py-4 sm:py-6 h-full">
             <motion.main
                 initial="initial"
                 animate="animate"
@@ -203,11 +246,11 @@ const Dashboard = () => {
                 {/* Page Header */}
                 <motion.div
                     variants={fadeInUp}
-                    className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6"
+                    className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4 mb-4 sm:mb-6"
                 >
                     <div>
-                        <h1 className="text-2xl font-bold text-foreground tracking-tight">Interview Dashboard</h1>
-                        <p className="text-sm text-muted-foreground mt-1">
+                        <h1 className="text-xl sm:text-2xl font-bold text-foreground tracking-tight">Interview Dashboard</h1>
+                        <p className="text-xs sm:text-sm text-muted-foreground mt-0.5 sm:mt-1 hidden sm:block">
                             Manage and track all interviews across your hiring pipeline
                         </p>
                     </div>
@@ -228,7 +271,7 @@ const Dashboard = () => {
                     />
                 </motion.div>
 
-                <Separator className="my-6" />
+                <Separator className="my-4 sm:my-6" />
 
                 {/* Pipeline Section */}
                 <motion.div variants={staggerItem}>
@@ -240,14 +283,14 @@ const Dashboard = () => {
                     />
                 </motion.div>
 
-                <Separator className="my-6" />
+                <Separator className="my-4 sm:my-6" />
 
                 {/* Table Section */}
                 <motion.section variants={staggerItem}>
-                    <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center justify-between mb-3 sm:mb-4">
                         <div>
-                            <h2 className="text-lg font-semibold text-foreground">Upcoming Interviews</h2>
-                            <p className="text-sm text-muted-foreground">View and manage scheduled interviews</p>
+                            <h2 className="text-base sm:text-lg font-semibold text-foreground">Upcoming Interviews</h2>
+                            <p className="text-xs sm:text-sm text-muted-foreground hidden sm:block">View and manage scheduled interviews</p>
                         </div>
                     </div>
                     <InterviewTable

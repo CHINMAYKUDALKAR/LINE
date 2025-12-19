@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { BullModule } from '@nestjs/bullmq';
 import { ScheduleModule } from '@nestjs/schedule';
+import { ConfigModule } from '@nestjs/config';
 import { CommunicationController } from './communication.controller';
 import { ReceiptController } from './webhooks/receipt.controller';
 import { MessageService } from './services/message.service';
@@ -9,6 +10,7 @@ import { AutomationService } from './services/automation.service';
 import { ChannelService } from './services/channel.service';
 import { SchedulerService } from './services/scheduler.service';
 import { VariableResolverService } from './services/variable-resolver.service';
+import { TwilioService } from './services/twilio.service';
 import { EmailProcessor } from './processors/email.processor';
 import { WhatsAppProcessor } from './processors/whatsapp.processor';
 import { SmsProcessor } from './processors/sms.processor';
@@ -20,6 +22,7 @@ import { COMMUNICATION_QUEUES, QUEUE_RETRY_CONFIG } from './queues';
 @Module({
     imports: [
         ScheduleModule.forRoot(),
+        ConfigModule,
         BullModule.registerQueue(
             {
                 name: COMMUNICATION_QUEUES.EMAIL,
@@ -74,6 +77,7 @@ import { COMMUNICATION_QUEUES, QUEUE_RETRY_CONFIG } from './queues';
         ChannelService,
         SchedulerService,
         VariableResolverService,
+        TwilioService,
         EmailProcessor,
         WhatsAppProcessor,
         SmsProcessor,
@@ -86,6 +90,8 @@ import { COMMUNICATION_QUEUES, QUEUE_RETRY_CONFIG } from './queues';
         AutomationService,
         ChannelService,
         VariableResolverService,
+        TwilioService,
     ],
 })
 export class CommunicationModule { }
+

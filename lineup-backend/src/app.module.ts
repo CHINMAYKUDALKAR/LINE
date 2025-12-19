@@ -28,6 +28,8 @@ import { SSOModule } from './modules/sso/sso.module';
 import { IdentityProviderModule } from './modules/identity-provider/identity-provider.module';
 import { SettingsModule } from './modules/settings/settings.module';
 import { IntegrationsModule } from './modules/integrations/integrations.module';
+import { TenantsModule } from './modules/tenants/tenants.module';
+import { AdminConsoleModule } from './modules/admin-console/admin-console.module';
 import { HealthController } from './common/health.controller';
 import { S3Service } from './common/s3.service';
 import { PrismaService } from './common/prisma.service';
@@ -67,6 +69,8 @@ import { IPAllowlistGuard } from './common/ip-allowlist.guard';
     IdentityProviderModule,
     SettingsModule,
     IntegrationsModule,
+    TenantsModule,
+    AdminConsoleModule,
   ],
   controllers: [HealthController],
   providers: [

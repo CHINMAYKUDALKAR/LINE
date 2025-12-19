@@ -10,6 +10,7 @@ exports.CommunicationModule = void 0;
 const common_1 = require("@nestjs/common");
 const bullmq_1 = require("@nestjs/bullmq");
 const schedule_1 = require("@nestjs/schedule");
+const config_1 = require("@nestjs/config");
 const communication_controller_1 = require("./communication.controller");
 const receipt_controller_1 = require("./webhooks/receipt.controller");
 const message_service_1 = require("./services/message.service");
@@ -18,6 +19,7 @@ const automation_service_1 = require("./services/automation.service");
 const channel_service_1 = require("./services/channel.service");
 const scheduler_service_1 = require("./services/scheduler.service");
 const variable_resolver_service_1 = require("./services/variable-resolver.service");
+const twilio_service_1 = require("./services/twilio.service");
 const email_processor_1 = require("./processors/email.processor");
 const whatsapp_processor_1 = require("./processors/whatsapp.processor");
 const sms_processor_1 = require("./processors/sms.processor");
@@ -32,6 +34,7 @@ exports.CommunicationModule = CommunicationModule = __decorate([
     (0, common_1.Module)({
         imports: [
             schedule_1.ScheduleModule.forRoot(),
+            config_1.ConfigModule,
             bullmq_1.BullModule.registerQueue({
                 name: queues_1.COMMUNICATION_QUEUES.EMAIL,
                 defaultJobOptions: {
@@ -79,6 +82,7 @@ exports.CommunicationModule = CommunicationModule = __decorate([
             channel_service_1.ChannelService,
             scheduler_service_1.SchedulerService,
             variable_resolver_service_1.VariableResolverService,
+            twilio_service_1.TwilioService,
             email_processor_1.EmailProcessor,
             whatsapp_processor_1.WhatsAppProcessor,
             sms_processor_1.SmsProcessor,
@@ -91,6 +95,7 @@ exports.CommunicationModule = CommunicationModule = __decorate([
             automation_service_1.AutomationService,
             channel_service_1.ChannelService,
             variable_resolver_service_1.VariableResolverService,
+            twilio_service_1.TwilioService,
         ],
     })
 ], CommunicationModule);

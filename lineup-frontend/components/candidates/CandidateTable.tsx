@@ -147,6 +147,8 @@ export function CandidateTable({
     );
   };
 
+  // ... existing code ...
+
   const handleRowClick = (candidate: CandidateListItem, e: React.MouseEvent) => {
     const target = e.target as HTMLElement;
     if (
@@ -159,10 +161,129 @@ export function CandidateTable({
     router.push(`/candidates/${candidate.id}`);
   };
 
+  // Mobile Card Component
+  const CandidateMobileCard = ({ candidate, isSelected }: { candidate: CandidateListItem; isSelected: boolean }) => {
+    const stageColor = stageColors[candidate.stage] || stageColors.received;
+
+    return (
+      <div
+        className={cn(
+          "bg-card p-4 border-b border-border last:border-0",
+          isSelected && "bg-primary/5"
+        )}
+        onClick={(e) => handleRowClick(candidate, e)}
+      >
+        <div className="flex items-start justify-between gap-3 mb-3">
+          <div className="flex items-start gap-3">
+            <Checkbox
+              checked={isSelected}
+              onCheckedChange={() => handleSelectOne(candidate.id)}
+              className="mt-1"
+            />
+            <div className="flex items-center gap-3">
+              <Avatar className="h-10 w-10">
+                <AvatarFallback className="bg-primary/10 text-primary text-sm">
+                  {getInitials(candidate.name)}
+                </AvatarFallback>
+              </Avatar>
+              <div>
+                <h3 className="font-semibold text-foreground">{candidate.name}</h3>
+                <p className="text-sm text-muted-foreground">{candidate.role}</p>
+              </div>
+            </div>
+          </div>
+
+          <CandidateRowMenu
+            candidate={candidate}
+            userRole={userRole}
+            onViewProfile={(c) => router.push(`/candidate/${c.id}`)}
+            onScheduleInterview={onScheduleInterview}
+            onChangeStage={onChangeStage}
+            onSendEmail={onSendEmail}
+            onSendWhatsApp={onSendWhatsApp}
+            onSendSMS={onSendSMS}
+            onDelete={onDelete}
+          />
+        </div>
+
+        <div className="pl-[2.75rem] space-y-3">
+          <div className="flex items-center justify-between">
+            {onUpdateCandidate && userRole !== 'interviewer' ? (
+              <div onClick={(e) => e.stopPropagation()} className="w-full max-w-[180px]">
+                <EditableSelect
+                  value={candidate.stage}
+                  options={stageOptions}
+                  onSave={async (newStage) => {
+                    await onUpdateCandidate(candidate.id, { stage: newStage as any });
+                  }}
+                  fieldName="stage"
+                  editable={true}
+                />
+              </div>
+            ) : (
+              <Badge
+                variant="outline"
+                className={cn('cursor-pointer transition-colors', stageColor)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (userRole !== 'interviewer') {
+                    onChangeStage(candidate);
+                  }
+                }}
+              >
+                {stageLabels[candidate.stage]}
+              </Badge>
+            )}
+
+            <span className="text-xs text-muted-foreground">
+              {formatDistanceToNow(new Date(candidate.lastActivity), { addSuffix: true })}
+            </span>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="bg-card rounded-lg border border-border overflow-hidden">
-      {/* Responsive: horizontal scroll on mobile */}
-      <div className="overflow-x-auto">
+      {/* Mobile View */}
+      <div className="md:hidden">
+        <div className="p-3 border-b border-border bg-muted/50 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Checkbox
+              checked={allSelected}
+              ref={(el) => {
+                if (el) {
+                  (el as HTMLButtonElement & { indeterminate: boolean }).indeterminate = someSelected;
+                }
+              }}
+              onCheckedChange={handleSelectAll}
+              aria-label="Select all candidates"
+            />
+            <span className="text-sm font-medium text-muted-foreground">Select All</span>
+          </div>
+          {/* Add sort dropdown for mobile if needed later */}
+        </div>
+
+        <div className="divide-y divide-border">
+          {sortedCandidates.length === 0 ? (
+            <div className="py-12 text-center">
+              <p className="text-muted-foreground">No candidates found</p>
+            </div>
+          ) : (
+            sortedCandidates.map((candidate) => (
+              <CandidateMobileCard
+                key={candidate.id}
+                candidate={candidate}
+                isSelected={selectedIds.includes(candidate.id)}
+              />
+            ))
+          )}
+        </div>
+      </div>
+
+      {/* Desktop View */}
+      <div className="hidden md:block overflow-x-auto">
         <Table className="min-w-[800px]">
           <TableHeader className="sticky top-0 z-10 bg-muted/50">
             <TableRow className="hover:bg-transparent">
@@ -315,13 +436,13 @@ export function CandidateTable({
             })}
           </TableBody>
         </Table>
-      </div>
 
-      {sortedCandidates.length === 0 && (
-        <div className="py-12 text-center">
-          <p className="text-muted-foreground">No candidates found</p>
-        </div>
-      )}
+        {sortedCandidates.length === 0 && (
+          <div className="py-12 text-center">
+            <p className="text-muted-foreground">No candidates found</p>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

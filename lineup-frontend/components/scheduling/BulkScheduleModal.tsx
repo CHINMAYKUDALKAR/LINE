@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Loader2, Calendar, Users, Clock, Zap, Info } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { Loader2, Calendar, Users, Clock, Zap, Info, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -61,6 +61,7 @@ export function BulkScheduleModal({
     const [rangeStart, setRangeStart] = useState('');
     const [rangeEnd, setRangeEnd] = useState('');
     const [stage, setStage] = useState('interview');
+    const [candidateSearch, setCandidateSearch] = useState('');
 
     const { data: candidatesData, isLoading: loadingCandidates } = useCandidates({ perPage: 100 });
     const { data: interviewersData, isLoading: loadingInterviewers } = useInterviewers();
@@ -68,6 +69,17 @@ export function BulkScheduleModal({
 
     const candidates = candidatesData?.data || [];
     const interviewers = interviewersData || [];
+
+    // Filter candidates based on search
+    const filteredCandidates = useMemo(() => {
+        if (!candidateSearch.trim()) return candidates;
+        const searchLower = candidateSearch.toLowerCase();
+        return candidates.filter((c: Candidate) =>
+            c.name?.toLowerCase().includes(searchLower) ||
+            c.email?.toLowerCase().includes(searchLower) ||
+            c.stage?.toLowerCase().includes(searchLower)
+        );
+    }, [candidates, candidateSearch]);
 
     useEffect(() => {
         if (preSelectedCandidateIds.length > 0) {
@@ -88,7 +100,12 @@ export function BulkScheduleModal({
     };
 
     const selectAllCandidates = () => {
-        setSelectedCandidateIds(candidates.map((c: Candidate) => c.id));
+        // Select all filtered candidates (respects search)
+        setSelectedCandidateIds(prev => {
+            const filteredIds = filteredCandidates.map((c: Candidate) => c.id);
+            const newSelection = new Set([...prev, ...filteredIds]);
+            return Array.from(newSelection);
+        });
     };
 
     const clearCandidates = () => {
@@ -147,7 +164,7 @@ export function BulkScheduleModal({
 
     return (
         <Dialog open={open} onOpenChange={handleClose}>
-            <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-hidden flex flex-col">
+            <DialogContent className="w-screen h-[100dvh] max-w-none sm:max-w-[800px] sm:h-auto sm:max-h-[90vh] sm:rounded-lg overflow-hidden flex flex-col">
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
                         <Calendar className="h-5 w-5" />
@@ -175,18 +192,28 @@ export function BulkScheduleModal({
                                 </Button>
                             </div>
                         </div>
+                        {/* Search Input */}
+                        <div className="relative">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                            <Input
+                                placeholder="Search candidates by name, email, or stage..."
+                                value={candidateSearch}
+                                onChange={(e) => setCandidateSearch(e.target.value)}
+                                className="pl-9"
+                            />
+                        </div>
                         <ScrollArea className="h-[150px] border rounded-lg p-2">
                             {loadingCandidates ? (
                                 <div className="flex items-center justify-center h-full">
                                     <Loader2 className="h-6 w-6 animate-spin" />
                                 </div>
-                            ) : candidates.length === 0 ? (
+                            ) : filteredCandidates.length === 0 ? (
                                 <p className="text-sm text-muted-foreground text-center py-4">
-                                    No candidates found
+                                    {candidateSearch ? 'No candidates match your search' : 'No candidates found'}
                                 </p>
                             ) : (
                                 <div className="space-y-2">
-                                    {candidates.map((candidate: Candidate) => (
+                                    {filteredCandidates.map((candidate: Candidate) => (
                                         <div
                                             key={candidate.id}
                                             className="flex items-center space-x-2 p-2 hover:bg-accent rounded cursor-pointer"
