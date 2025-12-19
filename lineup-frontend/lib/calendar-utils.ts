@@ -116,7 +116,10 @@ export function interviewToCalendarEvent(interview: {
     id: string;
     candidateId: string;
     candidate?: { name?: string; role?: string };
-    startAt?: string;
+    candidateName?: string;  // Enriched field from backend
+    candidateEmail?: string; // Enriched field from backend
+    date?: string;           // Backend uses 'date' field
+    startAt?: string;        // Alternative field name
     endAt?: string;
     durationMins?: number;
     stage?: string;
@@ -124,13 +127,17 @@ export function interviewToCalendarEvent(interview: {
     type?: string;
     location?: string;
     meetingLink?: string;
-    interviewers?: Array<{ id: string; name: string; email?: string }>;
+    interviewers?: Array<{ id: string; name: string | null; email: string }>;
     tenantId: string;
 }): CalendarEvent {
-    // Parse start and end times from ISO strings
-    const startAt = interview.startAt
-        ? new Date(interview.startAt)
-        : new Date();
+    // Parse start time - backend uses 'date' or 'startAt'
+    const startAt = interview.date
+        ? new Date(interview.date)
+        : interview.startAt
+            ? new Date(interview.startAt)
+            : new Date();
+
+    // Calculate end time
     const endAt = interview.endAt
         ? new Date(interview.endAt)
         : new Date(startAt.getTime() + (interview.durationMins || 60) * 60000);
@@ -139,7 +146,7 @@ export function interviewToCalendarEvent(interview: {
     const primaryInterviewer = interview.interviewers?.[0];
 
     // Generate initials from name
-    const getInitials = (name?: string) => {
+    const getInitials = (name?: string | null) => {
         if (!name) return 'UN';
         return name
             .split(' ')
@@ -186,7 +193,7 @@ export function interviewToCalendarEvent(interview: {
     return {
         id: interview.id,
         candidateId: interview.candidateId,
-        candidateName: interview.candidate?.name || 'Unknown Candidate',
+        candidateName: interview.candidateName || interview.candidate?.name || 'Unknown Candidate',
         interviewerId: primaryInterviewer?.id || '',
         interviewerName: primaryInterviewer?.name || 'Unknown',
         interviewerInitials: getInitials(primaryInterviewer?.name),

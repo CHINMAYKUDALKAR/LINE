@@ -101,17 +101,25 @@ export default function Calendar() {
 
     // Transform slots and interviews to calendar events and apply filters
     const filteredEvents = useMemo(() => {
-        // Get events from slots
-        const slotEvents = slotsData?.items ? slotsToCalendarEvents(slotsData.items) : [];
-
-        // Get events from interviews
+        // Get events from interviews first
         const interviewEvents = interviewsData?.data ? interviewsToCalendarEvents(interviewsData.data) : [];
-
-        // Merge events (interviews take priority, filter out duplicate slots if interview exists)
         const interviewIds = new Set(interviewEvents.map(e => e.id));
+
+        // Get events from slots, filtering out those that are linked to loaded interviews
+        // This prevents duplicates where both the Slot and the Interview appear
+        const slotEvents = slotsData?.items
+            ? slotsToCalendarEvents(
+                slotsData.items.filter(slot =>
+                    // Keep slot if it's not linked to an interview OR if the linked interview isn't loaded
+                    !slot.interviewId || !interviewIds.has(slot.interviewId)
+                )
+            )
+            : [];
+
+        // Merge events
         const mergedEvents = [
             ...interviewEvents,
-            ...slotEvents.filter(e => !interviewIds.has(e.id)),
+            ...slotEvents,
         ];
 
         return mergedEvents.filter((event) => {
