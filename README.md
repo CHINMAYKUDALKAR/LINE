@@ -160,7 +160,60 @@ Access the application:
 
 ---
 
-## 📁 Project Structure
+## � API Documentation
+
+Lineup provides comprehensive **Swagger/OpenAPI** documentation for all API endpoints.
+
+### Accessing the API Docs
+
+When the backend is running, visit: **http://localhost:3001/api/docs**
+
+### API Modules
+
+| Module | Endpoints | Description |
+|--------|-----------|-------------|
+| **Auth** | 10+ | Login, signup, JWT tokens, password reset |
+| **Candidates** | 15+ | CRUD, bulk import, stage management |
+| **Interviews** | 15+ | Scheduling, rescheduling, feedback |
+| **Calendar** | 30+ | Availability, slots, working hours, sync |
+| **Communication** | 20+ | Messages, templates, automations |
+| **Reports** | 10+ | Analytics, exports, scheduled reports |
+| **Users** | 7 | Invitations, roles, management |
+| **Teams** | 8 | Team creation, member management |
+| **Settings** | 10+ | Branding, SSO, SMTP, API keys |
+| **Integrations** | 10 | OAuth, field mapping, webhooks |
+
+### Authentication
+
+All protected endpoints require a **Bearer JWT token**:
+
+```bash
+curl -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  http://localhost:3001/api/v1/candidates
+```
+
+### Example Endpoints
+
+```bash
+# Login
+POST /api/v1/auth/login
+{ "email": "user@example.com", "password": "..." }
+
+# List Candidates
+GET /api/v1/candidates?stage=Interview&page=1&perPage=20
+
+# Schedule Interview
+POST /api/v1/interviews
+{ "candidateId": "...", "interviewerIds": [...], "startAt": "...", "durationMins": 60 }
+
+# Get Availability
+GET /api/v1/calendar/availability?userIds=...&start=...&end=...
+```
+
+---
+
+
+## �📁 Project Structure
 
 ```
 lineup/

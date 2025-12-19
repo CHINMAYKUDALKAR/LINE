@@ -11,16 +11,23 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.CreateApiKeyDto = void 0;
 const class_validator_1 = require("class-validator");
+const swagger_1 = require("@nestjs/swagger");
 class CreateApiKeyDto {
     name;
     scopes;
 }
 exports.CreateApiKeyDto = CreateApiKeyDto;
 __decorate([
+    (0, swagger_1.ApiProperty)({ description: 'API key name/label', example: 'Production Integration' }),
     (0, class_validator_1.IsString)(),
     __metadata("design:type", String)
 ], CreateApiKeyDto.prototype, "name", void 0);
 __decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'Permission scopes for this API key',
+        example: ['candidates:read', 'candidates:write', 'interviews:read'],
+        type: [String]
+    }),
     (0, class_validator_1.IsArray)(),
     __metadata("design:type", Array)
 ], CreateApiKeyDto.prototype, "scopes", void 0);

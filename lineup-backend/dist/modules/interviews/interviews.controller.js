@@ -17,6 +17,7 @@ const common_1 = require("@nestjs/common");
 const swagger_1 = require("@nestjs/swagger");
 const interviews_service_1 = require("./interviews.service");
 const create_interview_dto_1 = require("./dto/create-interview.dto");
+const reschedule_interview_dto_1 = require("./dto/reschedule-interview.dto");
 const list_interviews_dto_1 = require("./dto/list-interviews.dto");
 const bulk_schedule_dto_1 = require("./dto/bulk-schedule.dto");
 const interview_note_dto_1 = require("./dto/interview-note.dto");
@@ -74,6 +75,12 @@ __decorate([
     (0, common_1.Post)(),
     (0, rate_limit_1.RateLimited)(rate_limit_1.RateLimitProfile.WRITE),
     (0, roles_decorator_1.Roles)('ADMIN', 'MANAGER', 'RECRUITER'),
+    (0, swagger_1.ApiOperation)({ summary: 'Schedule a new interview' }),
+    (0, swagger_1.ApiBody)({ type: create_interview_dto_1.CreateInterviewDto }),
+    (0, swagger_1.ApiResponse)({ status: 201, description: 'Interview scheduled successfully' }),
+    (0, swagger_1.ApiResponse)({ status: 400, description: 'Invalid input data' }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'Unauthorized' }),
+    (0, swagger_1.ApiResponse)({ status: 409, description: 'Scheduling conflict detected' }),
     __param(0, (0, common_1.Req)()),
     __param(1, (0, common_1.Body)()),
     __metadata("design:type", Function),
@@ -84,6 +91,11 @@ __decorate([
     (0, common_1.Post)('bulk-schedule'),
     (0, rate_limit_1.RateLimited)(rate_limit_1.RateLimitProfile.BULK),
     (0, roles_decorator_1.Roles)('ADMIN', 'MANAGER', 'RECRUITER'),
+    (0, swagger_1.ApiOperation)({ summary: 'Schedule multiple interviews at once' }),
+    (0, swagger_1.ApiBody)({ type: bulk_schedule_dto_1.BulkScheduleDto }),
+    (0, swagger_1.ApiResponse)({ status: 201, description: 'Interviews scheduled successfully', schema: { example: { scheduled: 5, failed: 0, errors: [] } } }),
+    (0, swagger_1.ApiResponse)({ status: 400, description: 'Invalid input data' }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'Unauthorized' }),
     __param(0, (0, common_1.Req)()),
     __param(1, (0, common_1.Body)()),
     __metadata("design:type", Function),
@@ -93,6 +105,13 @@ __decorate([
 __decorate([
     (0, common_1.Post)('reschedule/:id'),
     (0, rate_limit_1.RateLimited)(rate_limit_1.RateLimitProfile.WRITE),
+    (0, roles_decorator_1.Roles)('ADMIN', 'MANAGER', 'RECRUITER'),
+    (0, swagger_1.ApiOperation)({ summary: 'Reschedule an existing interview' }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: 'Interview ID to reschedule' }),
+    (0, swagger_1.ApiBody)({ type: reschedule_interview_dto_1.RescheduleInterviewDto }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Interview rescheduled successfully' }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: 'Interview not found' }),
+    (0, swagger_1.ApiResponse)({ status: 409, description: 'Scheduling conflict detected' }),
     __param(0, (0, common_1.Req)()),
     __param(1, (0, common_1.Body)()),
     __metadata("design:type", Function),
@@ -103,6 +122,9 @@ __decorate([
     (0, common_1.Get)(),
     (0, rate_limit_1.RateLimited)(rate_limit_1.RateLimitProfile.READ),
     (0, roles_decorator_1.Roles)('ADMIN', 'MANAGER', 'RECRUITER', 'INTERVIEWER'),
+    (0, swagger_1.ApiOperation)({ summary: 'List all interviews with filters and pagination' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Paginated list of interviews', schema: { example: { data: [], total: 0, page: 1, limit: 20 } } }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'Unauthorized' }),
     __param(0, (0, common_1.Req)()),
     __param(1, (0, common_1.Query)()),
     __metadata("design:type", Function),
@@ -113,6 +135,10 @@ __decorate([
     (0, common_1.Get)(':id'),
     (0, rate_limit_1.RateLimited)(rate_limit_1.RateLimitProfile.READ),
     (0, roles_decorator_1.Roles)('ADMIN', 'MANAGER', 'RECRUITER', 'INTERVIEWER'),
+    (0, swagger_1.ApiOperation)({ summary: 'Get interview details by ID' }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: 'Interview ID' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Interview details with candidate and interviewer info' }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: 'Interview not found' }),
     __param(0, (0, common_1.Req)()),
     __param(1, (0, common_1.Param)('id')),
     __metadata("design:type", Function),
@@ -123,6 +149,11 @@ __decorate([
     (0, common_1.Post)(':id/cancel'),
     (0, rate_limit_1.RateLimited)(rate_limit_1.RateLimitProfile.WRITE),
     (0, roles_decorator_1.Roles)('ADMIN', 'MANAGER', 'RECRUITER'),
+    (0, swagger_1.ApiOperation)({ summary: 'Cancel a scheduled interview' }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: 'Interview ID to cancel' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Interview cancelled successfully' }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: 'Interview not found' }),
+    (0, swagger_1.ApiResponse)({ status: 400, description: 'Interview already completed or cancelled' }),
     __param(0, (0, common_1.Req)()),
     __param(1, (0, common_1.Param)('id')),
     __metadata("design:type", Function),
@@ -133,6 +164,9 @@ __decorate([
     (0, common_1.Post)(':id/sync-calendar'),
     (0, rate_limit_1.RateLimited)(rate_limit_1.RateLimitProfile.WRITE),
     (0, roles_decorator_1.Roles)('ADMIN'),
+    (0, swagger_1.ApiOperation)({ summary: 'Sync interview with external calendar (Admin only)' }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: 'Interview ID' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Calendar sync triggered' }),
     __param(0, (0, common_1.Req)()),
     __param(1, (0, common_1.Param)('id')),
     __metadata("design:type", Function),
@@ -143,6 +177,11 @@ __decorate([
     (0, common_1.Post)(':id/complete'),
     (0, rate_limit_1.RateLimited)(rate_limit_1.RateLimitProfile.WRITE),
     (0, roles_decorator_1.Roles)('ADMIN', 'MANAGER', 'RECRUITER', 'INTERVIEWER'),
+    (0, swagger_1.ApiOperation)({ summary: 'Mark an interview as completed' }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: 'Interview ID' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Interview marked as completed' }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: 'Interview not found' }),
+    (0, swagger_1.ApiResponse)({ status: 400, description: 'Interview already completed or cancelled' }),
     __param(0, (0, common_1.Req)()),
     __param(1, (0, common_1.Param)('id')),
     __metadata("design:type", Function),
@@ -221,6 +260,8 @@ __decorate([
     __metadata("design:returntype", void 0)
 ], InterviewsController.prototype, "getTimeline", null);
 exports.InterviewsController = InterviewsController = __decorate([
+    (0, swagger_1.ApiTags)('interviews'),
+    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
     (0, common_1.Controller)('api/v1/interviews'),
     (0, common_1.UseGuards)(jwt_guard_1.JwtAuthGuard, rbac_guard_1.RbacGuard),
     __metadata("design:paramtypes", [interviews_service_1.InterviewsService])

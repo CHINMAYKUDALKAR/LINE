@@ -14,6 +14,7 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.IntegrationsController = void 0;
 const common_1 = require("@nestjs/common");
+const swagger_1 = require("@nestjs/swagger");
 const integrations_service_1 = require("./integrations.service");
 const connect_dto_1 = require("./dto/connect.dto");
 const mapping_dto_1 = require("./dto/mapping.dto");
@@ -77,6 +78,8 @@ exports.IntegrationsController = IntegrationsController;
 __decorate([
     (0, common_1.Get)(),
     (0, roles_decorator_1.Roles)(client_1.Role.ADMIN, client_1.Role.MANAGER),
+    (0, swagger_1.ApiOperation)({ summary: 'List all integrations for the tenant' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'List of configured integrations with their status' }),
     __param(0, (0, common_1.Req)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object]),
@@ -85,8 +88,12 @@ __decorate([
 __decorate([
     (0, common_1.Get)(':provider'),
     (0, roles_decorator_1.Roles)(client_1.Role.ADMIN, client_1.Role.MANAGER),
+    (0, swagger_1.ApiOperation)({ summary: 'Get a specific integration details' }),
+    (0, swagger_1.ApiParam)({ name: 'provider', description: 'Integration provider (e.g., zoho, google, outlook)' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Integration details and configuration' }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: 'Integration not found' }),
     __param(0, (0, common_1.Req)()),
-    __param(1, (0, common_1.Query)('provider')),
+    __param(1, (0, common_1.Param)('provider')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object, String]),
     __metadata("design:returntype", Promise)
@@ -94,6 +101,10 @@ __decorate([
 __decorate([
     (0, common_1.Post)('connect'),
     (0, roles_decorator_1.Roles)(client_1.Role.ADMIN),
+    (0, swagger_1.ApiOperation)({ summary: 'Initiate OAuth connection flow for a provider' }),
+    (0, swagger_1.ApiBody)({ type: connect_dto_1.ConnectDto }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Authorization URL for OAuth flow', schema: { example: { authUrl: 'https://...' } } }),
+    (0, swagger_1.ApiResponse)({ status: 400, description: 'Invalid provider' }),
     __param(0, (0, common_1.Req)()),
     __param(1, (0, common_1.Body)()),
     __metadata("design:type", Function),
@@ -102,6 +113,12 @@ __decorate([
 ], IntegrationsController.prototype, "connect", null);
 __decorate([
     (0, common_1.Get)('callback'),
+    (0, swagger_1.ApiOperation)({ summary: 'Handle OAuth callback from provider' }),
+    (0, swagger_1.ApiQuery)({ name: 'provider', description: 'Integration provider' }),
+    (0, swagger_1.ApiQuery)({ name: 'code', description: 'Authorization code from provider' }),
+    (0, swagger_1.ApiQuery)({ name: 'state', description: 'State parameter for CSRF protection' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Integration connected successfully' }),
+    (0, swagger_1.ApiResponse)({ status: 400, description: 'Invalid code or state' }),
     __param(0, (0, common_1.Query)('provider')),
     __param(1, (0, common_1.Query)('code')),
     __param(2, (0, common_1.Query)('state')),
@@ -113,6 +130,10 @@ __decorate([
 __decorate([
     (0, common_1.Post)('mapping'),
     (0, roles_decorator_1.Roles)(client_1.Role.ADMIN),
+    (0, swagger_1.ApiOperation)({ summary: 'Update field mapping configuration for an integration' }),
+    (0, swagger_1.ApiBody)({ type: mapping_dto_1.UpdateMappingDto }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Mapping updated successfully' }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: 'Integration not found' }),
     __param(0, (0, common_1.Req)()),
     __param(1, (0, common_1.Body)()),
     __metadata("design:type", Function),
@@ -122,6 +143,10 @@ __decorate([
 __decorate([
     (0, common_1.Post)('sync'),
     (0, roles_decorator_1.Roles)(client_1.Role.ADMIN, client_1.Role.MANAGER),
+    (0, swagger_1.ApiOperation)({ summary: 'Trigger manual sync with external system' }),
+    (0, swagger_1.ApiBody)({ type: sync_dto_1.TriggerSyncDto }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Sync triggered successfully', schema: { example: { synced: 25, errors: 0 } } }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: 'Integration not connected' }),
     __param(0, (0, common_1.Req)()),
     __param(1, (0, common_1.Body)()),
     __metadata("design:type", Function),
@@ -131,6 +156,10 @@ __decorate([
 __decorate([
     (0, common_1.Post)('disconnect'),
     (0, roles_decorator_1.Roles)(client_1.Role.ADMIN),
+    (0, swagger_1.ApiOperation)({ summary: 'Disconnect an integration' }),
+    (0, swagger_1.ApiBody)({ schema: { example: { provider: 'zoho' } } }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Integration disconnected' }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: 'Integration not found' }),
     __param(0, (0, common_1.Req)()),
     __param(1, (0, common_1.Body)()),
     __metadata("design:type", Function),
@@ -140,8 +169,12 @@ __decorate([
 __decorate([
     (0, common_1.Get)(':provider/webhooks'),
     (0, roles_decorator_1.Roles)(client_1.Role.ADMIN, client_1.Role.MANAGER),
+    (0, swagger_1.ApiOperation)({ summary: 'Get webhook events for an integration' }),
+    (0, swagger_1.ApiParam)({ name: 'provider', description: 'Integration provider' }),
+    (0, swagger_1.ApiQuery)({ name: 'limit', required: false, description: 'Number of events to return (default: 50)' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'List of recent webhook events' }),
     __param(0, (0, common_1.Req)()),
-    __param(1, (0, common_1.Query)('provider')),
+    __param(1, (0, common_1.Param)('provider')),
     __param(2, (0, common_1.Query)('limit')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object, String, String]),
@@ -150,8 +183,11 @@ __decorate([
 __decorate([
     (0, common_1.Get)(':provider/metrics'),
     (0, roles_decorator_1.Roles)(client_1.Role.ADMIN, client_1.Role.MANAGER),
+    (0, swagger_1.ApiOperation)({ summary: 'Get sync metrics and statistics for an integration' }),
+    (0, swagger_1.ApiParam)({ name: 'provider', description: 'Integration provider' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Sync metrics including success rate, last sync time, etc.' }),
     __param(0, (0, common_1.Req)()),
-    __param(1, (0, common_1.Query)('provider')),
+    __param(1, (0, common_1.Param)('provider')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object, String]),
     __metadata("design:returntype", Promise)
@@ -159,13 +195,18 @@ __decorate([
 __decorate([
     (0, common_1.Get)(':provider/fields'),
     (0, roles_decorator_1.Roles)(client_1.Role.ADMIN, client_1.Role.MANAGER),
+    (0, swagger_1.ApiOperation)({ summary: 'Get field schemas for mapping configuration' }),
+    (0, swagger_1.ApiParam)({ name: 'provider', description: 'Integration provider' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Available fields from both Lineup and external system for mapping' }),
     __param(0, (0, common_1.Req)()),
-    __param(1, (0, common_1.Query)('provider')),
+    __param(1, (0, common_1.Param)('provider')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object, String]),
     __metadata("design:returntype", Promise)
 ], IntegrationsController.prototype, "getFields", null);
 exports.IntegrationsController = IntegrationsController = __decorate([
+    (0, swagger_1.ApiTags)('integrations'),
+    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
     (0, common_1.Controller)('api/v1/integrations'),
     (0, common_1.UseGuards)(jwt_guard_1.JwtAuthGuard, rbac_guard_1.RbacGuard),
     __metadata("design:paramtypes", [integrations_service_1.IntegrationsService])

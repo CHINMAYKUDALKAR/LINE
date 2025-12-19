@@ -14,6 +14,7 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.FeedbackController = void 0;
 const common_1 = require("@nestjs/common");
+const swagger_1 = require("@nestjs/swagger");
 const feedback_service_1 = require("./feedback.service");
 const submit_feedback_dto_1 = require("./dto/submit-feedback.dto");
 const jwt_guard_1 = require("../auth/guards/jwt.guard");
@@ -35,6 +36,11 @@ exports.FeedbackController = FeedbackController;
 __decorate([
     (0, common_1.Post)(),
     (0, roles_decorator_1.Roles)('INTERVIEWER', 'RECRUITER', 'MANAGER', 'ADMIN'),
+    (0, swagger_1.ApiOperation)({ summary: 'Submit interview feedback' }),
+    (0, swagger_1.ApiBody)({ type: submit_feedback_dto_1.SubmitFeedbackDto }),
+    (0, swagger_1.ApiResponse)({ status: 201, description: 'Feedback submitted successfully' }),
+    (0, swagger_1.ApiResponse)({ status: 400, description: 'Invalid feedback data' }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: 'Interview not found' }),
     __param(0, (0, common_1.Req)()),
     __param(1, (0, common_1.Body)()),
     __metadata("design:type", Function),
@@ -44,6 +50,10 @@ __decorate([
 __decorate([
     (0, common_1.Get)('interview/:id'),
     (0, roles_decorator_1.Roles)('RECRUITER', 'MANAGER', 'ADMIN'),
+    (0, swagger_1.ApiOperation)({ summary: 'Get all feedback for an interview' }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: 'Interview ID' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'List of feedback entries for the interview' }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: 'Interview not found' }),
     __param(0, (0, common_1.Req)()),
     __param(1, (0, common_1.Param)('id')),
     __metadata("design:type", Function),
@@ -51,6 +61,8 @@ __decorate([
     __metadata("design:returntype", void 0)
 ], FeedbackController.prototype, "getForInterview", null);
 exports.FeedbackController = FeedbackController = __decorate([
+    (0, swagger_1.ApiTags)('feedback'),
+    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
     (0, common_1.Controller)('api/v1/feedback'),
     (0, common_1.UseGuards)(jwt_guard_1.JwtAuthGuard, rbac_guard_1.RbacGuard),
     __metadata("design:paramtypes", [feedback_service_1.FeedbackService])

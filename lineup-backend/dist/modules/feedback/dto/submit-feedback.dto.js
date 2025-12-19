@@ -11,6 +11,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SubmitFeedbackDto = void 0;
 const class_validator_1 = require("class-validator");
+const swagger_1 = require("@nestjs/swagger");
 class SubmitFeedbackDto {
     interviewId;
     rating;
@@ -19,21 +20,28 @@ class SubmitFeedbackDto {
 }
 exports.SubmitFeedbackDto = SubmitFeedbackDto;
 __decorate([
+    (0, swagger_1.ApiProperty)({ description: 'ID of the interview to submit feedback for', example: 'int_abc123' }),
     (0, class_validator_1.IsString)(),
     __metadata("design:type", String)
 ], SubmitFeedbackDto.prototype, "interviewId", void 0);
 __decorate([
+    (0, swagger_1.ApiProperty)({ description: 'Overall rating (1-5 scale)', example: 4, minimum: 1, maximum: 5 }),
     (0, class_validator_1.IsInt)(),
     (0, class_validator_1.Min)(1),
     (0, class_validator_1.Max)(5),
     __metadata("design:type", Number)
 ], SubmitFeedbackDto.prototype, "rating", void 0);
 __decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: 'Detailed criteria ratings',
+        example: { communication: 4, problemSolving: 5, technicalSkills: 4 }
+    }),
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsObject)(),
     __metadata("design:type", Object)
 ], SubmitFeedbackDto.prototype, "criteria", void 0);
 __decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: 'Additional comments or notes', example: 'Strong candidate with good communication skills' }),
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsString)(),
     __metadata("design:type", String)

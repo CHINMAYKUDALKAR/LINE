@@ -11,6 +11,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.UpdateBrandingDto = void 0;
 const class_validator_1 = require("class-validator");
+const swagger_1 = require("@nestjs/swagger");
 class UpdateBrandingDto {
     logoUrl;
     primaryColor;
@@ -19,21 +20,25 @@ class UpdateBrandingDto {
 }
 exports.UpdateBrandingDto = UpdateBrandingDto;
 __decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: 'URL to company logo', example: 'https://example.com/logo.png' }),
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsString)(),
     __metadata("design:type", String)
 ], UpdateBrandingDto.prototype, "logoUrl", void 0);
 __decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: 'Primary brand color (hex)', example: '#3B82F6' }),
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsString)(),
     __metadata("design:type", String)
 ], UpdateBrandingDto.prototype, "primaryColor", void 0);
 __decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: 'Accent brand color (hex)', example: '#10B981' }),
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsString)(),
     __metadata("design:type", String)
 ], UpdateBrandingDto.prototype, "accentColor", void 0);
 __decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: 'Additional branding options', example: { favicon: 'https://...' } }),
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsObject)(),
     __metadata("design:type", Object)

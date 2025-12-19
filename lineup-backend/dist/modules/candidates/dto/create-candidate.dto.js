@@ -11,6 +11,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.CreateCandidateDto = void 0;
 const class_validator_1 = require("class-validator");
+const swagger_1 = require("@nestjs/swagger");
 class CreateCandidateDto {
     name;
     email;
@@ -22,17 +23,20 @@ class CreateCandidateDto {
 }
 exports.CreateCandidateDto = CreateCandidateDto;
 __decorate([
+    (0, swagger_1.ApiProperty)({ description: 'Candidate full name', example: 'John Doe', maxLength: 255 }),
     (0, class_validator_1.IsString)(),
     (0, class_validator_1.MaxLength)(255),
     __metadata("design:type", String)
 ], CreateCandidateDto.prototype, "name", void 0);
 __decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: 'Candidate email address', example: 'john.doe@email.com', maxLength: 255 }),
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsEmail)(),
     (0, class_validator_1.MaxLength)(255),
     __metadata("design:type", String)
 ], CreateCandidateDto.prototype, "email", void 0);
 __decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: 'Candidate phone number', example: '+1 555-123-4567', maxLength: 30 }),
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsString)(),
     (0, class_validator_1.MaxLength)(30),
@@ -40,24 +44,28 @@ __decorate([
     __metadata("design:type", String)
 ], CreateCandidateDto.prototype, "phone", void 0);
 __decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: 'Job title/role being applied for', example: 'Senior Software Engineer', maxLength: 255 }),
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsString)(),
     (0, class_validator_1.MaxLength)(255),
     __metadata("design:type", String)
 ], CreateCandidateDto.prototype, "roleTitle", void 0);
 __decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: 'Hiring stage', example: 'Applied', maxLength: 50 }),
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsString)(),
     (0, class_validator_1.MaxLength)(50),
     __metadata("design:type", String)
 ], CreateCandidateDto.prototype, "stage", void 0);
 __decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: 'Source of the candidate', example: 'LinkedIn', maxLength: 100 }),
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsString)(),
     (0, class_validator_1.MaxLength)(100),
     __metadata("design:type", String)
 ], CreateCandidateDto.prototype, "source", void 0);
 __decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: 'Tags for categorization', example: ['frontend', 'react', 'senior'], type: [String] }),
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsArray)(),
     (0, class_validator_1.IsString)({ each: true }),
