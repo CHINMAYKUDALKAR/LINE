@@ -1,6 +1,6 @@
 import { Controller, Get, Post, Delete, UseGuards, Req, Res, Query, Param, Body } from '@nestjs/common';
 import type { Response } from 'express';
-import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse, ApiParam, ApiBody } from '@nestjs/swagger';
+import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse, ApiParam, ApiBody, ApiQuery } from '@nestjs/swagger';
 import { ReportsService } from './reports.service';
 import { JwtAuthGuard } from '../auth/guards/jwt.guard';
 import { RbacGuard } from '../auth/guards/rbac.guard';
@@ -21,6 +21,8 @@ export class ReportsController {
     @Get('overview')
     @Roles('MANAGER', 'ADMIN')
     @ApiOperation({ summary: 'Get overview report with funnel, time-to-hire, and interviewer load' })
+    @ApiQuery({ name: 'refresh', required: false, description: 'Force refresh cached data' })
+    @ApiResponse({ status: 200, description: 'Overview report data' })
     overview(@Req() req: any, @Query('refresh') refresh?: string) {
         return this.svc.overview(req.user.tenantId, refresh === 'true');
     }
@@ -28,6 +30,8 @@ export class ReportsController {
     @Get('funnel')
     @Roles('MANAGER', 'ADMIN')
     @ApiOperation({ summary: 'Get candidate funnel/stage breakdown' })
+    @ApiQuery({ name: 'refresh', required: false, description: 'Force refresh cached data' })
+    @ApiResponse({ status: 200, description: 'Funnel data by hiring stage' })
     funnel(@Req() req: any, @Query('refresh') refresh?: string) {
         return this.svc.funnel(req.user.tenantId, refresh === 'true');
     }
@@ -35,6 +39,8 @@ export class ReportsController {
     @Get('time-to-hire')
     @Roles('MANAGER', 'ADMIN')
     @ApiOperation({ summary: 'Get average time-to-hire metrics' })
+    @ApiQuery({ name: 'refresh', required: false, description: 'Force refresh cached data' })
+    @ApiResponse({ status: 200, description: 'Time-to-hire statistics' })
     timeToHire(@Req() req: any, @Query('refresh') refresh?: string) {
         return this.svc.timeToHire(req.user.tenantId, refresh === 'true');
     }
@@ -42,6 +48,8 @@ export class ReportsController {
     @Get('interviewer-load')
     @Roles('MANAGER', 'ADMIN')
     @ApiOperation({ summary: 'Get interviewer workload distribution' })
+    @ApiQuery({ name: 'refresh', required: false, description: 'Force refresh cached data' })
+    @ApiResponse({ status: 200, description: 'Interviewer load metrics per user' })
     interviewerLoad(@Req() req: any, @Query('refresh') refresh?: string) {
         return this.svc.interviewerLoad(req.user.tenantId, refresh === 'true');
     }

@@ -11,6 +11,7 @@ import {
     UseGuards,
     Req,
 } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam, ApiBody, ApiQuery } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt.guard';
 import { RbacGuard } from '../auth/guards/rbac.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -45,6 +46,8 @@ import {
     TeamAvailabilityQueryDto,
 } from './dto';
 
+@ApiTags('calendar')
+@ApiBearerAuth('JWT-auth')
 @Controller('api/v1/calendar')
 @UseGuards(JwtAuthGuard)
 export class CalendarController {
@@ -65,6 +68,9 @@ export class CalendarController {
 
     @Get('availability')
     @RateLimited(RateLimitProfile.CALENDAR)
+    @ApiOperation({ summary: 'Get availability slots for users in a date range' })
+    @ApiResponse({ status: 200, description: 'Available time slots for specified users' })
+    @ApiResponse({ status: 400, description: 'Invalid date range or user IDs' })
     async getAvailability(@Req() req: any, @Query() query: AvailabilityQueryDto) {
         const tenantId = req.tenantId;
         const userIds = Array.isArray(query.userIds)
@@ -88,12 +94,17 @@ export class CalendarController {
 
     @Post('suggestions')
     @RateLimited(RateLimitProfile.CALENDAR)
+    @ApiOperation({ summary: 'Get AI-powered scheduling suggestions' })
+    @ApiBody({ type: SuggestionQueryDto })
+    @ApiResponse({ status: 200, description: 'List of optimal scheduling suggestions' })
     async getSuggestions(@Req() req: any, @Body() dto: SuggestionQueryDto) {
         return this.suggestionService.getSuggestions(req.tenantId, dto);
     }
 
     @Get('team-availability')
     @RateLimited(RateLimitProfile.CALENDAR)
+    @ApiOperation({ summary: 'Get team-wide availability overview' })
+    @ApiResponse({ status: 200, description: 'Team availability matrix' })
     async getTeamAvailability(@Req() req: any, @Query() query: TeamAvailabilityQueryDto) {
         return this.suggestionService.getTeamAvailability(req.tenantId, query);
     }
@@ -101,11 +112,17 @@ export class CalendarController {
     // ==================== Slots ====================
 
     @Get('slots')
+    @ApiOperation({ summary: 'List all interview slots' })
+    @ApiResponse({ status: 200, description: 'List of interview slots' })
     async getSlots(@Req() req: any, @Query() query: SlotQueryDto) {
         return this.slotService.getSlots(req.tenantId, query);
     }
 
     @Get('slots/:id')
+    @ApiOperation({ summary: 'Get slot details by ID' })
+    @ApiParam({ name: 'id', description: 'Slot ID' })
+    @ApiResponse({ status: 200, description: 'Slot details' })
+    @ApiResponse({ status: 404, description: 'Slot not found' })
     async getSlot(@Req() req: any, @Param('id') id: string) {
         return this.slotService.getSlot(req.tenantId, id);
     }
@@ -113,6 +130,10 @@ export class CalendarController {
     @Post('slots')
     @UseGuards(RbacGuard)
     @Roles('RECRUITER', 'MANAGER', 'ADMIN')
+    @ApiOperation({ summary: 'Create a new interview slot' })
+    @ApiBody({ type: CreateSlotDto })
+    @ApiResponse({ status: 201, description: 'Slot created successfully' })
+    @ApiResponse({ status: 400, description: 'Invalid slot data' })
     async createSlot(@Req() req: any, @Body() dto: CreateSlotDto) {
         return this.slotService.createSlot(req.tenantId, req.user.sub, dto);
     }
@@ -120,11 +141,20 @@ export class CalendarController {
     @Post('slots/generate')
     @UseGuards(RbacGuard)
     @Roles('RECRUITER', 'MANAGER', 'ADMIN')
+    @ApiOperation({ summary: 'Auto-generate interview slots based on working hours' })
+    @ApiBody({ type: GenerateSlotsDto })
+    @ApiResponse({ status: 201, description: 'Slots generated successfully', schema: { example: { generated: 10 } } })
     async generateSlots(@Req() req: any, @Body() dto: GenerateSlotsDto) {
         return this.slotService.generateSlots(req.tenantId, req.user.sub, dto);
     }
 
     @Post('slots/:id/book')
+    @ApiOperation({ summary: 'Book an interview slot for a candidate' })
+    @ApiParam({ name: 'id', description: 'Slot ID to book' })
+    @ApiBody({ type: BookSlotDto })
+    @ApiResponse({ status: 200, description: 'Slot booked successfully' })
+    @ApiResponse({ status: 404, description: 'Slot not found' })
+    @ApiResponse({ status: 409, description: 'Slot already booked' })
     async bookSlot(
         @Req() req: any,
         @Param('id') id: string,
@@ -134,6 +164,11 @@ export class CalendarController {
     }
 
     @Patch('slots/:id/reschedule')
+    @ApiOperation({ summary: 'Reschedule an existing slot' })
+    @ApiParam({ name: 'id', description: 'Slot ID to reschedule' })
+    @ApiBody({ type: RescheduleSlotDto })
+    @ApiResponse({ status: 200, description: 'Slot rescheduled successfully' })
+    @ApiResponse({ status: 404, description: 'Slot not found' })
     async rescheduleSlot(
         @Req() req: any,
         @Param('id') id: string,
@@ -143,6 +178,10 @@ export class CalendarController {
     }
 
     @Post('slots/:id/cancel')
+    @ApiOperation({ summary: 'Cancel a scheduled slot' })
+    @ApiParam({ name: 'id', description: 'Slot ID to cancel' })
+    @ApiResponse({ status: 200, description: 'Slot cancelled successfully' })
+    @ApiResponse({ status: 404, description: 'Slot not found' })
     async cancelSlot(@Req() req: any, @Param('id') id: string) {
         return this.slotService.cancelSlot(req.tenantId, id, req.user.sub);
     }
@@ -150,12 +189,18 @@ export class CalendarController {
     // ==================== Working Hours ====================
 
     @Get('working-hours')
+    @ApiOperation({ summary: 'Get working hours for a user' })
+    @ApiQuery({ name: 'userId', required: false, description: 'User ID (defaults to current user)' })
+    @ApiResponse({ status: 200, description: 'User working hours configuration' })
     async getWorkingHours(@Req() req: any, @Query('userId') userId?: string) {
         const targetUserId = userId || req.user.sub;
         return this.workingHoursService.getWorkingHours(req.tenantId, targetUserId);
     }
 
     @Put('working-hours')
+    @ApiOperation({ summary: 'Set working hours for current user' })
+    @ApiBody({ type: SetWorkingHoursDto })
+    @ApiResponse({ status: 200, description: 'Working hours updated' })
     async setWorkingHours(@Req() req: any, @Body() dto: SetWorkingHoursDto) {
         return this.workingHoursService.setWorkingHours(
             req.tenantId,
@@ -167,11 +212,16 @@ export class CalendarController {
     // ==================== Busy Blocks ====================
 
     @Get('busy-blocks')
+    @ApiOperation({ summary: 'List busy blocks (time-off, meetings, etc.)' })
+    @ApiResponse({ status: 200, description: 'List of busy blocks' })
     async getBusyBlocks(@Req() req: any, @Query() query: BusyBlockQueryDto) {
         return this.busyBlockService.getBusyBlocks(req.tenantId, query);
     }
 
     @Post('busy-blocks')
+    @ApiOperation({ summary: 'Create a busy block (mark time as unavailable)' })
+    @ApiBody({ type: CreateBusyBlockDto })
+    @ApiResponse({ status: 201, description: 'Busy block created' })
     async createBusyBlock(@Req() req: any, @Body() dto: CreateBusyBlockDto) {
         return this.busyBlockService.createBusyBlock(
             req.tenantId,
@@ -181,6 +231,10 @@ export class CalendarController {
     }
 
     @Delete('busy-blocks/:id')
+    @ApiOperation({ summary: 'Delete a busy block' })
+    @ApiParam({ name: 'id', description: 'Busy block ID' })
+    @ApiResponse({ status: 200, description: 'Busy block deleted' })
+    @ApiResponse({ status: 404, description: 'Busy block not found' })
     async deleteBusyBlock(@Req() req: any, @Param('id') id: string) {
         return this.busyBlockService.deleteBusyBlock(
             req.tenantId,
@@ -192,11 +246,17 @@ export class CalendarController {
     // ==================== Scheduling Rules ====================
 
     @Get('rules')
+    @ApiOperation({ summary: 'List all scheduling rules for tenant' })
+    @ApiResponse({ status: 200, description: 'List of scheduling rules' })
     async getRules(@Req() req: any) {
         return this.schedulingRulesService.getRules(req.tenantId);
     }
 
     @Get('rules/:id')
+    @ApiOperation({ summary: 'Get scheduling rule by ID' })
+    @ApiParam({ name: 'id', description: 'Rule ID' })
+    @ApiResponse({ status: 200, description: 'Scheduling rule details' })
+    @ApiResponse({ status: 404, description: 'Rule not found' })
     async getRule(@Req() req: any, @Param('id') id: string) {
         return this.schedulingRulesService.getRule(req.tenantId, id);
     }
@@ -204,6 +264,9 @@ export class CalendarController {
     @Post('rules')
     @UseGuards(RbacGuard)
     @Roles('ADMIN')
+    @ApiOperation({ summary: 'Create a new scheduling rule (Admin only)' })
+    @ApiBody({ type: CreateSchedulingRuleDto })
+    @ApiResponse({ status: 201, description: 'Rule created successfully' })
     async createRule(@Req() req: any, @Body() dto: CreateSchedulingRuleDto) {
         return this.schedulingRulesService.createRule(
             req.tenantId,
@@ -215,6 +278,11 @@ export class CalendarController {
     @Put('rules/:id')
     @UseGuards(RbacGuard)
     @Roles('ADMIN')
+    @ApiOperation({ summary: 'Update a scheduling rule (Admin only)' })
+    @ApiParam({ name: 'id', description: 'Rule ID' })
+    @ApiBody({ type: UpdateSchedulingRuleDto })
+    @ApiResponse({ status: 200, description: 'Rule updated' })
+    @ApiResponse({ status: 404, description: 'Rule not found' })
     async updateRule(
         @Req() req: any,
         @Param('id') id: string,
@@ -226,6 +294,10 @@ export class CalendarController {
     @Delete('rules/:id')
     @UseGuards(RbacGuard)
     @Roles('ADMIN')
+    @ApiOperation({ summary: 'Delete a scheduling rule (Admin only)' })
+    @ApiParam({ name: 'id', description: 'Rule ID' })
+    @ApiResponse({ status: 200, description: 'Rule deleted' })
+    @ApiResponse({ status: 404, description: 'Rule not found' })
     async deleteRule(@Req() req: any, @Param('id') id: string) {
         return this.schedulingRulesService.deleteRule(req.tenantId, id);
     }
@@ -233,6 +305,8 @@ export class CalendarController {
     // ==================== Calendar Sync ====================
 
     @Get('sync/accounts')
+    @ApiOperation({ summary: 'Get connected calendar accounts' })
+    @ApiResponse({ status: 200, description: 'List of connected calendar accounts' })
     async getConnectedAccounts(@Req() req: any) {
         const accounts = await this.calendarSyncService.getConnectedAccounts(
             req.tenantId,
@@ -242,6 +316,8 @@ export class CalendarController {
     }
 
     @Get('sync/google/auth-url')
+    @ApiOperation({ summary: 'Get Google Calendar OAuth URL' })
+    @ApiResponse({ status: 200, description: 'Google OAuth authorization URL' })
     async getGoogleAuthUrl(@Req() req: any, @Query() dto: CalendarConnectDto) {
         const authUrl = this.googleOAuth.getAuthUrl(
             req.tenantId,
@@ -252,6 +328,9 @@ export class CalendarController {
     }
 
     @Post('sync/google/callback')
+    @ApiOperation({ summary: 'Handle Google Calendar OAuth callback' })
+    @ApiBody({ type: CalendarCallbackDto })
+    @ApiResponse({ status: 200, description: 'Google Calendar connected successfully' })
     async googleCallback(@Req() req: any, @Body() dto: CalendarCallbackDto) {
         return this.googleOAuth.exchangeCode(
             req.tenantId,
@@ -262,12 +341,16 @@ export class CalendarController {
     }
 
     @Delete('sync/google')
+    @ApiOperation({ summary: 'Disconnect Google Calendar' })
+    @ApiResponse({ status: 200, description: 'Google Calendar disconnected' })
     async disconnectGoogle(@Req() req: any) {
         await this.googleOAuth.disconnect(req.tenantId, req.user.id);
         return { success: true };
     }
 
     @Get('sync/microsoft/auth-url')
+    @ApiOperation({ summary: 'Get Microsoft Outlook OAuth URL' })
+    @ApiResponse({ status: 200, description: 'Microsoft OAuth authorization URL' })
     async getMicrosoftAuthUrl(@Req() req: any, @Query() dto: CalendarConnectDto) {
         const authUrl = this.microsoftOAuth.getAuthUrl(
             req.tenantId,
@@ -278,6 +361,9 @@ export class CalendarController {
     }
 
     @Post('sync/microsoft/callback')
+    @ApiOperation({ summary: 'Handle Microsoft Outlook OAuth callback' })
+    @ApiBody({ type: CalendarCallbackDto })
+    @ApiResponse({ status: 200, description: 'Microsoft Calendar connected successfully' })
     async microsoftCallback(@Req() req: any, @Body() dto: CalendarCallbackDto) {
         return this.microsoftOAuth.exchangeCode(
             req.tenantId,
@@ -288,18 +374,27 @@ export class CalendarController {
     }
 
     @Delete('sync/microsoft')
+    @ApiOperation({ summary: 'Disconnect Microsoft Outlook' })
+    @ApiResponse({ status: 200, description: 'Microsoft Calendar disconnected' })
     async disconnectMicrosoft(@Req() req: any) {
         await this.microsoftOAuth.disconnect(req.tenantId, req.user.id);
         return { success: true };
     }
 
     @Post('sync/:accountId/sync')
+    @ApiOperation({ summary: 'Trigger manual calendar sync' })
+    @ApiParam({ name: 'accountId', description: 'Connected account ID' })
+    @ApiResponse({ status: 200, description: 'Sync completed', schema: { example: { success: true, eventsProcessed: 15 } } })
     async syncCalendar(@Param('accountId') accountId: string) {
         const result = await this.calendarSyncService.syncCalendar(accountId);
         return { success: true, eventsProcessed: result.eventsProcessed };
     }
 
     @Patch('sync/:accountId/toggle')
+    @ApiOperation({ summary: 'Enable/disable automatic sync for an account' })
+    @ApiParam({ name: 'accountId', description: 'Connected account ID' })
+    @ApiBody({ type: ToggleSyncDto })
+    @ApiResponse({ status: 200, description: 'Sync toggled' })
     async toggleSync(
         @Param('accountId') accountId: string,
         @Body() dto: ToggleSyncDto,
@@ -308,3 +403,4 @@ export class CalendarController {
         return { success: true };
     }
 }
+
