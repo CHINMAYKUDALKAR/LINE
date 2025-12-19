@@ -289,6 +289,9 @@ let InterviewsService = class InterviewsService {
                 continue;
             }
             try {
+                const candidate = candidates.find(c => c.id === slot.candidateId);
+                const previousStage = candidate?.stage || 'Unknown';
+                const newStage = dto.stage || 'Interview';
                 const interview = await this.prisma.interview.create({
                     data: {
                         tenantId,
@@ -296,8 +299,26 @@ let InterviewsService = class InterviewsService {
                         interviewerIds: dto.interviewerIds,
                         date: slot.scheduledAt,
                         durationMins: dto.durationMins,
-                        stage: dto.stage || 'Scheduled',
+                        stage: newStage,
                         status: 'SCHEDULED',
+                    },
+                });
+                await this.prisma.candidate.update({
+                    where: { id: slot.candidateId },
+                    data: { stage: newStage },
+                });
+                await this.prisma.auditLog.create({
+                    data: {
+                        tenantId,
+                        userId,
+                        action: 'CANDIDATE_STAGE_TRANSITION',
+                        metadata: {
+                            candidateId: slot.candidateId,
+                            previousStage,
+                            newStage,
+                            triggeredBy: 'BULK_SCHEDULE',
+                            interviewId: interview.id,
+                        },
                     },
                 });
                 for (const interviewerId of dto.interviewerIds) {
@@ -322,7 +343,7 @@ let InterviewsService = class InterviewsService {
                     interviewDate: slot.scheduledAt,
                     interviewTime: slot.scheduledAt.toLocaleTimeString(),
                     duration: dto.durationMins,
-                    stage: dto.stage || 'Scheduled',
+                    stage: newStage,
                 };
                 await this.automationService.onInterviewCreated(eventPayload);
                 results.interviews.push({

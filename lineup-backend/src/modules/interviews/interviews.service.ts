@@ -325,6 +325,11 @@ export class InterviewsService {
             }
 
             try {
+                // Get current candidate stage for audit trail
+                const candidate = candidates.find(c => c.id === slot.candidateId);
+                const previousStage = candidate?.stage || 'Unknown';
+                const newStage = dto.stage || 'Interview';
+
                 const interview = await this.prisma.interview.create({
                     data: {
                         tenantId,
@@ -332,8 +337,30 @@ export class InterviewsService {
                         interviewerIds: dto.interviewerIds,
                         date: slot.scheduledAt,
                         durationMins: dto.durationMins,
-                        stage: dto.stage || 'Scheduled',
+                        stage: newStage,
                         status: 'SCHEDULED',
+                    },
+                });
+
+                // Auto-transition candidate stage
+                await this.prisma.candidate.update({
+                    where: { id: slot.candidateId },
+                    data: { stage: newStage },
+                });
+
+                // Log stage transition for audit
+                await this.prisma.auditLog.create({
+                    data: {
+                        tenantId,
+                        userId,
+                        action: 'CANDIDATE_STAGE_TRANSITION',
+                        metadata: {
+                            candidateId: slot.candidateId,
+                            previousStage,
+                            newStage,
+                            triggeredBy: 'BULK_SCHEDULE',
+                            interviewId: interview.id,
+                        },
                     },
                 });
 
@@ -362,7 +389,7 @@ export class InterviewsService {
                     interviewDate: slot.scheduledAt,
                     interviewTime: slot.scheduledAt.toLocaleTimeString(),
                     duration: dto.durationMins,
-                    stage: dto.stage || 'Scheduled',
+                    stage: newStage,
                 };
                 await this.automationService.onInterviewCreated(eventPayload);
 
