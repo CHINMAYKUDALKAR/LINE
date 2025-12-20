@@ -16,6 +16,7 @@ async function main() {
     await prisma.interview.deleteMany({});
     await prisma.candidate.deleteMany({});
     await prisma.refreshToken.deleteMany({});
+    await prisma.userCustomRole.deleteMany({}); // Clear custom role assignments
     await prisma.user.deleteMany({});
 
     // Create tenant
@@ -35,7 +36,7 @@ async function main() {
     const hashedPassword = await bcrypt.hash('password123', 12);
     const superadminUser = await prisma.user.create({
         data: {
-            email: 'chinmay@mintskill.com',
+            email: 'superadmin@mintskill.com',
             password: hashedPassword,
             name: 'Chinmay Kudalkar',
             role: 'SUPERADMIN',
@@ -105,7 +106,7 @@ async function main() {
     // Create RECRUITER user
     const recruiterUser = await prisma.user.create({
         data: {
-            email: 'priya.sharma@mintskill.com',
+            email: 'recruiter@mintskill.com',
             password: hashedPassword,
             name: 'Priya Sharma',
             role: 'RECRUITER',
@@ -129,7 +130,7 @@ async function main() {
     const interviewers = await Promise.all([
         prisma.user.create({
             data: {
-                email: 'sarah.chen@mintskill.com',
+                email: 'interviewer@mintskill.com',
                 password: hashedPassword,
                 name: 'Sarah Chen',
                 role: 'INTERVIEWER',
@@ -138,7 +139,7 @@ async function main() {
         }),
         prisma.user.create({
             data: {
-                email: 'mike.johnson@mintskill.com',
+                email: 'interviewer2@mintskill.com',
                 password: hashedPassword,
                 name: 'Mike Johnson',
                 role: 'INTERVIEWER',
@@ -260,11 +261,11 @@ async function main() {
 
     console.log('\n🎉 Seeding complete!');
     console.log('\n📝 Login credentials (all passwords: password123):');
-    console.log('   SUPERADMIN: chinmay@mintskill.com');
-    console.log('   ADMIN:      admin@mintskill.com');
-    console.log('   MANAGER:    manager@mintskill.com');
-    console.log('   RECRUITER:  priya.sharma@mintskill.com');
-    console.log('   INTERVIEWER: sarah.chen@mintskill.com');
+    console.log('   SUPERADMIN:  superadmin@mintskill.com');
+    console.log('   ADMIN:       admin@mintskill.com');
+    console.log('   MANAGER:     manager@mintskill.com');
+    console.log('   RECRUITER:   recruiter@mintskill.com');
+    console.log('   INTERVIEWER: interviewer@mintskill.com');
     console.log('\n👥 Candidates to message:');
     candidates.forEach(c => console.log(`   - ${c.name} (${c.email})`));
     console.log('\n💡 All emails will appear in MailHog at http://localhost:8025');
