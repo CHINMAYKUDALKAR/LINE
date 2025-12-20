@@ -15,7 +15,7 @@ import {
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../../auth/guards/jwt.guard';
 import { RbacGuard } from '../../../common/rbac.guard';
-import { Roles } from '../../../common/roles.decorator';
+import { Roles } from '../../auth/decorators/roles.decorator';
 import { Role } from '@prisma/client';
 import { HiringStagesService } from '../services/hiring-stages.service';
 import { CreateHiringStageDto, UpdateHiringStageDto, ReorderHiringStagesDto } from '../dto/hiring-stage.dto';

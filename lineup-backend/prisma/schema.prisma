@@ -57,6 +57,9 @@ model Tenant {
   
   // Hiring Pipeline
   hiringStages         HiringStage[]
+  
+  // Custom Roles
+  customRoles          CustomRole[]
 }
 
 // Tenant-configurable hiring stages for the recruitment pipeline
@@ -153,6 +156,7 @@ model User {
   passwordResets  PasswordReset[]
   candidateNotes  CandidateNote[] @relation("CandidateNoteAuthor")
   interviewNotes  InterviewNote[] @relation("InterviewNoteAuthor")
+  customRoles     UserCustomRole[]
 
   @@index([tenantId, status])
   @@index([email])
@@ -910,3 +914,61 @@ model IntegrationMapping {
   @@index([externalId])
 }
 
+// ===========================================
+// CUSTOM ROLES & PERMISSIONS
+// ===========================================
+
+enum PermissionLevel {
+  SYSTEM  // Platform-only (not assignable by tenants)
+  TENANT  // Assignable by tenant admins
+}
+
+enum RoleType {
+  SYSTEM  // Built-in roles (ADMIN, MANAGER, etc.)
+  CUSTOM  // Tenant-created roles
+}
+
+model Permission {
+  id          String          @id
+  category    String          // e.g., "candidates", "interviews", "reports"
+  description String
+  level       PermissionLevel @default(TENANT)
+  createdAt   DateTime        @default(now())
+
+  @@index([category])
+  @@index([level])
+}
+
+model CustomRole {
+  id          String    @id @default(cuid())
+  tenantId    String
+  tenant      Tenant    @relation(fields: [tenantId], references: [id])
+  name        String
+  description String?
+  type        RoleType  @default(CUSTOM)
+  permissions String[]  // Array of Permission IDs
+  isDefault   Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  createdById String?
+
+  userRoles   UserCustomRole[]
+
+  @@unique([tenantId, name])
+  @@index([tenantId])
+}
+
+model UserCustomRole {
+  id        String     @id @default(cuid())
+  userId    String
+  user      User       @relation(fields: [userId], references: [id])
+  roleId    String
+  role      CustomRole @relation(fields: [roleId], references: [id])
+  tenantId  String
+  createdAt DateTime   @default(now())
+
+  @@unique([userId, roleId, tenantId])
+  @@index([userId])
+  @@index([roleId])
+  @@index([tenantId])
+}

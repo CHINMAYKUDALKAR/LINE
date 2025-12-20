@@ -1,7 +1,7 @@
 import { Controller, Get, Query, Req, UseGuards, Post, Body } from '@nestjs/common';
 import { AuthGuard } from '../../../common/auth.guard';
 import { RbacGuard } from '../../../common/rbac.guard';
-import { Roles } from '../../../common/roles.decorator';
+import { Roles } from '../../auth/decorators/roles.decorator';
 import { ZohoOAuthService } from './zoho.oauth.service';
 import { ZohoSyncService } from './zoho.sync.service';
 import { ZohoFieldMapService } from './zoho.fieldmap.service';

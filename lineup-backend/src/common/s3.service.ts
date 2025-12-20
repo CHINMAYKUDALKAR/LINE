@@ -67,6 +67,17 @@ export class S3Service {
         return response.Body as Readable;
     }
 
+    async downloadFile(key: string): Promise<Buffer> {
+        const stream = await this.streamFile(key);
+        const chunks: Buffer[] = [];
+
+        return new Promise((resolve, reject) => {
+            stream.on('data', (chunk) => chunks.push(Buffer.from(chunk)));
+            stream.on('end', () => resolve(Buffer.concat(chunks)));
+            stream.on('error', reject);
+        });
+    }
+
     async deleteFile(key: string): Promise<void> {
         const command = new DeleteObjectCommand({
             Bucket: this.bucket,

@@ -1,11 +1,20 @@
-import { useState, useEffect } from "react";
+import { useMemo } from "react";
+import { useAuth } from "@/lib/auth-context";
 import { UserRole } from "@/lib/api/users";
 
 export function useUserRole() {
-    // Mock role - in a real app this would come from an auth context or session
-    const [role, setRole] = useState<UserRole>("ADMIN");
-    const [isLoading, setIsLoading] = useState(false);
+    const { activeTenantId, tenants, isLoading } = useAuth();
 
-    return { role, isLoading, isAdmin: role === "ADMIN", isManager: ["ADMIN", "MANAGER"].includes(role) };
+    const currentRole = useMemo(() => {
+        const activeTenant = tenants?.find(t => t.id === activeTenantId);
+        return (activeTenant?.role as UserRole) || "RECRUITER";
+    }, [activeTenantId, tenants]);
+
+    return {
+        role: currentRole,
+        isLoading,
+        isSuperAdmin: currentRole === "SUPERADMIN",
+        isAdmin: currentRole === "ADMIN" || currentRole === "SUPERADMIN",
+        isManager: ["ADMIN", "MANAGER", "SUPERADMIN"].includes(currentRole),
+    };
 }
-

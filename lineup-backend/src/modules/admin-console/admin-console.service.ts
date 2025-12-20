@@ -92,7 +92,7 @@ export class AdminConsoleService {
         return { tenantId, logs };
     }
 
-    async createTenantAdmin(tenantId: string, email: string) {
+    async createTenantAdmin(tenantId: string, email: string, adminUserId: string) {
         const pwd = randomPassword();
         const hashed = await bcrypt.hash(pwd, 10);
 
@@ -107,8 +107,69 @@ export class AdminConsoleService {
             }
         });
 
-        await this.prisma.auditLog.create({ data: { tenantId, action: 'provision.tenantAdmin.created', metadata: { email } } });
+        await this.prisma.auditLog.create({
+            data: {
+                tenantId,
+                userId: adminUserId,
+                action: 'admin.tenant_admin_created',
+                metadata: {
+                    email,
+                    assignedUserId: user.id,
+                    role: 'ADMIN',
+                    assignedBy: 'PLATFORM_ADMIN'
+                }
+            }
+        });
         return { id: user.id, password: pwd };
+    }
+
+    /**
+     * Assign or change role for an existing user (SUPERADMIN only)
+     * This is the ONLY way to assign ADMIN role to existing users
+     */
+    async assignUserRole(
+        tenantId: string,
+        userId: string,
+        role: 'ADMIN' | 'MANAGER' | 'RECRUITER' | 'INTERVIEWER',
+        adminUserId: string
+    ) {
+        const user = await this.prisma.user.findFirst({
+            where: { id: userId, tenantId }
+        });
+
+        if (!user) {
+            throw new BadRequestException('User not found in tenant');
+        }
+
+        const oldRole = user.role;
+
+        const updated = await this.prisma.user.update({
+            where: { id: userId },
+            data: { role }
+        });
+
+        await this.prisma.auditLog.create({
+            data: {
+                tenantId,
+                userId: adminUserId,
+                action: 'admin.user_role_assigned',
+                metadata: {
+                    targetUserId: userId,
+                    targetEmail: user.email,
+                    oldRole,
+                    newRole: role,
+                    assignedBy: 'PLATFORM_ADMIN'
+                }
+            }
+        });
+
+        return {
+            success: true,
+            userId,
+            oldRole,
+            newRole: role,
+            message: `User role changed from ${oldRole} to ${role}`
+        };
     }
 
     // ============================================

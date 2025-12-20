@@ -7,22 +7,22 @@ export declare class IntegrationsController {
     constructor(integrationsService: IntegrationsService);
     listIntegrations(req: any): Promise<{
         id: string;
-        provider: string;
-        status: string | null;
-        lastSyncedAt: Date | null;
-        lastError: string | null;
         createdAt: Date;
         updatedAt: Date;
+        status: string | null;
+        provider: string;
+        lastSyncedAt: Date | null;
+        lastError: string | null;
     }[]>;
     getIntegration(req: any, provider: string): Promise<{
         id: string;
-        provider: string;
         settings: import(".prisma/client").Prisma.JsonValue;
-        status: string | null;
-        lastSyncedAt: Date | null;
-        lastError: string | null;
         createdAt: Date;
         updatedAt: Date;
+        status: string | null;
+        provider: string;
+        lastSyncedAt: Date | null;
+        lastError: string | null;
     }>;
     connect(req: any, connectDto: ConnectDto): Promise<{
         authUrl: string;
@@ -107,8 +107,8 @@ export declare class IntegrationsController {
     }>;
     getSyncLogs(req: any, provider: string, limit?: string, status?: string): Promise<{
         id: string;
-        status: import(".prisma/client").$Enums.SyncLogStatus;
         createdAt: Date;
+        status: import(".prisma/client").$Enums.SyncLogStatus;
         eventType: string;
         direction: import(".prisma/client").$Enums.SyncDirection;
         entityType: string;

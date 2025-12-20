@@ -33,7 +33,9 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.ASSIGNABLE_ROLES_BY_TENANT_ADMIN = exports.PROTECTED_ROLES = void 0;
 exports.canManageRole = canManageRole;
+exports.canAssignRole = canAssignRole;
 exports.validateRoleChange = validateRoleChange;
 exports.generateInvitationToken = generateInvitationToken;
 exports.hashInvitationToken = hashInvitationToken;
@@ -42,21 +44,38 @@ exports.isInvitationExpired = isInvitationExpired;
 const common_1 = require("@nestjs/common");
 const crypto = __importStar(require("crypto"));
 const ROLE_HIERARCHY = {
-    SUPERADMIN: 5,
-    SUPPORT: 4,
-    ADMIN: 4,
-    MANAGER: 3,
-    RECRUITER: 2,
-    INTERVIEWER: 1,
+    SUPERADMIN: 100,
+    SUPPORT: 90,
+    ADMIN: 80,
+    MANAGER: 60,
+    RECRUITER: 40,
+    INTERVIEWER: 20,
 };
+exports.PROTECTED_ROLES = ['SUPERADMIN', 'SUPPORT', 'ADMIN'];
+exports.ASSIGNABLE_ROLES_BY_TENANT_ADMIN = ['MANAGER', 'RECRUITER', 'INTERVIEWER'];
 function canManageRole(actorRole, targetRole) {
     const actorLevel = ROLE_HIERARCHY[actorRole] || 0;
     const targetLevel = ROLE_HIERARCHY[targetRole] || 0;
     return actorLevel > targetLevel;
 }
-function validateRoleChange(actorRole, targetRole) {
-    if (!canManageRole(actorRole, targetRole)) {
-        throw new common_1.ForbiddenException(`Role ${actorRole} cannot manage role ${targetRole}`);
+function canAssignRole(actorRole, targetRole) {
+    if (actorRole === 'SUPERADMIN') {
+        return true;
+    }
+    if (exports.PROTECTED_ROLES.includes(targetRole)) {
+        return false;
+    }
+    return canManageRole(actorRole, targetRole);
+}
+function validateRoleChange(actorRole, targetRole, currentRole) {
+    if (exports.PROTECTED_ROLES.includes(targetRole) && actorRole !== 'SUPERADMIN') {
+        throw new common_1.ForbiddenException('Admin role can only be assigned by platform administrators');
+    }
+    if (currentRole && exports.PROTECTED_ROLES.includes(currentRole) && actorRole !== 'SUPERADMIN') {
+        throw new common_1.ForbiddenException('Cannot modify users with admin role. Contact platform administrators.');
+    }
+    if (!canAssignRole(actorRole, targetRole)) {
+        throw new common_1.ForbiddenException(`Role ${actorRole} cannot assign role ${targetRole}`);
     }
 }
 function generateInvitationToken() {

@@ -11,6 +11,7 @@ import { StorageService } from '../storage/storage.service';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { IntegrationEventsService } from '../integrations/services/integration-events.service';
+import { parseSpreadsheet, isSupportedSpreadsheet } from './utils/spreadsheet-parser.util';
 
 @Injectable()
 export class CandidatesService {
@@ -317,6 +318,59 @@ export class CandidatesService {
         });
 
         return result;
+    }
+
+    /**
+     * Import candidates from an uploaded spreadsheet file (CSV or XLSX)
+     * Fetches the file from S3, parses it, and imports candidates
+     */
+    async importFromFile(tenantId: string, userId: string, fileId: string): Promise<{
+        success: number;
+        failed: number;
+        duplicates: string[];
+        errors: Array<{ row: number; message: string }>;
+        totalRows: number;
+    }> {
+
+        // Get file metadata from storage
+        const file = await this.prisma.fileObject.findFirst({
+            where: { id: fileId, tenantId },
+        });
+
+        if (!file) {
+            throw new NotFoundException('File not found');
+        }
+
+        // Validate file type
+        const mimeType = file.mimeType || 'application/octet-stream';
+        if (!isSupportedSpreadsheet(mimeType)) {
+            throw new BadRequestException(
+                `Unsupported file type: ${mimeType}. Please upload a CSV or Excel file.`
+            );
+        }
+
+        // Fetch file from S3
+        const buffer = await this.storageService.downloadFile(file.key);
+
+        // Parse the spreadsheet
+        let rows;
+        try {
+            rows = parseSpreadsheet(buffer, mimeType);
+        } catch (error: any) {
+            throw new BadRequestException(`Failed to parse file: ${error.message}`);
+        }
+
+        if (rows.length === 0) {
+            throw new BadRequestException('File contains no valid candidate rows');
+        }
+
+        // Use the existing directBulkImport logic
+        const result = await this.directBulkImport(tenantId, userId, rows);
+
+        return {
+            ...result,
+            totalRows: rows.length,
+        };
     }
 
     // =====================================================

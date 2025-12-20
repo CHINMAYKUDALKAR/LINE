@@ -82,6 +82,7 @@ export declare class StorageService {
         downloadUrl: string;
         filename: string;
     }>;
+    downloadFile(key: string): Promise<Buffer>;
     updateMetadata(tenantId: string, fileId: string, dto: UpdateFileMetadataDto): Promise<{
         id: string;
         tenantId: string;

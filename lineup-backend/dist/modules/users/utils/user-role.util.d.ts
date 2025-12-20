@@ -1,6 +1,9 @@
 import { Role } from '@prisma/client';
+export declare const PROTECTED_ROLES: Role[];
+export declare const ASSIGNABLE_ROLES_BY_TENANT_ADMIN: Role[];
 export declare function canManageRole(actorRole: Role, targetRole: Role): boolean;
-export declare function validateRoleChange(actorRole: Role, targetRole: Role): void;
+export declare function canAssignRole(actorRole: Role, targetRole: Role): boolean;
+export declare function validateRoleChange(actorRole: Role, targetRole: Role, currentRole?: Role): void;
 export declare function generateInvitationToken(): string;
 export declare function hashInvitationToken(token: string): string;
 export declare function getInvitationExpiry(): Date;

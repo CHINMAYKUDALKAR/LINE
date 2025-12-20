@@ -22,6 +22,7 @@ const storage_service_1 = require("../storage/storage.service");
 const bullmq_1 = require("@nestjs/bullmq");
 const bullmq_2 = require("bullmq");
 const integration_events_service_1 = require("../integrations/services/integration-events.service");
+const spreadsheet_parser_util_1 = require("./utils/spreadsheet-parser.util");
 let CandidatesService = class CandidatesService {
     prisma;
     storageService;
@@ -263,6 +264,34 @@ let CandidatesService = class CandidatesService {
             },
         });
         return result;
+    }
+    async importFromFile(tenantId, userId, fileId) {
+        const file = await this.prisma.fileObject.findFirst({
+            where: { id: fileId, tenantId },
+        });
+        if (!file) {
+            throw new common_1.NotFoundException('File not found');
+        }
+        const mimeType = file.mimeType || 'application/octet-stream';
+        if (!(0, spreadsheet_parser_util_1.isSupportedSpreadsheet)(mimeType)) {
+            throw new common_1.BadRequestException(`Unsupported file type: ${mimeType}. Please upload a CSV or Excel file.`);
+        }
+        const buffer = await this.storageService.downloadFile(file.key);
+        let rows;
+        try {
+            rows = (0, spreadsheet_parser_util_1.parseSpreadsheet)(buffer, mimeType);
+        }
+        catch (error) {
+            throw new common_1.BadRequestException(`Failed to parse file: ${error.message}`);
+        }
+        if (rows.length === 0) {
+            throw new common_1.BadRequestException('File contains no valid candidate rows');
+        }
+        const result = await this.directBulkImport(tenantId, userId, rows);
+        return {
+            ...result,
+            totalRows: rows.length,
+        };
     }
     async listDocuments(tenantId, candidateId) {
         await this.get(tenantId, candidateId);

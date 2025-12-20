@@ -200,6 +200,13 @@ export class StorageService {
         return { downloadUrl, filename: file.filename };
     }
 
+    /**
+     * Download file contents as Buffer (for server-side processing)
+     */
+    async downloadFile(key: string): Promise<Buffer> {
+        return this.s3.downloadFile(key);
+    }
+
     async updateMetadata(tenantId: string, fileId: string, dto: UpdateFileMetadataDto) {
         const file = await this.getFile(tenantId, fileId);
 

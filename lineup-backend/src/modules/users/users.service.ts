@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { PrismaService } from '../../common/prisma.service';
@@ -8,6 +8,7 @@ import { ListUsersDto } from './dto/list-users.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import {
     validateRoleChange,
+    PROTECTED_ROLES,
     generateInvitationToken,
     hashInvitationToken,
     getInvitationExpiry,
@@ -177,7 +178,24 @@ export class UsersService {
 
         if (!admin) throw new BadRequestException('Admin user not found');
         if (!user) throw new NotFoundException('User not found');
-        if (dto.role && dto.role !== user.role) validateRoleChange(admin.role, dto.role);
+
+        // Capture old role for audit logging
+        const oldRole = user.role;
+
+        // Validate role change if role is being modified
+        if (dto.role && dto.role !== user.role) {
+            // This will throw ForbiddenException if:
+            // 1. Trying to assign a protected role (ADMIN/SUPERADMIN) without being SUPERADMIN
+            // 2. Trying to modify a user with protected role without being SUPERADMIN
+            validateRoleChange(admin.role, dto.role, user.role);
+        }
+
+        // Additional check: prevent modifying ANY field on a protected user unless SUPERADMIN
+        if (PROTECTED_ROLES.includes(user.role) && admin.role !== 'SUPERADMIN') {
+            throw new ForbiddenException(
+                'Cannot modify users with admin role. Contact platform administrators.'
+            );
+        }
 
         const updated = await this.prisma.user.update({
             where: { id: userId },
@@ -189,12 +207,21 @@ export class UsersService {
             },
         });
 
+        // Enhanced audit logging with role change details
         await this.prisma.auditLog.create({
             data: {
                 tenantId,
                 userId: adminId,
-                action: 'user.updated',
-                metadata: { targetUserId: userId, changes: JSON.parse(JSON.stringify(dto)) },
+                action: dto.role && dto.role !== oldRole ? 'user.role_changed' : 'user.updated',
+                metadata: {
+                    targetUserId: userId,
+                    targetEmail: user.email,
+                    ...(dto.role && dto.role !== oldRole && {
+                        oldRole,
+                        newRole: dto.role,
+                    }),
+                    changes: JSON.parse(JSON.stringify(dto)),
+                },
             },
         });
 

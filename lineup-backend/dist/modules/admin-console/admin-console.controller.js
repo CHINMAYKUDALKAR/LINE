@@ -19,7 +19,7 @@ const platform_rbac_guard_1 = require("./guards/platform-rbac.guard");
 const auth_guard_1 = require("../../common/auth.guard");
 const create_platform_user_dto_1 = require("./dto/create-platform-user.dto");
 const create_tenant_provision_dto_1 = require("./dto/create-tenant-provision.dto");
-const roles_decorator_1 = require("../../common/roles.decorator");
+const roles_decorator_1 = require("../auth/decorators/roles.decorator");
 let AdminConsoleController = class AdminConsoleController {
     svc;
     constructor(svc) {
@@ -43,8 +43,11 @@ let AdminConsoleController = class AdminConsoleController {
     updateTenantStatus(req, id, body) {
         return this.svc.updateTenantStatus(id, body.enabled, req.user.sub);
     }
-    createTenantAdmin(id, email) {
-        return this.svc.createTenantAdmin(id, email);
+    createTenantAdmin(req, id, email) {
+        return this.svc.createTenantAdmin(id, email, req.user.sub);
+    }
+    assignUserRole(req, tenantId, userId, role) {
+        return this.svc.assignUserRole(tenantId, userId, role, req.user.sub);
     }
     listTenantUsers(id) {
         return this.svc.listTenantUsers(id);
@@ -115,12 +118,25 @@ __decorate([
 ], AdminConsoleController.prototype, "updateTenantStatus", null);
 __decorate([
     (0, common_1.Post)('tenants/:id/create-admin'),
-    __param(0, (0, common_1.Param)('id')),
-    __param(1, (0, common_1.Body)('email')),
+    (0, roles_decorator_1.Roles)('SUPERADMIN'),
+    __param(0, (0, common_1.Req)()),
+    __param(1, (0, common_1.Param)('id')),
+    __param(2, (0, common_1.Body)('email')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, String]),
+    __metadata("design:paramtypes", [Object, String, String]),
     __metadata("design:returntype", void 0)
 ], AdminConsoleController.prototype, "createTenantAdmin", null);
+__decorate([
+    (0, common_1.Patch)('tenants/:tenantId/users/:userId/role'),
+    (0, roles_decorator_1.Roles)('SUPERADMIN'),
+    __param(0, (0, common_1.Req)()),
+    __param(1, (0, common_1.Param)('tenantId')),
+    __param(2, (0, common_1.Param)('userId')),
+    __param(3, (0, common_1.Body)('role')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String, String, String]),
+    __metadata("design:returntype", void 0)
+], AdminConsoleController.prototype, "assignUserRole", null);
 __decorate([
     (0, common_1.Get)('tenants/:id/users'),
     __param(0, (0, common_1.Param)('id')),

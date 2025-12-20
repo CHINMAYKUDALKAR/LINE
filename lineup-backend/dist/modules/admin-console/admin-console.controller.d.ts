@@ -72,18 +72,25 @@ export declare class AdminConsoleController {
         enabled: boolean;
         updatedAt: Date;
     }>;
-    createTenantAdmin(id: string, email: string): Promise<{
+    createTenantAdmin(req: any, id: string, email: string): Promise<{
         id: string;
         password: string;
     }>;
+    assignUserRole(req: any, tenantId: string, userId: string, role: 'ADMIN' | 'MANAGER' | 'RECRUITER' | 'INTERVIEWER'): Promise<{
+        success: boolean;
+        userId: string;
+        oldRole: import(".prisma/client").$Enums.Role;
+        newRole: "ADMIN" | "MANAGER" | "RECRUITER" | "INTERVIEWER";
+        message: string;
+    }>;
     listTenantUsers(id: string): Promise<{
+        name: string | null;
         id: string;
         email: string;
-        name: string | null;
+        createdAt: Date;
         role: import(".prisma/client").$Enums.Role;
         status: import(".prisma/client").$Enums.UserStatus;
         lastLogin: Date | null;
-        createdAt: Date;
     }[]>;
     updateUserStatus(req: any, id: string, body: {
         status: 'ACTIVE' | 'INACTIVE';
@@ -94,8 +101,8 @@ export declare class AdminConsoleController {
     }>;
     listAllIntegrations(): Promise<({
         tenant: {
-            id: string;
             name: string;
+            id: string;
         };
     } & {
         id: string;

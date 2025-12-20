@@ -82,6 +82,9 @@ let CandidatesController = class CandidatesController {
         }
         return this.svc.bulkImport(req.user.tenantId, req.user.sub, body);
     }
+    importFromFile(req, fileId) {
+        return this.svc.importFromFile(req.user.tenantId, req.user.sub, fileId);
+    }
     async parseResume(req, dto) {
         const result = await this.resumeParserService.parseResume(req.user.tenantId, dto.fileId);
         await this.svc.logResumeParseAction(req.user.tenantId, req.user.sub, dto.fileId, result.status);
@@ -259,6 +262,21 @@ __decorate([
     __metadata("design:paramtypes", [Object, Object]),
     __metadata("design:returntype", void 0)
 ], CandidatesController.prototype, "bulkImport", null);
+__decorate([
+    (0, common_1.Post)('import-from-file'),
+    (0, rate_limit_1.RateLimited)(rate_limit_1.RateLimitProfile.BULK),
+    (0, roles_decorator_1.Roles)('ADMIN', 'MANAGER'),
+    (0, swagger_1.ApiOperation)({ summary: 'Import candidates from an uploaded CSV or Excel file' }),
+    (0, swagger_1.ApiBody)({ schema: { properties: { fileId: { type: 'string', description: 'ID of the uploaded file' } } } }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Import results with success/failure counts' }),
+    (0, swagger_1.ApiResponse)({ status: 400, description: 'Invalid file type or parsing error' }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: 'File not found' }),
+    __param(0, (0, common_1.Req)()),
+    __param(1, (0, common_1.Body)('fileId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:returntype", void 0)
+], CandidatesController.prototype, "importFromFile", null);
 __decorate([
     (0, common_1.Post)('resume/parse'),
     (0, rate_limit_1.RateLimited)(rate_limit_1.RateLimitProfile.WRITE),

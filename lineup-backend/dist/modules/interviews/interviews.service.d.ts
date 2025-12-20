@@ -197,8 +197,8 @@ export declare class InterviewsService {
     listNotes(tenantId: string, interviewId: string, page?: number, perPage?: number): Promise<{
         data: {
             author: {
-                id: string;
                 name: string | null;
+                id: string;
                 email: string;
             };
             authorId: string;
@@ -212,8 +212,8 @@ export declare class InterviewsService {
     }>;
     addNote(tenantId: string, interviewId: string, userId: string, content: string): Promise<{
         author: {
-            id: string;
             name: string | null;
+            id: string;
             email: string;
         };
         id: string;

@@ -2,7 +2,7 @@ import { Controller, Post, Body, UseGuards, Req } from '@nestjs/common';
 import { EmailService } from './email.service';
 import { AuthGuard } from '../../common/auth.guard';
 import { RbacGuard } from '../../common/rbac.guard';
-import { Roles } from '../../common/roles.decorator';
+import { Roles } from '../auth/decorators/roles.decorator';
 
 @Controller('api/v1/email')
 @UseGuards(AuthGuard, RbacGuard)

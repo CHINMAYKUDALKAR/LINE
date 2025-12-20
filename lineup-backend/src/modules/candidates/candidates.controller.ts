@@ -168,6 +168,18 @@ export class CandidatesController {
         return this.svc.bulkImport(req.user.tenantId, req.user.sub, body);
     }
 
+    @Post('import-from-file')
+    @RateLimited(RateLimitProfile.BULK)
+    @Roles('ADMIN', 'MANAGER')
+    @ApiOperation({ summary: 'Import candidates from an uploaded CSV or Excel file' })
+    @ApiBody({ schema: { properties: { fileId: { type: 'string', description: 'ID of the uploaded file' } } } })
+    @ApiResponse({ status: 200, description: 'Import results with success/failure counts' })
+    @ApiResponse({ status: 400, description: 'Invalid file type or parsing error' })
+    @ApiResponse({ status: 404, description: 'File not found' })
+    importFromFile(@Req() req: any, @Body('fileId') fileId: string) {
+        return this.svc.importFromFile(req.user.tenantId, req.user.sub, fileId);
+    }
+
     // =====================================================
     // RESUME PARSING
     // =====================================================

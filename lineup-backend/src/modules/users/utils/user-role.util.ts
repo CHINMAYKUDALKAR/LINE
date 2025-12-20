@@ -6,16 +6,27 @@ import * as crypto from 'crypto';
  * Role hierarchy levels (higher number = more permissions)
  */
 const ROLE_HIERARCHY: Record<Role, number> = {
-    SUPERADMIN: 5,
-    SUPPORT: 4,
-    ADMIN: 4,
-    MANAGER: 3,
-    RECRUITER: 2,
-    INTERVIEWER: 1,
+    SUPERADMIN: 100,   // Platform-wide administrator (PLATFORM_SUPER_ADMIN)
+    SUPPORT: 90,       // Platform support staff
+    ADMIN: 80,         // Tenant administrator (TENANT_ADMIN)
+    MANAGER: 60,
+    RECRUITER: 40,
+    INTERVIEWER: 20,
 };
 
 /**
- * Check if actor role can manage target role
+ * Roles that can ONLY be assigned by SUPERADMIN (platform admin)
+ * These are "protected" roles that tenant admins cannot create/modify
+ */
+export const PROTECTED_ROLES: Role[] = ['SUPERADMIN', 'SUPPORT', 'ADMIN'];
+
+/**
+ * Roles that tenant admins CAN assign
+ */
+export const ASSIGNABLE_ROLES_BY_TENANT_ADMIN: Role[] = ['MANAGER', 'RECRUITER', 'INTERVIEWER'];
+
+/**
+ * Check if actor role can manage target role based on hierarchy
  */
 export function canManageRole(actorRole: Role, targetRole: Role): boolean {
     const actorLevel = ROLE_HIERARCHY[actorRole] || 0;
@@ -24,12 +35,54 @@ export function canManageRole(actorRole: Role, targetRole: Role): boolean {
 }
 
 /**
- * Validate role change and throw if not allowed
+ * Check if actor can assign the target role
+ * - SUPERADMIN can assign any role
+ * - Other roles can only assign non-protected roles AND must be higher in hierarchy
  */
-export function validateRoleChange(actorRole: Role, targetRole: Role): void {
-    if (!canManageRole(actorRole, targetRole)) {
+export function canAssignRole(actorRole: Role, targetRole: Role): boolean {
+    // SUPERADMIN can assign any role
+    if (actorRole === 'SUPERADMIN') {
+        return true;
+    }
+
+    // Protected roles can only be assigned by SUPERADMIN
+    if (PROTECTED_ROLES.includes(targetRole)) {
+        return false;
+    }
+
+    // For non-protected roles, check hierarchy
+    return canManageRole(actorRole, targetRole);
+}
+
+/**
+ * Validate role change and throw if not allowed
+ * Enforces:
+ * 1. Protected roles (ADMIN, SUPERADMIN, SUPPORT) can only be assigned by SUPERADMIN
+ * 2. Actor must be higher in hierarchy than target role
+ */
+export function validateRoleChange(
+    actorRole: Role,
+    targetRole: Role,
+    currentRole?: Role
+): void {
+    // Check if trying to assign a protected role
+    if (PROTECTED_ROLES.includes(targetRole) && actorRole !== 'SUPERADMIN') {
         throw new ForbiddenException(
-            `Role ${actorRole} cannot manage role ${targetRole}`
+            'Admin role can only be assigned by platform administrators'
+        );
+    }
+
+    // Check if trying to change FROM a protected role (demoting an admin)
+    if (currentRole && PROTECTED_ROLES.includes(currentRole) && actorRole !== 'SUPERADMIN') {
+        throw new ForbiddenException(
+            'Cannot modify users with admin role. Contact platform administrators.'
+        );
+    }
+
+    // Check hierarchy for non-protected roles
+    if (!canAssignRole(actorRole, targetRole)) {
+        throw new ForbiddenException(
+            `Role ${actorRole} cannot assign role ${targetRole}`
         );
     }
 }

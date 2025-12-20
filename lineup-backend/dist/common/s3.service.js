@@ -61,6 +61,15 @@ let S3Service = S3Service_1 = class S3Service {
         const response = await this.s3.send(command);
         return response.Body;
     }
+    async downloadFile(key) {
+        const stream = await this.streamFile(key);
+        const chunks = [];
+        return new Promise((resolve, reject) => {
+            stream.on('data', (chunk) => chunks.push(Buffer.from(chunk)));
+            stream.on('end', () => resolve(Buffer.concat(chunks)));
+            stream.on('error', reject);
+        });
+    }
     async deleteFile(key) {
         const command = new client_s3_1.DeleteObjectCommand({
             Bucket: this.bucket,

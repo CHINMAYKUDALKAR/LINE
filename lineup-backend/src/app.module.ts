@@ -31,6 +31,7 @@ import { IntegrationsModule } from './modules/integrations/integrations.module';
 import { TenantsModule } from './modules/tenants/tenants.module';
 import { AdminConsoleModule } from './modules/admin-console/admin-console.module';
 import { UsageModule } from './modules/usage/usage.module';
+import { RolesModule } from './modules/roles/roles.module';
 import { HealthController } from './common/health.controller';
 import { S3Service } from './common/s3.service';
 import { PrismaService } from './common/prisma.service';
@@ -73,6 +74,7 @@ import { IPAllowlistGuard } from './common/ip-allowlist.guard';
     TenantsModule,
     AdminConsoleModule,
     UsageModule,
+    RolesModule,
   ],
   controllers: [HealthController],
   providers: [

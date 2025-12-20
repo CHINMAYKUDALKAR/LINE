@@ -4,7 +4,7 @@ import { PlatformRbacGuard } from './guards/platform-rbac.guard';
 import { AuthGuard } from '../../common/auth.guard';
 import { CreatePlatformUserDto } from './dto/create-platform-user.dto';
 import { CreateTenantProvisionDto } from './dto/create-tenant-provision.dto';
-import { Roles } from '../../common/roles.decorator';
+import { Roles } from '../auth/decorators/roles.decorator';
 
 @Controller('api/v1/admin')
 @UseGuards(AuthGuard, PlatformRbacGuard)
@@ -56,8 +56,20 @@ export class AdminConsoleController {
     }
 
     @Post('tenants/:id/create-admin')
-    createTenantAdmin(@Param('id') id: string, @Body('email') email: string) {
-        return this.svc.createTenantAdmin(id, email);
+    @Roles('SUPERADMIN')
+    createTenantAdmin(@Req() req: any, @Param('id') id: string, @Body('email') email: string) {
+        return this.svc.createTenantAdmin(id, email, req.user.sub);
+    }
+
+    @Patch('tenants/:tenantId/users/:userId/role')
+    @Roles('SUPERADMIN')
+    assignUserRole(
+        @Req() req: any,
+        @Param('tenantId') tenantId: string,
+        @Param('userId') userId: string,
+        @Body('role') role: 'ADMIN' | 'MANAGER' | 'RECRUITER' | 'INTERVIEWER',
+    ) {
+        return this.svc.assignUserRole(tenantId, userId, role, req.user.sub);
     }
 
     // ============================================

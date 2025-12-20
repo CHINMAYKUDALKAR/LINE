@@ -173,6 +173,9 @@ let StorageService = class StorageService {
         const downloadUrl = await this.s3.getPresignedDownloadUrl(file.key, file.filename);
         return { downloadUrl, filename: file.filename };
     }
+    async downloadFile(key) {
+        return this.s3.downloadFile(key);
+    }
     async updateMetadata(tenantId, fileId, dto) {
         const file = await this.getFile(tenantId, fileId);
         return this.prisma.fileObject.update({

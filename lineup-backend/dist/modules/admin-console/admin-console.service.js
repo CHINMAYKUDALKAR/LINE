@@ -108,7 +108,7 @@ let AdminConsoleService = class AdminConsoleService {
         });
         return { tenantId, logs };
     }
-    async createTenantAdmin(tenantId, email) {
+    async createTenantAdmin(tenantId, email, adminUserId) {
         const pwd = (0, provisioning_util_1.randomPassword)();
         const hashed = await bcrypt.hash(pwd, 10);
         const user = await this.prisma.user.create({
@@ -121,8 +121,54 @@ let AdminConsoleService = class AdminConsoleService {
                 status: 'ACTIVE'
             }
         });
-        await this.prisma.auditLog.create({ data: { tenantId, action: 'provision.tenantAdmin.created', metadata: { email } } });
+        await this.prisma.auditLog.create({
+            data: {
+                tenantId,
+                userId: adminUserId,
+                action: 'admin.tenant_admin_created',
+                metadata: {
+                    email,
+                    assignedUserId: user.id,
+                    role: 'ADMIN',
+                    assignedBy: 'PLATFORM_ADMIN'
+                }
+            }
+        });
         return { id: user.id, password: pwd };
+    }
+    async assignUserRole(tenantId, userId, role, adminUserId) {
+        const user = await this.prisma.user.findFirst({
+            where: { id: userId, tenantId }
+        });
+        if (!user) {
+            throw new common_1.BadRequestException('User not found in tenant');
+        }
+        const oldRole = user.role;
+        const updated = await this.prisma.user.update({
+            where: { id: userId },
+            data: { role }
+        });
+        await this.prisma.auditLog.create({
+            data: {
+                tenantId,
+                userId: adminUserId,
+                action: 'admin.user_role_assigned',
+                metadata: {
+                    targetUserId: userId,
+                    targetEmail: user.email,
+                    oldRole,
+                    newRole: role,
+                    assignedBy: 'PLATFORM_ADMIN'
+                }
+            }
+        });
+        return {
+            success: true,
+            userId,
+            oldRole,
+            newRole: role,
+            message: `User role changed from ${oldRole} to ${role}`
+        };
     }
     async updateTenantStatus(tenantId, enabled, adminUserId) {
         const tenant = await this.prisma.tenant.update({

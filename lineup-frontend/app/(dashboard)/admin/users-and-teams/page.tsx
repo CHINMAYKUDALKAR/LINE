@@ -6,12 +6,14 @@ import {
   UserRole,
   UserStatus,
   Team,
+  User,
   getUsers,
   getTeams,
   inviteUser,
   createTeam,
   deleteUser,
   deleteTeam,
+  updateUser,
   InviteUserDto,
   CreateTeamDto
 } from "@/lib/api/users";
@@ -66,7 +68,7 @@ import { toast } from "sonner";
 type Tab = "users" | "teams";
 
 export default function UsersTeams() {
-  const { role: currentUserRole, isManager } = useUserRole();
+  const { role: currentUserRole, isManager, isSuperAdmin } = useUserRole();
   const queryClient = useQueryClient();
 
   const [activeTab, setActiveTab] = useState<Tab>("users");
@@ -78,6 +80,9 @@ export default function UsersTeams() {
   const [createTeamModalOpen, setCreateTeamModalOpen] = useState(false);
   const [teamDetailOpen, setTeamDetailOpen] = useState(false);
   const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
+  const [changeRoleModalOpen, setChangeRoleModalOpen] = useState(false);
+  const [selectedUserForRoleChange, setSelectedUserForRoleChange] = useState<User | null>(null);
+  const [newRole, setNewRole] = useState<UserRole>("RECRUITER");
 
   // Forms state
   const [inviteName, setInviteName] = useState("");
@@ -177,7 +182,37 @@ export default function UsersTeams() {
     }
   });
 
+  const updateRoleMutation = useMutation({
+    mutationFn: ({ userId, role }: { userId: string; role: UserRole }) =>
+      updateUser(userId, { role }),
+    onSuccess: () => {
+      toast.success("Role updated successfully");
+      setChangeRoleModalOpen(false);
+      setSelectedUserForRoleChange(null);
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to update role");
+    }
+  });
+
   // --- Actions ---
+
+  const handleChangeRole = (user: User) => {
+    setSelectedUserForRoleChange(user);
+    setNewRole(user.role);
+    setChangeRoleModalOpen(true);
+  };
+
+  const handleConfirmRoleChange = () => {
+    if (!selectedUserForRoleChange) return;
+    updateRoleMutation.mutate({
+      userId: selectedUserForRoleChange.id,
+      role: newRole
+    });
+  };
+
+
 
   const handleInvite = () => {
     if (!inviteEmail) return;
@@ -464,7 +499,7 @@ export default function UsersTeams() {
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem>View Profile</DropdownMenuItem>
-                            <DropdownMenuItem>Change Role</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleChangeRole(user)}>Change Role</DropdownMenuItem>
                             {user.status !== 'inactive' ? (
                               <DropdownMenuItem
                                 className="text-destructive"
@@ -589,7 +624,7 @@ export default function UsersTeams() {
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
                                 <DropdownMenuItem>View Profile</DropdownMenuItem>
-                                <DropdownMenuItem>Change Role</DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleChangeRole(user)}>Change Role</DropdownMenuItem>
                                 {user.status !== 'inactive' ? (
                                   <DropdownMenuItem
                                     className="text-destructive"
@@ -749,7 +784,17 @@ export default function UsersTeams() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="ADMIN">Admin</SelectItem>
+                  {isSuperAdmin && (
+                    <SelectItem value="SUPERADMIN">Super Admin</SelectItem>
+                  )}
+                  <SelectItem
+                    value="ADMIN"
+                    disabled={!isSuperAdmin}
+                    className={!isSuperAdmin ? "opacity-50 cursor-not-allowed" : ""}
+                    title={!isSuperAdmin ? "Admin role can only be assigned by Lineup platform administrators." : undefined}
+                  >
+                    Admin {!isSuperAdmin && "(Platform Only)"}
+                  </SelectItem>
                   <SelectItem value="MANAGER">Manager</SelectItem>
                   <SelectItem value="RECRUITER">Recruiter</SelectItem>
                   <SelectItem value="INTERVIEWER">Interviewer</SelectItem>
@@ -956,6 +1001,72 @@ export default function UsersTeams() {
               </div>
             </>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Change Role Modal */}
+      <Dialog open={changeRoleModalOpen} onOpenChange={setChangeRoleModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Change User Role</DialogTitle>
+            <DialogDescription>
+              Update the role for {selectedUserForRoleChange?.name || selectedUserForRoleChange?.email}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-foreground">
+                Current Role
+              </label>
+              <Badge className={getRoleColor(selectedUserForRoleChange?.role || "RECRUITER")}>
+                {selectedUserForRoleChange?.role}
+              </Badge>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-foreground">
+                New Role
+              </label>
+              <Select
+                value={newRole}
+                onValueChange={(val: UserRole) => setNewRole(val)}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {isSuperAdmin && (
+                    <SelectItem value="SUPERADMIN">Super Admin</SelectItem>
+                  )}
+                  <SelectItem
+                    value="ADMIN"
+                    disabled={!isSuperAdmin}
+                    className={!isSuperAdmin ? "opacity-50 cursor-not-allowed" : ""}
+                    title={!isSuperAdmin ? "Admin role can only be assigned by Lineup platform administrators." : undefined}
+                  >
+                    Admin {!isSuperAdmin && "(Platform Only)"}
+                  </SelectItem>
+                  <SelectItem value="MANAGER">Manager</SelectItem>
+                  <SelectItem value="RECRUITER">Recruiter</SelectItem>
+                  <SelectItem value="INTERVIEWER">Interviewer</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="flex gap-2 justify-end">
+            <Button
+              variant="outline"
+              onClick={() => setChangeRoleModalOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              className="bg-[#0066CC] hover:bg-[#0052A3] text-white"
+              onClick={handleConfirmRoleChange}
+              disabled={updateRoleMutation.isPending || newRole === selectedUserForRoleChange?.role}
+            >
+              {updateRoleMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Update Role"}
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div >

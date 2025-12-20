@@ -36,9 +36,16 @@ export declare class AdminConsoleService {
             createdAt: Date;
         }[];
     }>;
-    createTenantAdmin(tenantId: string, email: string): Promise<{
+    createTenantAdmin(tenantId: string, email: string, adminUserId: string): Promise<{
         id: string;
         password: string;
+    }>;
+    assignUserRole(tenantId: string, userId: string, role: 'ADMIN' | 'MANAGER' | 'RECRUITER' | 'INTERVIEWER', adminUserId: string): Promise<{
+        success: boolean;
+        userId: string;
+        oldRole: import(".prisma/client").$Enums.Role;
+        newRole: "ADMIN" | "MANAGER" | "RECRUITER" | "INTERVIEWER";
+        message: string;
     }>;
     updateTenantStatus(tenantId: string, enabled: boolean, adminUserId: string): Promise<{
         tenantId: string;
@@ -74,13 +81,13 @@ export declare class AdminConsoleService {
         updatedAt?: Date | undefined;
     }>;
     listTenantUsers(tenantId: string): Promise<{
+        name: string | null;
         id: string;
         email: string;
-        name: string | null;
+        createdAt: Date;
         role: import(".prisma/client").$Enums.Role;
         status: import(".prisma/client").$Enums.UserStatus;
         lastLogin: Date | null;
-        createdAt: Date;
     }[]>;
     updateUserStatus(userId: string, status: 'ACTIVE' | 'INACTIVE', adminUserId: string): Promise<{
         userId: string;
@@ -89,8 +96,8 @@ export declare class AdminConsoleService {
     }>;
     listAllIntegrations(): Promise<({
         tenant: {
-            id: string;
             name: string;
+            id: string;
         };
     } & {
         id: string;

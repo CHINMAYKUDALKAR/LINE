@@ -17,7 +17,7 @@ const common_1 = require("@nestjs/common");
 const email_service_1 = require("./email.service");
 const auth_guard_1 = require("../../common/auth.guard");
 const rbac_guard_1 = require("../../common/rbac.guard");
-const roles_decorator_1 = require("../../common/roles.decorator");
+const roles_decorator_1 = require("../auth/decorators/roles.decorator");
 let EmailController = class EmailController {
     svc;
     constructor(svc) {

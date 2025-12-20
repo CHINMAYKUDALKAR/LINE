@@ -201,8 +201,13 @@ let UsersService = class UsersService {
             throw new common_1.BadRequestException('Admin user not found');
         if (!user)
             throw new common_1.NotFoundException('User not found');
-        if (dto.role && dto.role !== user.role)
-            (0, user_role_util_1.validateRoleChange)(admin.role, dto.role);
+        const oldRole = user.role;
+        if (dto.role && dto.role !== user.role) {
+            (0, user_role_util_1.validateRoleChange)(admin.role, dto.role, user.role);
+        }
+        if (user_role_util_1.PROTECTED_ROLES.includes(user.role) && admin.role !== 'SUPERADMIN') {
+            throw new common_1.ForbiddenException('Cannot modify users with admin role. Contact platform administrators.');
+        }
         const updated = await this.prisma.user.update({
             where: { id: userId },
             data: {
@@ -216,8 +221,16 @@ let UsersService = class UsersService {
             data: {
                 tenantId,
                 userId: adminId,
-                action: 'user.updated',
-                metadata: { targetUserId: userId, changes: JSON.parse(JSON.stringify(dto)) },
+                action: dto.role && dto.role !== oldRole ? 'user.role_changed' : 'user.updated',
+                metadata: {
+                    targetUserId: userId,
+                    targetEmail: user.email,
+                    ...(dto.role && dto.role !== oldRole && {
+                        oldRole,
+                        newRole: dto.role,
+                    }),
+                    changes: JSON.parse(JSON.stringify(dto)),
+                },
             },
         });
         return updated;

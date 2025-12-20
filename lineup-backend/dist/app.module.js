@@ -37,6 +37,7 @@ const integrations_module_1 = require("./modules/integrations/integrations.modul
 const tenants_module_1 = require("./modules/tenants/tenants.module");
 const admin_console_module_1 = require("./modules/admin-console/admin-console.module");
 const usage_module_1 = require("./modules/usage/usage.module");
+const roles_module_1 = require("./modules/roles/roles.module");
 const health_controller_1 = require("./common/health.controller");
 const exceptions_filter_1 = require("./common/exceptions.filter");
 const app_common_module_1 = require("./common/app-common.module");
@@ -82,6 +83,7 @@ exports.AppModule = AppModule = __decorate([
             tenants_module_1.TenantsModule,
             admin_console_module_1.AdminConsoleModule,
             usage_module_1.UsageModule,
+            roles_module_1.RolesModule,
         ],
         controllers: [health_controller_1.HealthController],
         providers: [

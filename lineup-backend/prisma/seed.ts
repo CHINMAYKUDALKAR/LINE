@@ -31,20 +31,43 @@ async function main() {
     });
     console.log('✅ Created tenant:', tenant.name);
 
-    // Create admin user (you)
+    // Create SUPERADMIN user (Platform Admin - Chinmay Kudalkar)
     const hashedPassword = await bcrypt.hash('password123', 12);
+    const superadminUser = await prisma.user.create({
+        data: {
+            email: 'chinmay@mintskill.com',
+            password: hashedPassword,
+            name: 'Chinmay Kudalkar',
+            role: 'SUPERADMIN',
+            tenantId: tenant.id,
+        },
+    });
+    console.log('✅ Created SUPERADMIN:', superadminUser.email);
+
+    // Create UserTenant record for superadmin
+    await prisma.userTenant.upsert({
+        where: { userId_tenantId: { userId: superadminUser.id, tenantId: tenant.id } },
+        update: { role: 'SUPERADMIN', status: 'ACTIVE' },
+        create: {
+            userId: superadminUser.id,
+            tenantId: tenant.id,
+            role: 'SUPERADMIN',
+            status: 'ACTIVE',
+        },
+    });
+
+    // Create ADMIN user (Tenant Admin)
     const adminUser = await prisma.user.create({
         data: {
             email: 'admin@mintskill.com',
             password: hashedPassword,
-            name: 'Chinmay Kudalkar',
+            name: 'Raj Patel',
             role: 'ADMIN',
             tenantId: tenant.id,
         },
     });
-    console.log('✅ Created admin:', adminUser.email);
+    console.log('✅ Created ADMIN:', adminUser.email);
 
-    // Create UserTenant record for admin (required for new auth system)
     await prisma.userTenant.upsert({
         where: { userId_tenantId: { userId: adminUser.id, tenantId: tenant.id } },
         update: { role: 'ADMIN', status: 'ACTIVE' },
@@ -56,7 +79,53 @@ async function main() {
         },
     });
 
-    // Create interviewer users
+    // Create MANAGER user
+    const managerUser = await prisma.user.create({
+        data: {
+            email: 'manager@mintskill.com',
+            password: hashedPassword,
+            name: 'Anita Desai',
+            role: 'MANAGER',
+            tenantId: tenant.id,
+        },
+    });
+    console.log('✅ Created MANAGER:', managerUser.email);
+
+    await prisma.userTenant.upsert({
+        where: { userId_tenantId: { userId: managerUser.id, tenantId: tenant.id } },
+        update: { role: 'MANAGER', status: 'ACTIVE' },
+        create: {
+            userId: managerUser.id,
+            tenantId: tenant.id,
+            role: 'MANAGER',
+            status: 'ACTIVE',
+        },
+    });
+
+    // Create RECRUITER user
+    const recruiterUser = await prisma.user.create({
+        data: {
+            email: 'priya.sharma@mintskill.com',
+            password: hashedPassword,
+            name: 'Priya Sharma',
+            role: 'RECRUITER',
+            tenantId: tenant.id,
+        },
+    });
+    console.log('✅ Created RECRUITER:', recruiterUser.email);
+
+    await prisma.userTenant.upsert({
+        where: { userId_tenantId: { userId: recruiterUser.id, tenantId: tenant.id } },
+        update: { role: 'RECRUITER', status: 'ACTIVE' },
+        create: {
+            userId: recruiterUser.id,
+            tenantId: tenant.id,
+            role: 'RECRUITER',
+            status: 'ACTIVE',
+        },
+    });
+
+    // Create INTERVIEWER users
     const interviewers = await Promise.all([
         prisma.user.create({
             data: {
@@ -76,28 +145,18 @@ async function main() {
                 tenantId: tenant.id,
             },
         }),
-        prisma.user.create({
-            data: {
-                email: 'priya.sharma@mintskill.com',
-                password: hashedPassword,
-                name: 'Priya Sharma',
-                role: 'RECRUITER',
-                tenantId: tenant.id,
-            },
-        }),
     ]);
-    console.log('✅ Created', interviewers.length, 'team members');
+    console.log('✅ Created', interviewers.length, 'INTERVIEWER users');
 
     // Create UserTenant records for all interviewers
     for (const user of interviewers) {
-        const role = user.email.includes('priya') ? 'RECRUITER' : 'INTERVIEWER';
         await prisma.userTenant.upsert({
             where: { userId_tenantId: { userId: user.id, tenantId: tenant.id } },
-            update: { role, status: 'ACTIVE' },
+            update: { role: 'INTERVIEWER', status: 'ACTIVE' },
             create: {
                 userId: user.id,
                 tenantId: tenant.id,
-                role,
+                role: 'INTERVIEWER',
                 status: 'ACTIVE',
             },
         });
@@ -200,9 +259,12 @@ async function main() {
     console.log('✅ Seeded communication templates');
 
     console.log('\n🎉 Seeding complete!');
-    console.log('\n📝 Login credentials:');
-    console.log('   Email: admin@mintskill.com');
-    console.log('   Password: password123');
+    console.log('\n📝 Login credentials (all passwords: password123):');
+    console.log('   SUPERADMIN: chinmay@mintskill.com');
+    console.log('   ADMIN:      admin@mintskill.com');
+    console.log('   MANAGER:    manager@mintskill.com');
+    console.log('   RECRUITER:  priya.sharma@mintskill.com');
+    console.log('   INTERVIEWER: sarah.chen@mintskill.com');
     console.log('\n👥 Candidates to message:');
     candidates.forEach(c => console.log(`   - ${c.name} (${c.email})`));
     console.log('\n💡 All emails will appear in MailHog at http://localhost:8025');

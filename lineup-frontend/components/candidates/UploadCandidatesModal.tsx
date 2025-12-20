@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from 'react';
 import Papa from 'papaparse';
+import * as XLSX from 'xlsx';
 import { Loader2, Upload, FileSpreadsheet, AlertCircle, CheckCircle2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -80,56 +81,127 @@ export function UploadCandidatesModal({ open, onOpenChange, onSuccess }: UploadC
     const handleFileSelect = useCallback((selectedFile: File) => {
         setFile(selectedFile);
 
-        Papa.parse(selectedFile, {
-            header: true,
-            skipEmptyLines: true,
-            // Optimize: only preview first chunk to speed up large files
-            preview: MAX_ROWS + 1, // +1 to detect if over limit
-            complete: (results) => {
-                const headers = results.meta.fields || [];
-                let data = results.data as Record<string, string>[];
+        const isExcel = selectedFile.name.endsWith('.xlsx') ||
+            selectedFile.name.endsWith('.xls') ||
+            selectedFile.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
+            selectedFile.type === 'application/vnd.ms-excel';
 
-                // Validate row limit
-                if (data.length > MAX_ROWS) {
-                    toast.error(`File contains more than ${MAX_ROWS} rows. Please split your file into smaller batches.`);
-                    data = data.slice(0, MAX_ROWS);
-                    toast.info(`Only the first ${MAX_ROWS} rows will be imported.`);
-                }
+        if (isExcel) {
+            // Handle Excel files
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const data = e.target?.result;
+                    const workbook = XLSX.read(data, { type: 'binary' });
+                    const sheetName = workbook.SheetNames[0];
+                    const sheet = workbook.Sheets[sheetName];
+                    const jsonData = XLSX.utils.sheet_to_json<Record<string, any>>(sheet, { defval: '' });
 
-                setCsvHeaders(headers);
-                setCsvData(data);
+                    if (jsonData.length === 0) {
+                        toast.error('File contains no data rows');
+                        return;
+                    }
 
-                // Auto-map based on header names
-                const autoMapping: FieldMapping = {};
-                headers.forEach((header) => {
-                    const lowerHeader = header.toLowerCase().trim();
-                    CANDIDATE_FIELDS.forEach((field) => {
-                        if (
-                            lowerHeader === field.key.toLowerCase() ||
-                            lowerHeader === field.label.toLowerCase() ||
-                            lowerHeader.includes(field.key.toLowerCase())
-                        ) {
-                            autoMapping[header] = field.key;
-                        }
+                    // Get headers from first row keys
+                    const headers = Object.keys(jsonData[0] || {});
+                    let rows = jsonData.map(row => {
+                        const result: Record<string, string> = {};
+                        headers.forEach(h => {
+                            result[h] = String(row[h] || '').trim();
+                        });
+                        return result;
                     });
-                });
-                setFieldMapping(autoMapping);
-                setStep('mapping');
-            },
-            error: (error) => {
-                toast.error(`Failed to parse CSV: ${error.message}`);
-            },
-        });
+
+                    // Validate row limit
+                    if (rows.length > MAX_ROWS) {
+                        toast.error(`File contains more than ${MAX_ROWS} rows. Please split your file.`);
+                        rows = rows.slice(0, MAX_ROWS);
+                        toast.info(`Only the first ${MAX_ROWS} rows will be imported.`);
+                    }
+
+                    setCsvHeaders(headers);
+                    setCsvData(rows);
+
+                    // Auto-map based on header names
+                    const autoMapping: FieldMapping = {};
+                    headers.forEach((header) => {
+                        const lowerHeader = header.toLowerCase().trim();
+                        CANDIDATE_FIELDS.forEach((field) => {
+                            if (
+                                lowerHeader === field.key.toLowerCase() ||
+                                lowerHeader === field.label.toLowerCase() ||
+                                lowerHeader.includes(field.key.toLowerCase())
+                            ) {
+                                autoMapping[header] = field.key;
+                            }
+                        });
+                    });
+                    setFieldMapping(autoMapping);
+                    setStep('mapping');
+                } catch (error: any) {
+                    toast.error(`Failed to parse Excel file: ${error.message}`);
+                }
+            };
+            reader.onerror = () => {
+                toast.error('Failed to read file');
+            };
+            reader.readAsBinaryString(selectedFile);
+        } else {
+            // Handle CSV files with PapaParse
+            Papa.parse(selectedFile, {
+                header: true,
+                skipEmptyLines: true,
+                preview: MAX_ROWS + 1,
+                complete: (results) => {
+                    const headers = results.meta.fields || [];
+                    let data = results.data as Record<string, string>[];
+
+                    if (data.length > MAX_ROWS) {
+                        toast.error(`File contains more than ${MAX_ROWS} rows. Please split your file.`);
+                        data = data.slice(0, MAX_ROWS);
+                        toast.info(`Only the first ${MAX_ROWS} rows will be imported.`);
+                    }
+
+                    setCsvHeaders(headers);
+                    setCsvData(data);
+
+                    const autoMapping: FieldMapping = {};
+                    headers.forEach((header) => {
+                        const lowerHeader = header.toLowerCase().trim();
+                        CANDIDATE_FIELDS.forEach((field) => {
+                            if (
+                                lowerHeader === field.key.toLowerCase() ||
+                                lowerHeader === field.label.toLowerCase() ||
+                                lowerHeader.includes(field.key.toLowerCase())
+                            ) {
+                                autoMapping[header] = field.key;
+                            }
+                        });
+                    });
+                    setFieldMapping(autoMapping);
+                    setStep('mapping');
+                },
+                error: (error) => {
+                    toast.error(`Failed to parse CSV: ${error.message}`);
+                },
+            });
+        }
     }, []);
 
     const handleDrop = useCallback(
         (e: React.DragEvent) => {
             e.preventDefault();
             const droppedFile = e.dataTransfer.files[0];
-            if (droppedFile && (droppedFile.type === 'text/csv' || droppedFile.name.endsWith('.csv'))) {
+            const validTypes = ['text/csv', 'application/csv', 'application/vnd.ms-excel',
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'];
+            const validExtensions = ['.csv', '.xlsx', '.xls'];
+            const hasValidType = validTypes.includes(droppedFile?.type || '');
+            const hasValidExt = validExtensions.some(ext => droppedFile?.name.endsWith(ext));
+
+            if (droppedFile && (hasValidType || hasValidExt)) {
                 handleFileSelect(droppedFile);
             } else {
-                toast.error('Please upload a CSV file');
+                toast.error('Please upload a CSV or Excel file');
             }
         },
         [handleFileSelect]
@@ -261,9 +333,13 @@ export function UploadCandidatesModal({ open, onOpenChange, onSuccess }: UploadC
                                         <FileSpreadsheet className="h-3.5 w-3.5" />
                                         CSV
                                     </span>
+                                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-green-100 dark:bg-green-950 text-green-700 dark:text-green-400 text-xs font-medium">
+                                        <FileSpreadsheet className="h-3.5 w-3.5" />
+                                        XLSX
+                                    </span>
                                     <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-400 text-xs font-medium">
                                         <FileSpreadsheet className="h-3.5 w-3.5" />
-                                        TXT
+                                        XLS
                                     </span>
                                 </div>
 
@@ -275,7 +351,7 @@ export function UploadCandidatesModal({ open, onOpenChange, onSuccess }: UploadC
                                 <input
                                     type="file"
                                     className="hidden"
-                                    accept=".csv,.txt,text/csv,text/plain,application/csv"
+                                    accept=".csv,.xlsx,.xls,text/csv,application/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                                     onChange={handleFileChange}
                                 />
                             </label>
