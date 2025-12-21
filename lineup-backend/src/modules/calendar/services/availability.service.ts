@@ -135,8 +135,10 @@ export class AvailabilityService {
 
         if (!workingHours) {
             // Use default working hours if none set
+            // Get user's timezone preference or use tenant/system default
+            const userTimezone = await this.getUserTimezone(tenantId, userId);
             const defaultPattern = this.workingHoursService.getDefaultPattern();
-            return this.expandWeeklyPattern(defaultPattern, start, end, 'UTC');
+            return this.expandWeeklyPattern(defaultPattern, start, end, userTimezone);
         }
 
         const weekly = workingHours.weekly as unknown as WeeklyPattern[];
@@ -157,6 +159,34 @@ export class AvailabilityService {
         const freeIntervals = subtractIntervals(workingIntervals, busyIntervals);
 
         return freeIntervals;
+    }
+
+    /**
+     * Get timezone for a user, falling back to tenant settings or system default
+     */
+    private async getUserTimezone(tenantId: string, userId: string): Promise<string> {
+        // First check if user has a timezone set in their profile
+        const user = await this.prisma.user.findUnique({
+            where: { id: userId },
+            select: { timezone: true },
+        });
+        if (user?.timezone) {
+            return user.timezone;
+        }
+
+        // Fall back to tenant settings
+        const tenant = await this.prisma.tenant.findUnique({
+            where: { id: tenantId },
+            select: { settings: true },
+        });
+        const tenantTimezone = (tenant?.settings as any)?.timezone;
+        if (tenantTimezone) {
+            return tenantTimezone;
+        }
+
+        // Default to Asia/Kolkata (IST) for better India support
+        // Most users are in India, so this is a sensible default
+        return 'Asia/Kolkata';
     }
 
     /**

@@ -14,6 +14,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { CandidateListItem } from '@/types/candidate-list';
+import { CandidateDetailSheet } from './CandidateDetailSheet';
 import { CandidateRowMenu } from './CandidateRowMenu';
 import { CandidateMobileCard } from './CandidateMobileCard';
 import { stageLabels, stageColors, getInitials } from '@/lib/candidate-constants';
@@ -126,6 +127,9 @@ export function CandidateTable({
 
   // ... existing code ...
 
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const [selectedCandidateId, setSelectedCandidateId] = useState<string | null>(null);
+
   const handleRowClick = (candidate: CandidateListItem, e: React.MouseEvent) => {
     const target = e.target as HTMLElement;
     if (
@@ -135,7 +139,8 @@ export function CandidateTable({
     ) {
       return;
     }
-    router.push(`/candidates/${candidate.id}`);
+    setSelectedCandidateId(candidate.id);
+    setSheetOpen(true);
   };
 
 
@@ -260,7 +265,7 @@ export function CandidateTable({
                 <TableRow
                   key={candidate.id}
                   className={cn(
-                    'cursor-pointer transition-colors',
+                    'cursor-pointer transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted',
                     isSelected && 'bg-primary/5'
                   )}
                   onClick={(e) => handleRowClick(candidate, e)}
@@ -351,6 +356,13 @@ export function CandidateTable({
           </div>
         )}
       </div>
+      <CandidateDetailSheet
+        open={sheetOpen}
+        onOpenChange={setSheetOpen}
+        candidateId={selectedCandidateId}
+        onSchedule={(c) => onScheduleInterview(c as CandidateListItem)}
+        onEdit={(id) => router.push(`/candidates/${id}/edit`)}
+      />
     </div>
   );
 }

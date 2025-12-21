@@ -12,7 +12,6 @@ import { UploadCandidatesModal } from '@/components/candidates/UploadCandidatesM
 import { BulkScheduleModal } from '@/components/scheduling/BulkScheduleModal';
 import { useToast } from '@/hooks/use-toast';
 import { InterviewStage, InterviewStatus } from '@/types/interview';
-import { Separator } from '@/components/ui/separator';
 import { getOverview, getFunnel } from '@/lib/api/reports';
 import { getInterviews } from '@/lib/api/interviews';
 import { fadeInUp, staggerContainer, staggerItem } from '@/lib/animations';
@@ -263,7 +262,7 @@ const Dashboard = () => {
                 </motion.div>
 
                 {/* KPI Section */}
-                <motion.div variants={staggerItem}>
+                <motion.div variants={staggerItem} className="mb-8">
                     <KPICards
                         metrics={metrics}
                         isLoading={isLoading}
@@ -271,10 +270,8 @@ const Dashboard = () => {
                     />
                 </motion.div>
 
-                <Separator className="my-4 sm:my-6" />
-
                 {/* Pipeline Section */}
-                <motion.div variants={staggerItem}>
+                <motion.div variants={staggerItem} className="mb-8">
                     <StagePipeline
                         stages={stageCounts}
                         activeStage={activeStage}
@@ -283,11 +280,9 @@ const Dashboard = () => {
                     />
                 </motion.div>
 
-                <Separator className="my-4 sm:my-6" />
-
                 {/* Table Section */}
                 <motion.section variants={staggerItem}>
-                    <div className="flex items-center justify-between mb-3 sm:mb-4">
+                    <div className="flex items-center justify-between mb-4">
                         <div>
                             <h2 className="text-base sm:text-lg font-semibold text-foreground">Upcoming Interviews</h2>
                             <p className="text-xs sm:text-sm text-muted-foreground hidden sm:block">View and manage scheduled interviews</p>

@@ -15,6 +15,10 @@ export class ListCandidatesDto {
     @ApiPropertyOptional({ description: 'Search query (name, email, phone)', example: 'john' })
     @IsOptional()
     @IsString()
+    role?: string;
+
+    @IsOptional()
+    @IsString()
     q?: string;
 
     @ApiPropertyOptional({ description: 'Page number', example: '1' })

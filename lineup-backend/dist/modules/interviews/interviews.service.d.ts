@@ -29,6 +29,9 @@ export declare class InterviewsService {
         avgRating: number | null;
         hasFeedback: boolean;
         isNoShow: boolean;
+        bulkMode: import(".prisma/client").$Enums.BulkMode | null;
+        bulkBatchId: string | null;
+        candidateIds: string[];
         createdAt: Date;
         updatedAt: Date;
         deletedAt: Date | null;
@@ -48,6 +51,9 @@ export declare class InterviewsService {
             avgRating: number | null;
             hasFeedback: boolean;
             isNoShow: boolean;
+            bulkMode: import(".prisma/client").$Enums.BulkMode | null;
+            bulkBatchId: string | null;
+            candidateIds: string[];
             createdAt: Date;
             updatedAt: Date;
             deletedAt: Date | null;
@@ -80,6 +86,9 @@ export declare class InterviewsService {
         avgRating: number | null;
         hasFeedback: boolean;
         isNoShow: boolean;
+        bulkMode: import(".prisma/client").$Enums.BulkMode | null;
+        bulkBatchId: string | null;
+        candidateIds: string[];
         createdAt: Date;
         updatedAt: Date;
         deletedAt: Date | null;
@@ -113,6 +122,9 @@ export declare class InterviewsService {
             avgRating: number | null;
             hasFeedback: boolean;
             isNoShow: boolean;
+            bulkMode: import(".prisma/client").$Enums.BulkMode | null;
+            bulkBatchId: string | null;
+            candidateIds: string[];
             createdAt: Date;
             updatedAt: Date;
             deletedAt: Date | null;
@@ -147,11 +159,15 @@ export declare class InterviewsService {
         avgRating: number | null;
         hasFeedback: boolean;
         isNoShow: boolean;
+        bulkMode: import(".prisma/client").$Enums.BulkMode | null;
+        bulkBatchId: string | null;
+        candidateIds: string[];
         createdAt: Date;
         updatedAt: Date;
         deletedAt: Date | null;
     }[]>;
     checkConflicts(tenantId: string, interviewerIds: string[], start: Date, end: Date, excludeId?: string): Promise<void>;
+    checkCandidateHasActiveInterview(tenantId: string, candidateId: string, excludeInterviewId?: string): Promise<void>;
     cancel(tenantId: string, userId: string, id: string): Promise<{
         id: string;
         tenantId: string;
@@ -166,6 +182,9 @@ export declare class InterviewsService {
         avgRating: number | null;
         hasFeedback: boolean;
         isNoShow: boolean;
+        bulkMode: import(".prisma/client").$Enums.BulkMode | null;
+        bulkBatchId: string | null;
+        candidateIds: string[];
         createdAt: Date;
         updatedAt: Date;
         deletedAt: Date | null;
@@ -184,6 +203,9 @@ export declare class InterviewsService {
         avgRating: number | null;
         hasFeedback: boolean;
         isNoShow: boolean;
+        bulkMode: import(".prisma/client").$Enums.BulkMode | null;
+        bulkBatchId: string | null;
+        candidateIds: string[];
         createdAt: Date;
         updatedAt: Date;
         deletedAt: Date | null;
@@ -192,6 +214,9 @@ export declare class InterviewsService {
         success: boolean;
     }>;
     bulkSchedule(tenantId: string, userId: string, dto: BulkScheduleDto): Promise<BulkScheduleResult>;
+    private handleGroupMode;
+    private handleSequentialMode;
+    private mapLegacyStrategyToMode;
     private enqueueReminders;
     private sanitizeContent;
     listNotes(tenantId: string, interviewId: string, page?: number, perPage?: number): Promise<{

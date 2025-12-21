@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { FeedbackService } from '../feedback.service';
 import { PrismaService } from '../../../common/prisma.service';
 import { NotFoundException, ForbiddenException } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 
 const mockPrisma = {
     interview: { findFirst: jest.fn(), update: jest.fn() },
@@ -17,8 +18,14 @@ describe('FeedbackService', () => {
         const module: TestingModule = await Test.createTestingModule({
             providers: [
                 FeedbackService,
-                { provide: PrismaService, useValue: mockPrisma }
-            ]
+                { provide: PrismaService, useValue: mockPrisma },
+                {
+                    provide: EventEmitter2,
+                    useValue: {
+                        emit: jest.fn(),
+                    },
+                },
+            ],
         }).compile();
         service = module.get<FeedbackService>(FeedbackService);
     });

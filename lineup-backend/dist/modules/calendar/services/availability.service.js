@@ -74,8 +74,9 @@ let AvailabilityService = AvailabilityService_1 = class AvailabilityService {
     async computeFreeIntervals(tenantId, userId, start, end) {
         const workingHours = await this.workingHoursService.getWorkingHours(tenantId, userId);
         if (!workingHours) {
+            const userTimezone = await this.getUserTimezone(tenantId, userId);
             const defaultPattern = this.workingHoursService.getDefaultPattern();
-            return this.expandWeeklyPattern(defaultPattern, start, end, 'UTC');
+            return this.expandWeeklyPattern(defaultPattern, start, end, userTimezone);
         }
         const weekly = workingHours.weekly;
         const timezone = workingHours.timezone || 'UTC';
@@ -83,6 +84,24 @@ let AvailabilityService = AvailabilityService_1 = class AvailabilityService {
         const busyIntervals = await this.getCachedBusyBlocks(tenantId, userId, start, end);
         const freeIntervals = (0, interval_math_1.subtractIntervals)(workingIntervals, busyIntervals);
         return freeIntervals;
+    }
+    async getUserTimezone(tenantId, userId) {
+        const user = await this.prisma.user.findUnique({
+            where: { id: userId },
+            select: { timezone: true },
+        });
+        if (user?.timezone) {
+            return user.timezone;
+        }
+        const tenant = await this.prisma.tenant.findUnique({
+            where: { id: tenantId },
+            select: { settings: true },
+        });
+        const tenantTimezone = tenant?.settings?.timezone;
+        if (tenantTimezone) {
+            return tenantTimezone;
+        }
+        return 'Asia/Kolkata';
     }
     async getCachedBusyBlocks(tenantId, userId, start, end) {
         const cacheKey = this.getBusyBlocksCacheKey(tenantId, userId, start, end);

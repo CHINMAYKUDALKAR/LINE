@@ -15,6 +15,7 @@ const swagger_1 = require("@nestjs/swagger");
 class ListCandidatesDto {
     stage;
     source;
+    role;
     q;
     page;
     perPage;
@@ -38,6 +39,11 @@ __decorate([
 ], ListCandidatesDto.prototype, "source", void 0);
 __decorate([
     (0, swagger_1.ApiPropertyOptional)({ description: 'Search query (name, email, phone)', example: 'john' }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], ListCandidatesDto.prototype, "role", void 0);
+__decorate([
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsString)(),
     __metadata("design:type", String)

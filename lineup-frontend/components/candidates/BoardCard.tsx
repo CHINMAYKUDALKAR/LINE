@@ -38,9 +38,9 @@ export function BoardCard({ candidate, onClick }: BoardCardProps) {
         .toUpperCase();
 
     return (
-        <div ref={setNodeRef} style={style} className="mb-3 touch-none">
+        <div ref={setNodeRef} style={style} className="mb-3 touch-none group">
             <Card
-                className={`hover:shadow-md transition-shadow cursor-pointer ${isDragging ? 'shadow-lg border-primary/50' : ''}`}
+                className={`hover:shadow-md hover:border-primary/40 transition-all cursor-pointer bg-card/80 backdrop-blur-sm ${isDragging ? 'shadow-lg border-primary/50 ring-2 ring-primary/20 rotate-2 scale-105 z-50' : ''}`}
                 onClick={() => onClick?.(candidate)}
             >
                 <CardHeader className="p-4 pb-2 flex flex-row items-start justify-between space-y-0">

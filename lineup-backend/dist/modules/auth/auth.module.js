@@ -20,6 +20,7 @@ const audit_module_1 = require("../audit/audit.module");
 const brute_force_guard_1 = require("../../common/brute-force.guard");
 const password_policy_service_1 = require("../../common/password-policy.service");
 const permissions_guard_1 = require("./guards/permissions.guard");
+const jwt_strategy_1 = require("./jwt.strategy");
 let AuthModule = class AuthModule {
 };
 exports.AuthModule = AuthModule;
@@ -37,6 +38,7 @@ exports.AuthModule = AuthModule = __decorate([
             brute_force_guard_1.BruteForceService,
             password_policy_service_1.PasswordPolicyService,
             permissions_guard_1.PermissionGuard,
+            jwt_strategy_1.JwtStrategy,
         ],
         exports: [
             auth_service_1.AuthService,

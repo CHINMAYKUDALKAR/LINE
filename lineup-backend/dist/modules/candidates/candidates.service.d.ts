@@ -75,6 +75,9 @@ export declare class CandidatesService {
     }>;
     list(tenantId: string, dto: ListCandidatesDto): Promise<{
         data: {
+            hasActiveInterview: boolean;
+            activeInterviewId: string | undefined;
+            activeInterviewDate: Date | undefined;
             name: string;
             id: string;
             email: string | null;

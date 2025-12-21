@@ -24,6 +24,9 @@ if (typeof window !== 'undefined') {
 const MAX_RETRIES = 3;
 const INITIAL_RETRY_DELAY = 1000; // 1 second
 
+// Token refresh mutex - prevents concurrent refresh calls
+let refreshPromise: Promise<string | null> | null = null;
+
 export class ApiError extends Error {
     constructor(
         public status: number,
@@ -51,8 +54,27 @@ function getActiveTenantId(): string | null {
     return null;
 }
 
-// Attempt to refresh the access token
+// Attempt to refresh the access token (with mutex to prevent concurrent refreshes)
 async function attemptTokenRefresh(): Promise<string | null> {
+    // If a refresh is already in progress, wait for it
+    if (refreshPromise) {
+        return refreshPromise;
+    }
+
+    // Start a new refresh
+    refreshPromise = doTokenRefresh();
+
+    try {
+        const result = await refreshPromise;
+        return result;
+    } finally {
+        // Clear the mutex after refresh completes (success or failure)
+        refreshPromise = null;
+    }
+}
+
+// The actual token refresh logic
+async function doTokenRefresh(): Promise<string | null> {
     try {
         const response = await fetch(`${API_BASE.replace('/api/v1', '')}/api/v1/auth/refresh`, {
             method: 'POST',

@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AppSidebar } from './AppSidebar';
 import { MobileHeader } from './MobileHeader';
+import { CommandPalette } from '@/components/command-palette';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { toast } from '@/hooks/use-toast';
 import {
@@ -47,6 +48,8 @@ export function AppShell({ children }: AppShellProps) {
     <TooltipProvider>
       <div className="flex flex-col md:flex-row h-screen w-full overflow-hidden bg-background">
         <MobileHeader />
+
+        <CommandPalette />
 
         <AppSidebar
           tenants={mockTenants}

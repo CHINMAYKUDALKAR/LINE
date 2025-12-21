@@ -9,9 +9,14 @@ var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.BulkScheduleDto = exports.BulkScheduleStrategy = void 0;
+exports.BulkScheduleDto = exports.BulkScheduleStrategy = exports.BulkMode = void 0;
 const class_validator_1 = require("class-validator");
 const swagger_1 = require("@nestjs/swagger");
+var BulkMode;
+(function (BulkMode) {
+    BulkMode["SEQUENTIAL"] = "SEQUENTIAL";
+    BulkMode["GROUP"] = "GROUP";
+})(BulkMode || (exports.BulkMode = BulkMode = {}));
 var BulkScheduleStrategy;
 (function (BulkScheduleStrategy) {
     BulkScheduleStrategy["AUTO"] = "AUTO";
@@ -22,12 +27,12 @@ class BulkScheduleDto {
     candidateIds;
     interviewerIds;
     durationMins;
-    strategy;
+    bulkMode;
+    startTime;
     stage;
-    scheduledTime;
-    rangeStart;
-    rangeEnd;
     timezone;
+    strategy;
+    scheduledTime;
 }
 exports.BulkScheduleDto = BulkScheduleDto;
 __decorate([
@@ -60,13 +65,21 @@ __decorate([
 ], BulkScheduleDto.prototype, "durationMins", void 0);
 __decorate([
     (0, swagger_1.ApiProperty)({
-        description: 'Scheduling strategy',
-        enum: BulkScheduleStrategy,
-        example: BulkScheduleStrategy.AUTO
+        description: 'Bulk scheduling mode - REQUIRED. SEQUENTIAL creates one interview per candidate with staggered times. GROUP creates one interview for all candidates at same time.',
+        enum: BulkMode,
+        example: BulkMode.SEQUENTIAL
     }),
-    (0, class_validator_1.IsEnum)(BulkScheduleStrategy),
+    (0, class_validator_1.IsEnum)(BulkMode),
     __metadata("design:type", String)
-], BulkScheduleDto.prototype, "strategy", void 0);
+], BulkScheduleDto.prototype, "bulkMode", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'Start time for the first interview (ISO 8601). For SEQUENTIAL, subsequent interviews are offset by duration.',
+        example: '2024-01-15T14:00:00Z'
+    }),
+    (0, class_validator_1.IsISO8601)(),
+    __metadata("design:type", String)
+], BulkScheduleDto.prototype, "startTime", void 0);
 __decorate([
     (0, swagger_1.ApiPropertyOptional)({ description: 'Interview stage/round', example: 'Technical Round' }),
     (0, class_validator_1.IsOptional)(),
@@ -74,36 +87,19 @@ __decorate([
     __metadata("design:type", String)
 ], BulkScheduleDto.prototype, "stage", void 0);
 __decorate([
-    (0, swagger_1.ApiPropertyOptional)({
-        description: 'For SAME_TIME strategy: the specific time to schedule all interviews',
-        example: '2024-01-15T14:00:00Z'
-    }),
-    (0, class_validator_1.IsOptional)(),
-    (0, class_validator_1.IsISO8601)(),
-    __metadata("design:type", String)
-], BulkScheduleDto.prototype, "scheduledTime", void 0);
-__decorate([
-    (0, swagger_1.ApiPropertyOptional)({
-        description: 'For AUTO strategy: start of scheduling range',
-        example: '2024-01-15T09:00:00Z'
-    }),
-    (0, class_validator_1.IsOptional)(),
-    (0, class_validator_1.IsISO8601)(),
-    __metadata("design:type", String)
-], BulkScheduleDto.prototype, "rangeStart", void 0);
-__decorate([
-    (0, swagger_1.ApiPropertyOptional)({
-        description: 'For AUTO strategy: end of scheduling range',
-        example: '2024-01-20T18:00:00Z'
-    }),
-    (0, class_validator_1.IsOptional)(),
-    (0, class_validator_1.IsISO8601)(),
-    __metadata("design:type", String)
-], BulkScheduleDto.prototype, "rangeEnd", void 0);
-__decorate([
     (0, swagger_1.ApiPropertyOptional)({ description: 'Timezone for scheduling', example: 'Asia/Kolkata' }),
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsString)(),
     __metadata("design:type", String)
 ], BulkScheduleDto.prototype, "timezone", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsEnum)(BulkScheduleStrategy),
+    __metadata("design:type", String)
+], BulkScheduleDto.prototype, "strategy", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsISO8601)(),
+    __metadata("design:type", String)
+], BulkScheduleDto.prototype, "scheduledTime", void 0);
 //# sourceMappingURL=bulk-schedule.dto.js.map

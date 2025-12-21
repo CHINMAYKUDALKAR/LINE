@@ -21,6 +21,10 @@ export default {
         extend: {
             fontFamily: {
                 sans: ['Inter', 'system-ui', 'sans-serif'],
+                display: ['Plus Jakarta Sans', 'Inter', 'system-ui', 'sans-serif'],
+            },
+            transitionTimingFunction: {
+                'spring': 'cubic-bezier(0.32, 0.72, 0, 1)',
             },
             colors: {
                 border: "hsl(var(--border))",

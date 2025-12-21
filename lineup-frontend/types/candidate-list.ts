@@ -20,6 +20,7 @@ export interface CandidateListItem {
 
 export interface CandidateListFilters {
   search: string;
+  role: string;
   stage: InterviewStage | 'all';
   source: string | 'all';
   recruiterId: string | 'all';

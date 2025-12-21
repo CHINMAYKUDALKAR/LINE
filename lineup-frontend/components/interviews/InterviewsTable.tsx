@@ -179,11 +179,11 @@ export function InterviewsTable({
             </div>
 
             {/* Desktop Table View */}
-            <div className="hidden md:block rounded-md border border-border bg-card overflow-hidden">
+            <div className="hidden md:block rounded-xl border border-border/50 bg-card/40 backdrop-blur-sm overflow-hidden shadow-sm">
                 <div className="overflow-x-auto">
                     <Table>
-                        <TableHeader className="bg-muted/30">
-                            <TableRow>
+                        <TableHeader className="bg-muted/40">
+                            <TableRow className="hover:bg-muted/40 border-b-border/50">
                                 <TableHead className="w-[40px] pl-4">
                                     <Checkbox
                                         checked={selectedIds.size === events.length && events.length > 0}

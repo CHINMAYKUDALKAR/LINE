@@ -18,6 +18,8 @@ import { InterviewStage } from '@/types/interview';
 import { BoardColumn } from './BoardColumn';
 import { BoardCard } from './BoardCard';
 import { createPortal } from 'react-dom';
+import { useRouter } from 'next/navigation';
+import { CandidateDetailSheet } from './CandidateDetailSheet';
 
 interface CandidateBoardProps {
     candidates: CandidateListItem[];
@@ -46,6 +48,14 @@ const dropAnimation: DropAnimation = {
 
 export function CandidateBoard({ candidates, onStageChange, onCandidateClick }: CandidateBoardProps) {
     const [activeId, setActiveId] = useState<string | null>(null);
+    const [sheetOpen, setSheetOpen] = useState(false);
+    const [selectedCandidateId, setSelectedCandidateId] = useState<string | null>(null);
+    const router = useRouter();
+
+    const handleCardClick = (candidate: CandidateListItem) => {
+        setSelectedCandidateId(candidate.id);
+        setSheetOpen(true);
+    };
 
     const sensors = useSensors(
         useSensor(MouseSensor, {
@@ -111,7 +121,7 @@ export function CandidateBoard({ candidates, onStageChange, onCandidateClick }: 
                             id={col.id}
                             title={col.title}
                             candidates={candidates.filter((c) => c.stage === col.id)}
-                            onCardClick={onCandidateClick}
+                            onCardClick={handleCardClick}
                         />
                     </div>
                 ))}
@@ -125,6 +135,13 @@ export function CandidateBoard({ candidates, onStageChange, onCandidateClick }: 
                 </DragOverlay>,
                 document.body
             )}
+
+            <CandidateDetailSheet
+                open={sheetOpen}
+                onOpenChange={setSheetOpen}
+                candidateId={selectedCandidateId}
+                onEdit={(id) => router.push(`/candidates/${id}/edit`)}
+            />
         </DndContext>
     );
 }

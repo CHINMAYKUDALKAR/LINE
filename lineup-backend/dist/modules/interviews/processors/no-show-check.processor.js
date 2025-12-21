@@ -51,6 +51,16 @@ let NoShowCheckProcessor = NoShowCheckProcessor_1 = class NoShowCheckProcessor e
                         status: 'NO_SHOW'
                     }
                 });
+                const deletedBlocks = await this.prisma.busyBlock.deleteMany({
+                    where: {
+                        tenantId: interview.tenantId,
+                        source: 'interview',
+                        sourceId: interview.id
+                    }
+                });
+                if (deletedBlocks.count > 0) {
+                    this.logger.log(`Deleted ${deletedBlocks.count} BusyBlock(s) for no-show interview ${interview.id}`);
+                }
                 this.logger.log(`Marked interview ${interview.id} as NO_SHOW`);
             }
         }

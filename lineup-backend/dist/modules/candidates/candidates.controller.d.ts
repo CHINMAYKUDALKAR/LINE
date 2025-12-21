@@ -33,6 +33,9 @@ export declare class CandidatesController {
     }>;
     list(req: any, dto: ListCandidatesDto): Promise<{
         data: {
+            hasActiveInterview: boolean;
+            activeInterviewId: string | undefined;
+            activeInterviewDate: Date | undefined;
             name: string;
             id: string;
             email: string | null;

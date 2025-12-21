@@ -1,4 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -6,130 +7,120 @@
 
 @layer base {
     :root {
-        /* App Background: #F7F9FC */
-        --background: 210 30% 98%;
-        /* Card Background: #FFFFFF */
+        /* App Background: Soft Cool Gray */
+        --background: 210 40% 98%; 
+        /* Foreground: Deep Navy/Black */
         --foreground: 222 47% 11%;
-        /* #0F172A */
 
+        /* Card: Pure White with slight transparency in glass mode */
         --card: 0 0% 100%;
         --card-foreground: 222 47% 11%;
 
         --popover: 0 0% 100%;
         --popover-foreground: 222 47% 11%;
 
-        /* Primary: #2563EB (Blue-600) */
+        /* Primary: Vibrant Royal Blue (Intercom/Stripe style) */
         --primary: 221 83% 53%;
-        --primary-foreground: 0 0% 100%;
+        --primary-foreground: 210 40% 98%;
 
-        /* Secondary: Use white + border for secondary actions */
-        --secondary: 0 0% 100%;
-        --secondary-foreground: 222 47% 11%;
+        /* Secondary: Muted cool gray for secondary actions */
+        --secondary: 210 40% 96.1%;
+        --secondary-foreground: 222 47% 11.2%;
 
-        /* Muted: #F1F5F9 (Subtle Hover) */
-        --muted: 210 20% 96%;
-        --muted-foreground: 215 16% 47%;
-        /* #64748B */
+        /* Muted: Subtler text */
+        --muted: 210 40% 96.1%;
+        --muted-foreground: 215.4 16.3% 46.9%;
 
-        --accent: 210 40% 98%;
-        /* Soft accent for hover */
-        --accent-foreground: 222 47% 11%;
+        /* Accent: For hover states, slightly richer than muted */
+        --accent: 210 40% 96.1%;
+        --accent-foreground: 222 47% 11.2%;
 
-        /* Error: #DC2626 */
-        --destructive: 0 72% 51%;
-        --destructive-foreground: 0 0% 100%;
+        /* Destructive: Refined Red */
+        --destructive: 0 84.2% 60.2%;
+        --destructive-foreground: 210 40% 98%;
 
-        /* Borders: #E5E7EB */
-        --border: 220 13% 91%;
-        --input: 220 13% 91%;
+        /* Borders: Subtle cool gray */
+        --border: 214.3 31.8% 91.4%;
+        --input: 214.3 31.8% 91.4%;
+        
+        /* Ring: Primary with opacity */
         --ring: 221 83% 53%;
-        /* Match Primary */
 
-        --radius: 0.5rem;
+        --radius: 0.75rem; /* More rounded friendliness */
 
-        /* Chart Colors */
-        --chart-1: 221 83% 53%;
-        /* Blue */
-        --chart-2: 142 76% 36%;
-        /* Green */
-        --chart-3: 38 92% 50%;
-        /* Amber */
-        --chart-4: 262 83% 58%;
-        /* Purple */
-        --chart-5: 215 16% 47%;
-        /* Slate */
+        /* Chart Colors - Vibrant & Distinct */
+        --chart-1: 221 83% 53%;   /* Blue */
+        --chart-2: 162 94% 30%;   /* Emerald */
+        --chart-3: 43 96% 64%;    /* Amber */
+        --chart-4: 262 83% 58%;   /* Purple */
+        --chart-5: 199 89% 48%;   /* Cyan */
 
-        /* Sidebar: White background, consistent with prompt */
+        /* Sidebar: Glassy Light */
         --sidebar-background: 0 0% 100%;
         --sidebar-foreground: 215 16% 47%;
-        /* Muted text default */
         --sidebar-primary: 221 83% 53%;
         --sidebar-primary-foreground: 0 0% 100%;
-        --sidebar-accent: 214 95% 93%;
-        /* Blue-100 for active state */
+        --sidebar-accent: 210 40% 96.1%;
         --sidebar-accent-foreground: 222 47% 11%;
-        /* Dark text for active */
-        --sidebar-border: 220 13% 91%;
+        --sidebar-border: 214.3 31.8% 91.4%;
         --sidebar-ring: 221 83% 53%;
     }
 
 
     .dark {
-        /* Background: #121212 */
-        --background: 0 0% 7%;
-        /* Primary Text: #E0E0E0 */
-        --foreground: 0 0% 88%;
+        /* Background: Deep Rich Navy/Black */
+        --background: 222 47% 6%;
+        --foreground: 210 40% 98%;
 
-        /* Card Background */
-        --card: 0 0% 7%;
-        --card-foreground: 0 0% 88%;
+        /* Card: Slightly lighter navy */
+        --card: 222 47% 8%; 
+        --card-foreground: 210 40% 98%;
 
-        --popover: 0 0% 7%;
-        --popover-foreground: 0 0% 88%;
+        --popover: 222 47% 8%;
+        --popover-foreground: 210 40% 98%;
 
-        /* Primary: Keep Blue for brand or use Accent? Keeping Blue for now */
-        --primary: 221 83% 53%;
-        --primary-foreground: 0 0% 100%;
+        /* Primary: Lighter Blue for dark mode visibility */
+        --primary: 217 91% 60%;
+        --primary-foreground: 222 47.1% 11.2%;
 
         /* Secondary */
-        --secondary: 0 0% 15%;
-        --secondary-foreground: 0 0% 88%;
+        --secondary: 217.2 32.6% 17.5%;
+        --secondary-foreground: 210 40% 98%;
 
-        /* Muted: Secondary Text #B0B0B0 as fg */
-        --muted: 0 0% 15%;
-        --muted-foreground: 0 0% 69%;
+        /* Muted */
+        --muted: 217.2 32.6% 17.5%;
+        --muted-foreground: 215 20.2% 65.1%;
 
-        /* Accent: #888888 for highlights/ring */
-        --accent: 0 0% 27%;
-        /* Using border color for accent bg */
-        --accent-foreground: 0 0% 88%;
+        /* Accent */
+        --accent: 217.2 32.6% 17.5%;
+        --accent-foreground: 210 40% 98%;
 
+        /* Destructive */
         --destructive: 0 62.8% 30.6%;
-        --destructive-foreground: 0 0% 98%;
+        --destructive-foreground: 210 40% 98%;
 
-        /* Borders: #444444 */
-        --border: 0 0% 27%;
-        --input: 0 0% 27%;
+        /* Borders: Darker, subtle */
+        --border: 217.2 32.6% 17.5%;
+        --input: 217.2 32.6% 17.5%;
+        
+        --ring: 224.3 76.3% 48%;
 
-        /* Ring: Accent #888888 */
-        --ring: 0 0% 53%;
-
-        /* Chart Colors */
-        --chart-1: 221 83% 53%;
-        --chart-2: 142 76% 36%;
-        --chart-3: 38 92% 50%;
-        --chart-4: 262 83% 58%;
-        --chart-5: 215 16% 47%;
+        /* Chart Colors - Adjust for dark mode */
+        --chart-1: 217 91% 60%;
+        --chart-2: 162 70% 50%;
+        --chart-3: 43 96% 64%;
+        --chart-4: 262 83% 68%;
+        --chart-5: 199 89% 58%;
 
         /* Sidebar Dark */
-        --sidebar-background: 0 0% 7%;
-        --sidebar-foreground: 0 0% 69%;
-        --sidebar-primary: 221 83% 53%;
+        --sidebar-background: 222 47% 8%;
+        --sidebar-foreground: 215 20.2% 65.1%;
+        --sidebar-primary: 217 91% 60%;
         --sidebar-primary-foreground: 0 0% 100%;
-        --sidebar-accent: 0 0% 27%;
-        --sidebar-accent-foreground: 0 0% 88%;
-        --sidebar-border: 0 0% 27%;
-        --sidebar-ring: 0 0% 53%;
+        --sidebar-accent: 217.2 32.6% 17.5%;
+        --sidebar-accent-foreground: 210 40% 98%;
+        --sidebar-border: 217.2 32.6% 17.5%;
+        --sidebar-ring: 224.3 76.3% 48%;
     }
 }
 
@@ -139,22 +130,50 @@
     }
 
     body {
-        @apply bg-background text-foreground font-sans antialiased;
+        @apply bg-background text-foreground font-sans antialiased selection:bg-primary/20 selection:text-primary;
+    }
+
+    /* Modern Typography Headings */
+    h1, h2, h3, h4, h5, h6 {
+        @apply font-display tracking-tight text-foreground;
+    }
+}
+
+/* Glassmorphism Utilities */
+@layer utilities {
+    .glass {
+        @apply bg-white/70 backdrop-blur-md border border-white/20 shadow-sm;
+    }
+    
+    .dark .glass {
+        @apply bg-slate-900/70 backdrop-blur-md border border-white/10 shadow-sm;
+    }
+
+    .glass-card {
+        @apply bg-white/70 backdrop-blur-sm border border-border shadow-sm hover:shadow-md transition-all duration-300;
+    }
+
+    .dark .glass-card {
+        @apply bg-card/60 backdrop-blur-sm border border-border/50 hover:bg-card/80;
+    }
+    
+    .glass-sidebar {
+        @apply bg-background/80 backdrop-blur-xl border-r border-border;
     }
 }
 
 .scrollbar-thin::-webkit-scrollbar {
     height: 6px;
+    width: 6px;
 }
 
 .scrollbar-thin::-webkit-scrollbar-track {
-    background: hsl(var(--muted));
-    border-radius: 3px;
+    background: transparent;
 }
 
 .scrollbar-thin::-webkit-scrollbar-thumb {
-    background: hsl(var(--border));
-    border-radius: 3px;
+    background: hsl(var(--muted-foreground) / 0.3);
+    border-radius: 99px;
 }
 
 .scrollbar-thin::-webkit-scrollbar-thumb:hover {

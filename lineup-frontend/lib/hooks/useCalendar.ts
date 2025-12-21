@@ -63,10 +63,11 @@ export function useAvailability(params: AvailabilityQueryParams) {
 }
 
 // Slots Hooks
-export function useSlots(params?: SlotQueryParams) {
+export function useSlots(params?: SlotQueryParams, enabled = true) {
     return useQuery({
         queryKey: calendarKeys.slots(params),
         queryFn: () => getSlots(params),
+        enabled,
     });
 }
 

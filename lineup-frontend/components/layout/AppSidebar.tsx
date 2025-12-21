@@ -164,9 +164,10 @@ export function AppSidebar({
       {/* Desktop Sidebar */}
       <aside
         className={cn(
-          'hidden md:flex flex-col h-full bg-card border-r border-border',
-          'transition-all duration-300 ease-in-out flex-shrink-0',
-          collapsed ? 'w-[72px]' : 'w-64'
+          'hidden md:flex flex-col h-[calc(100vh-2rem)] my-4 ml-4 rounded-2xl border border-white/20 shadow-xl',
+          'transition-all duration-500 ease-spring flex-shrink-0 z-30',
+          'bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl', // Glass effect
+          collapsed ? 'w-[80px]' : 'w-72'
         )}
       >
         <SidebarContent />

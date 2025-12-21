@@ -3,7 +3,8 @@ import { PrismaService } from '../../common/prisma.service';
 import { CreateInterviewDto } from './dto/create-interview.dto';
 import { RescheduleInterviewDto } from './dto/reschedule-interview.dto';
 import { ListInterviewsDto } from './dto/list-interviews.dto';
-import { BulkScheduleDto, BulkScheduleStrategy, BulkScheduleResult } from './dto/bulk-schedule.dto';
+import { BulkScheduleDto, BulkScheduleStrategy, BulkScheduleResult, BulkMode } from './dto/bulk-schedule.dto';
+import { BulkMode as PrismaBulkMode } from '@prisma/client';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { AvailabilityUtil } from './utils/availability.util';
@@ -37,6 +38,9 @@ export class InterviewsService {
         const start = AvailabilityUtil.parseDate(dto.startAt);
         const end = new Date(start.getTime() + dto.durationMins * 60000);
 
+        // Check if candidate already has an active scheduled interview
+        await this.checkCandidateHasActiveInterview(tenantId, dto.candidateId);
+
         await this.checkConflicts(tenantId, dto.interviewerIds, start, end);
 
         const interview = await this.prisma.interview.create({
@@ -56,6 +60,21 @@ export class InterviewsService {
         await this.prisma.auditLog.create({
             data: { tenantId, userId, action: 'INTERVIEW_CREATE', metadata: { id: interview.id } }
         });
+
+        // Create busy blocks for all interviewers to prevent double-booking
+        for (const interviewerId of dto.interviewerIds) {
+            await this.prisma.busyBlock.create({
+                data: {
+                    tenantId,
+                    userId: interviewerId,
+                    startAt: start,
+                    endAt: end,
+                    source: 'interview',
+                    sourceId: interview.id,
+                    reason: 'Interview scheduled',
+                },
+            });
+        }
 
         await this.enqueueReminders(tenantId, interview.id, start);
         await this.syncQueue.add('sync', { interviewId: interview.id, tenantId });
@@ -98,6 +117,14 @@ export class InterviewsService {
         const start = AvailabilityUtil.parseDate(dto.newStartAt);
         const end = new Date(start.getTime() + dto.newDurationMins * 60000);
 
+        // Delete old busy blocks first (to ensure proper availability check)
+        await this.prisma.busyBlock.deleteMany({
+            where: {
+                tenantId,
+                sourceId: id,
+            },
+        });
+
         // Detect conflicts (warn-only, never block)
         const conflicts = await this.detectConflicts(tenantId, interview.interviewerIds, start, end, id);
 
@@ -109,6 +136,21 @@ export class InterviewsService {
                 status: 'SCHEDULED' // Keep as SCHEDULED (not RESCHEDULED) for calendar clarity
             }
         });
+
+        // Create new busy blocks with updated times
+        for (const interviewerId of interview.interviewerIds) {
+            await this.prisma.busyBlock.create({
+                data: {
+                    tenantId,
+                    userId: interviewerId,
+                    startAt: start,
+                    endAt: end,
+                    source: 'interview',
+                    sourceId: id,
+                    reason: 'Interview scheduled',
+                },
+            });
+        }
 
         // Audit log with old and new times
         await this.prisma.auditLog.create({
@@ -226,19 +268,26 @@ export class InterviewsService {
      * Returns array of conflicting interviews for the given time slot
      */
     async detectConflicts(tenantId: string, interviewerIds: string[], start: Date, end: Date, excludeId?: string) {
+        // For an overlap to exist:
+        // - The existing interview's start must be BEFORE the proposed end
+        // - The existing interview's end must be AFTER the proposed start
+        // We can only filter the first condition in Prisma; the second requires JS.
         const potentialConflicts = await this.prisma.interview.findMany({
             where: {
                 tenantId,
                 interviewerIds: { hasSome: interviewerIds },
                 status: { not: 'CANCELLED' },
-                id: excludeId ? { not: excludeId } : undefined,
+                ...(excludeId && { id: { not: excludeId } }),
+                // Interview must start before the proposed slot ends to be a potential overlap
                 date: { lt: end }
             }
         });
 
+        // Filter further: interview must also END after the proposed slot START
         const conflicts = potentialConflicts.filter(i => {
             const iEnd = new Date(i.date.getTime() + i.durationMins * 60000);
-            return i.date < end && iEnd > start;
+            // True overlap: existing interview starts before proposed end AND ends after proposed start
+            return iEnd > start;
         });
 
         return conflicts;
@@ -250,10 +299,38 @@ export class InterviewsService {
      */
     async checkConflicts(tenantId: string, interviewerIds: string[], start: Date, end: Date, excludeId?: string) {
         const conflicts = await this.detectConflicts(tenantId, interviewerIds, start, end, excludeId);
+
         if (conflicts.length > 0) {
             throw new ConflictException({
                 message: 'Interview conflict detected',
                 conflicts: conflicts.map(c => ({ id: c.id, date: c.date, duration: c.durationMins }))
+            });
+        }
+    }
+
+    /**
+     * Check if a candidate already has an active scheduled interview
+     * Throws ConflictException if they do (one-interview-per-candidate rule)
+     */
+    async checkCandidateHasActiveInterview(tenantId: string, candidateId: string, excludeInterviewId?: string) {
+        const existingInterview = await this.prisma.interview.findFirst({
+            where: {
+                tenantId,
+                candidateId,
+                status: 'SCHEDULED',
+                date: { gt: new Date() }, // Only future interviews
+                ...(excludeInterviewId && { id: { not: excludeInterviewId } }),
+            },
+            select: { id: true, date: true, durationMins: true, stage: true },
+        });
+
+        if (existingInterview) {
+            throw new ConflictException({
+                message: 'Candidate already has a scheduled interview',
+                candidateId,
+                reason: 'INTERVIEW_ALREADY_SCHEDULED',
+                existingInterviewId: existingInterview.id,
+                existingInterviewDate: existingInterview.date,
             });
         }
     }
@@ -266,6 +343,15 @@ export class InterviewsService {
         });
         await this.prisma.auditLog.create({
             data: { tenantId, userId, action: 'INTERVIEW_CANCEL', metadata: { id } }
+        });
+
+        // Clean up busy blocks associated with this interview
+        // This prevents stale availability blocks from causing false conflicts
+        await this.prisma.busyBlock.deleteMany({
+            where: {
+                tenantId,
+                sourceId: id,
+            },
         });
 
         const eventPayload: InterviewEventPayload = {
@@ -333,18 +419,30 @@ export class InterviewsService {
 
     /**
      * Bulk schedule interviews for multiple candidates
+     * Supports two explicit modes:
+     * - SEQUENTIAL: One interview per candidate, times staggered by duration
+     * - GROUP: One interview for all candidates at the same time
      */
     async bulkSchedule(tenantId: string, userId: string, dto: BulkScheduleDto): Promise<BulkScheduleResult> {
-        const results: BulkScheduleResult = {
-            total: dto.candidateIds.length,
-            scheduled: 0,
-            failed: 0,
-            interviews: [],
-        };
+        const { v4: uuidv4 } = require('uuid');
+        const bulkBatchId = uuidv4();
+
+        // Determine mode - prefer new bulkMode, fall back to legacy strategy
+        const bulkMode = dto.bulkMode || this.mapLegacyStrategyToMode(dto.strategy);
+        if (!bulkMode) {
+            throw new BadRequestException('bulkMode is required. Use SEQUENTIAL or GROUP.');
+        }
+
+        // Determine start time
+        const startTime = dto.startTime || dto.scheduledTime;
+        if (!startTime) {
+            throw new BadRequestException('startTime is required');
+        }
+        const baseStartTime = new Date(startTime);
 
         // Validate candidates exist
         const candidates = await this.prisma.candidate.findMany({
-            where: { id: { in: dto.candidateIds }, tenantId },
+            where: { id: { in: dto.candidateIds }, tenantId, deletedAt: null },
         });
         const validCandidateIds = new Set(candidates.map(c => c.id));
 
@@ -356,137 +454,315 @@ export class InterviewsService {
             throw new BadRequestException('One or more interviewers not found');
         }
 
-        // Calculate interview slots based on strategy
-        let slots: Array<{ candidateId: string; scheduledAt: Date }> = [];
+        const results: BulkScheduleResult = {
+            total: dto.candidateIds.length,
+            scheduled: 0,
+            skipped: 0,
+            bulkBatchId,
+            bulkMode,
+            created: [],
+            skippedCandidates: [],
+        };
 
-        switch (dto.strategy) {
-            case BulkScheduleStrategy.SAME_TIME:
-                if (!dto.scheduledTime) {
-                    throw new BadRequestException('scheduledTime is required for SAME_TIME strategy');
-                }
-                const sameTime = new Date(dto.scheduledTime);
-                slots = dto.candidateIds.map(candidateId => ({
-                    candidateId,
-                    scheduledAt: sameTime,
-                }));
-                break;
-
-            case BulkScheduleStrategy.AUTO:
-                const rangeStart = dto.rangeStart ? new Date(dto.rangeStart) : new Date();
-                const rangeEnd = dto.rangeEnd ? new Date(dto.rangeEnd) : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-                const interval = (rangeEnd.getTime() - rangeStart.getTime()) / dto.candidateIds.length;
-                slots = dto.candidateIds.map((candidateId, index) => ({
-                    candidateId,
-                    scheduledAt: new Date(rangeStart.getTime() + interval * index),
-                }));
-                break;
-
-            case BulkScheduleStrategy.PER_CANDIDATE:
-                const baseTime = dto.scheduledTime ? new Date(dto.scheduledTime) : new Date();
-                slots = dto.candidateIds.map((candidateId, index) => ({
-                    candidateId,
-                    scheduledAt: new Date(baseTime.getTime() + index * (dto.durationMins + 15) * 60 * 1000),
-                }));
-                break;
+        if (bulkMode === 'GROUP') {
+            // GROUP MODE: Create ONE interview for all candidates at the same time
+            await this.handleGroupMode(tenantId, userId, dto, candidates, validCandidateIds, baseStartTime, bulkBatchId, results);
+        } else {
+            // SEQUENTIAL MODE: Create separate interviews with staggered times
+            await this.handleSequentialMode(tenantId, userId, dto, candidates, validCandidateIds, baseStartTime, bulkBatchId, results);
         }
 
-        // Create interviews for each slot
-        for (const slot of slots) {
-            if (!validCandidateIds.has(slot.candidateId)) {
-                results.interviews.push({ candidateId: slot.candidateId, error: 'Candidate not found' });
-                results.failed++;
-                continue;
-            }
-
-            try {
-                // Get current candidate stage for audit trail
-                const candidate = candidates.find(c => c.id === slot.candidateId);
-                const previousStage = candidate?.stage || 'Unknown';
-                const newStage = dto.stage || 'Interview';
-
-                const interview = await this.prisma.interview.create({
-                    data: {
-                        tenantId,
-                        candidateId: slot.candidateId,
-                        interviewerIds: dto.interviewerIds,
-                        date: slot.scheduledAt,
-                        durationMins: dto.durationMins,
-                        stage: newStage,
-                        status: 'SCHEDULED',
-                    },
-                });
-
-                // Auto-transition candidate stage
-                await this.prisma.candidate.update({
-                    where: { id: slot.candidateId },
-                    data: { stage: newStage },
-                });
-
-                // Record in stage history for full audit trail
-                await this.prisma.candidateStageHistory.create({
-                    data: {
-                        tenantId,
-                        candidateId: slot.candidateId,
-                        previousStage,
-                        newStage,
-                        source: 'SYSTEM',
-                        triggeredBy: 'BULK_SCHEDULE',
-                        actorId: userId,
-                        reason: null,
-                    },
-                });
-
-                // Create busy blocks for each interviewer
-                for (const interviewerId of dto.interviewerIds) {
-                    await this.prisma.busyBlock.create({
-                        data: {
-                            tenantId,
-                            userId: interviewerId,
-                            startAt: slot.scheduledAt,
-                            endAt: new Date(slot.scheduledAt.getTime() + dto.durationMins * 60000),
-                            source: 'interview',
-                            sourceId: interview.id,
-                            reason: 'Bulk scheduled interview',
-                        },
-                    });
-                }
-
-                await this.enqueueReminders(tenantId, interview.id, slot.scheduledAt);
-
-                const eventPayload: InterviewEventPayload = {
-                    tenantId,
-                    interviewId: interview.id,
-                    candidateId: slot.candidateId,
-                    interviewerIds: dto.interviewerIds,
-                    interviewDate: slot.scheduledAt,
-                    interviewTime: slot.scheduledAt.toLocaleTimeString(),
-                    duration: dto.durationMins,
-                    stage: newStage,
-                };
-                await this.automationService.onInterviewCreated(eventPayload);
-
-                results.interviews.push({
-                    candidateId: slot.candidateId,
-                    interviewId: interview.id,
-                    scheduledAt: slot.scheduledAt.toISOString(),
-                });
-                results.scheduled++;
-            } catch (error: any) {
-                results.interviews.push({ candidateId: slot.candidateId, error: error.message || 'Failed to schedule' });
-                results.failed++;
-            }
-        }
-
+        // Audit log
         await this.prisma.auditLog.create({
             data: {
                 tenantId,
                 userId,
                 action: 'BULK_SCHEDULE',
-                metadata: { strategy: dto.strategy, total: results.total, scheduled: results.scheduled, failed: results.failed },
+                metadata: {
+                    bulkMode,
+                    bulkBatchId,
+                    total: results.total,
+                    scheduled: results.scheduled,
+                    skipped: results.skipped,
+                },
             },
         });
 
         return results;
+    }
+
+    /**
+     * Handle GROUP mode: Create one interview for all candidates at the same time
+     */
+    private async handleGroupMode(
+        tenantId: string,
+        userId: string,
+        dto: BulkScheduleDto,
+        candidates: any[],
+        validCandidateIds: Set<string>,
+        startTime: Date,
+        bulkBatchId: string,
+        results: BulkScheduleResult
+    ) {
+        const endTime = new Date(startTime.getTime() + dto.durationMins * 60000);
+        const stage = dto.stage || 'Interview';
+
+        // Check interviewer availability for the slot
+        const conflicts = await this.detectConflicts(tenantId, dto.interviewerIds, startTime, endTime);
+        if (conflicts.length > 0) {
+            // All candidates skipped due to conflict
+            for (const candidateId of dto.candidateIds) {
+                results.skippedCandidates.push({
+                    candidateId,
+                    reason: 'Interviewer unavailable at this time',
+                });
+                results.skipped++;
+            }
+            return;
+        }
+
+        // Filter valid candidates
+        const validCandidates = dto.candidateIds.filter(id => validCandidateIds.has(id));
+        const invalidCandidates = dto.candidateIds.filter(id => !validCandidateIds.has(id));
+
+        // Add invalid candidates to skipped
+        for (const candidateId of invalidCandidates) {
+            results.skippedCandidates.push({ candidateId, reason: 'Candidate not found' });
+            results.skipped++;
+        }
+
+        if (validCandidates.length === 0) {
+            return;
+        }
+
+        // Use first candidate as primary, store all in candidateIds array
+        const primaryCandidateId = validCandidates[0];
+
+        try {
+            // Create ONE interview with multiple candidateIds
+            const interview = await this.prisma.interview.create({
+                data: {
+                    tenantId,
+                    candidateId: primaryCandidateId, // Primary candidate for relation
+                    candidateIds: validCandidates,   // All candidates in group
+                    interviewerIds: dto.interviewerIds,
+                    date: startTime,
+                    durationMins: dto.durationMins,
+                    stage,
+                    status: 'SCHEDULED',
+                    bulkMode: 'GROUP',
+                    bulkBatchId,
+                },
+            });
+
+            // Update all candidates' stages
+            for (const candidateId of validCandidates) {
+                const candidate = candidates.find(c => c.id === candidateId);
+                const previousStage = candidate?.stage || 'Unknown';
+
+                await this.prisma.candidate.update({
+                    where: { id: candidateId },
+                    data: { stage },
+                });
+
+                await this.prisma.candidateStageHistory.create({
+                    data: {
+                        tenantId,
+                        candidateId,
+                        previousStage,
+                        newStage: stage,
+                        source: 'SYSTEM',
+                        triggeredBy: 'BULK_SCHEDULE_GROUP',
+                        actorId: userId,
+                        reason: null,
+                    },
+                });
+
+                results.created.push({
+                    candidateId,
+                    interviewId: interview.id,
+                    scheduledAt: startTime.toISOString(),
+                });
+                results.scheduled++;
+            }
+
+            // Create busy blocks for interviewers
+            for (const interviewerId of dto.interviewerIds) {
+                await this.prisma.busyBlock.create({
+                    data: {
+                        tenantId,
+                        userId: interviewerId,
+                        startAt: startTime,
+                        endAt: endTime,
+                        source: 'interview',
+                        sourceId: interview.id,
+                        reason: 'Group interview scheduled',
+                    },
+                });
+            }
+
+            await this.enqueueReminders(tenantId, interview.id, startTime);
+
+            const eventPayload: InterviewEventPayload = {
+                tenantId,
+                interviewId: interview.id,
+                candidateId: primaryCandidateId,
+                interviewerIds: dto.interviewerIds,
+                interviewDate: startTime,
+                interviewTime: startTime.toLocaleTimeString(),
+                duration: dto.durationMins,
+                stage,
+            };
+            await this.automationService.onInterviewCreated(eventPayload);
+
+        } catch (error: any) {
+            for (const candidateId of validCandidates) {
+                results.skippedCandidates.push({
+                    candidateId,
+                    reason: error.message || 'Failed to create group interview',
+                });
+                results.skipped++;
+            }
+        }
+    }
+
+    /**
+     * Handle SEQUENTIAL mode: Create separate interviews with staggered times
+     */
+    private async handleSequentialMode(
+        tenantId: string,
+        userId: string,
+        dto: BulkScheduleDto,
+        candidates: any[],
+        validCandidateIds: Set<string>,
+        baseStartTime: Date,
+        bulkBatchId: string,
+        results: BulkScheduleResult
+    ) {
+        const stage = dto.stage || 'Interview';
+
+        for (let index = 0; index < dto.candidateIds.length; index++) {
+            const candidateId = dto.candidateIds[index];
+
+            // Check if candidate is valid
+            if (!validCandidateIds.has(candidateId)) {
+                results.skippedCandidates.push({ candidateId, reason: 'Candidate not found' });
+                results.skipped++;
+                continue;
+            }
+
+            // Calculate slot time: baseStartTime + (index * durationMins)
+            const slotStart = new Date(baseStartTime.getTime() + index * dto.durationMins * 60000);
+            const slotEnd = new Date(slotStart.getTime() + dto.durationMins * 60000);
+
+            // Check availability for this slot
+            const conflicts = await this.detectConflicts(tenantId, dto.interviewerIds, slotStart, slotEnd);
+            if (conflicts.length > 0) {
+                results.skippedCandidates.push({
+                    candidateId,
+                    reason: `Interviewer unavailable at ${slotStart.toISOString()}`,
+                });
+                results.skipped++;
+                continue;
+            }
+
+            try {
+                const candidate = candidates.find(c => c.id === candidateId);
+                const previousStage = candidate?.stage || 'Unknown';
+
+                const interview = await this.prisma.interview.create({
+                    data: {
+                        tenantId,
+                        candidateId,
+                        interviewerIds: dto.interviewerIds,
+                        date: slotStart,
+                        durationMins: dto.durationMins,
+                        stage,
+                        status: 'SCHEDULED',
+                        bulkMode: 'SEQUENTIAL',
+                        bulkBatchId,
+                    },
+                });
+
+                // Update candidate stage
+                await this.prisma.candidate.update({
+                    where: { id: candidateId },
+                    data: { stage },
+                });
+
+                await this.prisma.candidateStageHistory.create({
+                    data: {
+                        tenantId,
+                        candidateId,
+                        previousStage,
+                        newStage: stage,
+                        source: 'SYSTEM',
+                        triggeredBy: 'BULK_SCHEDULE_SEQUENTIAL',
+                        actorId: userId,
+                        reason: null,
+                    },
+                });
+
+                // Create busy blocks for interviewers
+                for (const interviewerId of dto.interviewerIds) {
+                    await this.prisma.busyBlock.create({
+                        data: {
+                            tenantId,
+                            userId: interviewerId,
+                            startAt: slotStart,
+                            endAt: slotEnd,
+                            source: 'interview',
+                            sourceId: interview.id,
+                            reason: 'Sequential bulk scheduled interview',
+                        },
+                    });
+                }
+
+                await this.enqueueReminders(tenantId, interview.id, slotStart);
+
+                const eventPayload: InterviewEventPayload = {
+                    tenantId,
+                    interviewId: interview.id,
+                    candidateId,
+                    interviewerIds: dto.interviewerIds,
+                    interviewDate: slotStart,
+                    interviewTime: slotStart.toLocaleTimeString(),
+                    duration: dto.durationMins,
+                    stage,
+                };
+                await this.automationService.onInterviewCreated(eventPayload);
+
+                results.created.push({
+                    candidateId,
+                    interviewId: interview.id,
+                    scheduledAt: slotStart.toISOString(),
+                });
+                results.scheduled++;
+
+            } catch (error: any) {
+                results.skippedCandidates.push({
+                    candidateId,
+                    reason: error.message || 'Failed to schedule',
+                });
+                results.skipped++;
+            }
+        }
+    }
+
+    /**
+     * Map legacy strategy to new BulkMode
+     */
+    private mapLegacyStrategyToMode(strategy?: BulkScheduleStrategy): BulkMode | null {
+        if (!strategy) return null;
+        switch (strategy) {
+            case BulkScheduleStrategy.SAME_TIME:
+                return BulkMode.GROUP;
+            case BulkScheduleStrategy.PER_CANDIDATE:
+            case BulkScheduleStrategy.AUTO:
+                return BulkMode.SEQUENTIAL;
+            default:
+                return null;
+        }
     }
 
     private async enqueueReminders(tenantId: string, interviewId: string, start: Date) {

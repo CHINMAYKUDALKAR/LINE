@@ -102,6 +102,8 @@ let CandidatesService = class CandidatesService {
             where.stage = dto.stage;
         if (dto.source)
             where.source = dto.source;
+        if (dto.role)
+            where.roleTitle = { contains: dto.role, mode: 'insensitive' };
         if (dto.recruiterId && dto.recruiterId !== 'all')
             where.createdById = dto.recruiterId;
         if (dto.dateFrom || dto.dateTo) {
@@ -138,7 +140,27 @@ let CandidatesService = class CandidatesService {
                 }
             })
         ]);
-        return { data, meta: { total, page, perPage, lastPage: Math.ceil(total / perPage) } };
+        const candidateIds = data.map(c => c.id);
+        const now = new Date();
+        console.log('[DEBUG] Checking active interviews for', candidateIds.length, 'candidates, now:', now.toISOString());
+        const activeInterviews = await this.prisma.interview.findMany({
+            where: {
+                tenantId,
+                candidateId: { in: candidateIds },
+                status: 'SCHEDULED',
+                date: { gt: now },
+            },
+            select: { candidateId: true, id: true, date: true, status: true },
+        });
+        console.log('[DEBUG] Found', activeInterviews.length, 'active interviews:', activeInterviews.map(i => ({ candidateId: i.candidateId, date: i.date, status: i.status })));
+        const activeInterviewMap = new Map(activeInterviews.map(i => [i.candidateId, { interviewId: i.id, interviewDate: i.date }]));
+        const enrichedData = data.map(candidate => ({
+            ...candidate,
+            hasActiveInterview: activeInterviewMap.has(candidate.id),
+            activeInterviewId: activeInterviewMap.get(candidate.id)?.interviewId,
+            activeInterviewDate: activeInterviewMap.get(candidate.id)?.interviewDate,
+        }));
+        return { data: enrichedData, meta: { total, page, perPage, lastPage: Math.ceil(total / perPage) } };
     }
     async delete(tenantId, userId, id) {
         const candidate = await this.prisma.candidate.findUnique({

@@ -12,6 +12,19 @@ import { ScheduleInterviewModal } from '@/components/scheduling/ScheduleIntervie
 import { BulkScheduleModal } from '@/components/scheduling/BulkScheduleModal';
 import { useSlots, useCancelSlot, useRescheduleSlot, calendarKeys } from '@/lib/hooks/useCalendar';
 import { useQueryClient, useQuery } from '@tanstack/react-query';
+import {
+    format,
+    startOfWeek,
+    endOfWeek,
+    startOfMonth,
+    endOfMonth,
+    addDays,
+    addWeeks,
+    addMonths,
+    subDays,
+    subWeeks,
+    subMonths,
+} from 'date-fns';
 import { slotsToCalendarEvents, getCalendarDateRange, interviewsToCalendarEvents } from '@/lib/calendar-utils';
 import { getInterviews } from '@/lib/api/interviews';
 import { useAuth } from '@/lib/auth-context';
@@ -30,11 +43,17 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { format, addHours } from 'date-fns';
+import { addHours } from 'date-fns';
 import { fadeInUp, staggerContainer, staggerItem } from '@/lib/animations';
 
+// Mock current user
+const CURRENT_USER = {
+    id: 'user-1',
+    role: 'admin' as any, // Changed to any to match original userRole type
+};
+
 export default function Calendar() {
-    const { activeTenantId, tenants } = useAuth();
+    const { activeTenantId, tenants, isAuthenticated, isLoading: authLoading } = useAuth();
     const activeTenant = tenants.find(t => t.id === activeTenantId);
     const userRole = (activeTenant?.role?.toLowerCase() as any) || 'recruiter';
     const queryClient = useQueryClient();
@@ -77,7 +96,7 @@ export default function Calendar() {
     } = useSlots({
         start: dateRange.start.toISOString(),
         end: dateRange.end.toISOString(),
-    });
+    }, isAuthenticated && !authLoading);
 
     // Fetch interviews from API
     const {
@@ -90,9 +109,11 @@ export default function Calendar() {
             from: dateRange.start.toISOString(),
             to: dateRange.end.toISOString(),
         }),
+        enabled: isAuthenticated && !authLoading, // Wait for auth to be ready
     });
 
-    const isLoading = slotsLoading || interviewsLoading;
+    // Include auth loading in overall loading state
+    const isLoading = authLoading || slotsLoading || interviewsLoading;
     const error = slotsError || interviewsError;
 
     // Cancel and reschedule mutations
@@ -149,6 +170,59 @@ export default function Calendar() {
         setSelectedSlotDate(undefined);
         setIsCreateSlotOpen(true);
     };
+
+    // Date Navigation Logic
+    const handleNavigate = (direction: 'prev' | 'next') => {
+        switch (view) {
+            case 'day':
+                setCurrentDate(direction === 'next' ? addDays(currentDate, 1) : subDays(currentDate, 1));
+                break;
+            case 'week':
+                setCurrentDate(direction === 'next' ? addWeeks(currentDate, 1) : subWeeks(currentDate, 1));
+                break;
+            case 'month':
+                setCurrentDate(direction === 'next' ? addMonths(currentDate, 1) : subMonths(currentDate, 1));
+                break;
+        }
+    };
+
+    // Keyboard Shortcuts
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            // Ignore if user is typing in an input
+            if (
+                document.activeElement?.tagName === 'INPUT' ||
+                document.activeElement?.tagName === 'TEXTAREA' ||
+                (document.activeElement as HTMLElement).isContentEditable
+            ) {
+                return;
+            }
+
+            switch (e.key.toLowerCase()) {
+                case 't':
+                    setCurrentDate(new Date());
+                    break;
+                case 'w':
+                    setView('week');
+                    break;
+                case 'm':
+                    setView('month');
+                    break;
+                case 'd':
+                    setView('day');
+                    break;
+                case 'arrowright':
+                    handleNavigate('next');
+                    break;
+                case 'arrowleft':
+                    handleNavigate('prev');
+                    break;
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [view, currentDate]); // Re-bind when view/date changes to capture correct closure state
 
     // Called from DnD/Resize with modified event data - auto-save
     const handleReschedule = async (event: CalendarEvent) => {

@@ -145,6 +145,18 @@ export class NoShowDetectionProcessor extends WorkerHost {
             }
         });
 
+        // Delete associated BusyBlocks to free up the time slot
+        const deletedBlocks = await this.prisma.busyBlock.deleteMany({
+            where: {
+                tenantId: interview.tenantId,
+                source: 'interview',
+                sourceId: interview.id
+            }
+        });
+        if (deletedBlocks.count > 0) {
+            this.logger.log(`Deleted ${deletedBlocks.count} BusyBlock(s) for no-show interview ${interview.id}`);
+        }
+
         // Audit log
         await this.prisma.auditLog.create({
             data: {

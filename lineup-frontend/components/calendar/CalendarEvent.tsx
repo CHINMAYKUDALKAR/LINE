@@ -9,25 +9,25 @@ interface CalendarEventProps {
 }
 
 const stageColors: Record<string, string> = {
-  received: 'bg-slate-100 text-slate-700 border-slate-200',
-  screening: 'bg-blue-50 text-blue-700 border-blue-200',
-  'interview-1': 'bg-indigo-50 text-indigo-700 border-indigo-200',
-  'interview-2': 'bg-violet-50 text-violet-700 border-violet-200',
-  'hr-round': 'bg-amber-50 text-amber-700 border-amber-200',
-  offer: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+  received: 'bg-slate-500/10 text-slate-700 border-slate-200/50 hover:bg-slate-500/20',
+  screening: 'bg-blue-500/10 text-blue-700 border-blue-200/50 hover:bg-blue-500/20',
+  'interview-1': 'bg-indigo-500/10 text-indigo-700 border-indigo-200/50 hover:bg-indigo-500/20',
+  'interview-2': 'bg-violet-500/10 text-violet-700 border-violet-200/50 hover:bg-violet-500/20',
+  'hr-round': 'bg-amber-500/10 text-amber-700 border-amber-200/50 hover:bg-amber-500/20',
+  offer: 'bg-emerald-500/10 text-emerald-700 border-emerald-200/50 hover:bg-emerald-500/20',
 };
 
 const statusColors: Record<string, string> = {
-  scheduled: 'bg-primary/10 text-primary',
-  completed: 'bg-emerald-100 text-emerald-700',
-  cancelled: 'bg-muted text-muted-foreground',
-  'no-show': 'bg-destructive/10 text-destructive',
-  'pending-feedback': 'bg-amber-100 text-amber-700',
+  scheduled: 'bg-primary/10 text-primary border-primary/20',
+  completed: 'bg-emerald-500/10 text-emerald-700 border-emerald-500/20',
+  cancelled: 'bg-muted/50 text-muted-foreground border-border/50',
+  'no-show': 'bg-destructive/10 text-destructive border-destructive/20',
+  'pending-feedback': 'bg-amber-500/10 text-amber-700 border-amber-500/20',
 };
 
 export function CalendarEventCard({ event, compact = false, onClick }: CalendarEventProps) {
   const stageColor = stageColors[event.stage] || stageColors.received;
-  
+
   if (compact) {
     return (
       <button

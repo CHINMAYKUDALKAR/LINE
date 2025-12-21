@@ -95,11 +95,15 @@ export function ScheduleInterviewModal({ open, onOpenChange, onSuccess, initialD
             name: c.name,
             email: c.email,
             phone: c.phone,
-            role: c.roleApplied || c.position || 'Unknown Role',
+            role: c.roleTitle || c.roleApplied || c.position || 'Unknown Role',
             stage: c.stage || 'applied',
             hasResume: !!c.resumeUrl,
             priorInterviews: c.interviewCount || 0,
             appliedDate: c.createdAt,
+            // Interview scheduling conflict fields
+            hasActiveInterview: c.hasActiveInterview || false,
+            activeInterviewId: c.activeInterviewId,
+            activeInterviewDate: c.activeInterviewDate,
           }));
           setCandidates(mappedCandidates);
 
@@ -215,9 +219,19 @@ export function ScheduleInterviewModal({ open, onOpenChange, onSuccess, initialD
       onSuccess?.();
     } catch (error: any) {
       const errorMessage = error?.message || '';
+      const errorReason = error?.reason || '';
 
-      // Check for conflict error and show as warning, not error
-      if (errorMessage.toLowerCase().includes('conflict')) {
+      // Check for candidate already has interview error
+      if (errorMessage.toLowerCase().includes('already has a scheduled interview') ||
+        errorReason === 'INTERVIEW_ALREADY_SCHEDULED') {
+        toast({
+          title: 'Candidate Already Scheduled',
+          description: 'This candidate already has an upcoming interview. Cancel or complete it before scheduling a new one.',
+          variant: 'destructive',
+        });
+      }
+      // Check for interviewer time conflict error
+      else if (errorMessage.toLowerCase().includes('conflict')) {
         toast({
           title: 'Scheduling Conflict',
           description: 'One or more interviewers are not available at this time. Please choose a different time slot or select different interviewers.',
@@ -246,8 +260,8 @@ export function ScheduleInterviewModal({ open, onOpenChange, onSuccess, initialD
 
         <div className="flex h-full min-h-0 flex-col md:flex-row">
           {/* Sidebar Stepper - Hidden on mobile */}
-          <div className="hidden md:flex w-56 flex-shrink-0 bg-muted/30 border-r border-border p-6 flex-col">
-            <h2 className="text-lg font-semibold text-foreground mb-1">Schedule Interview</h2>
+          <div className="hidden md:flex w-64 flex-shrink-0 bg-muted/40 backdrop-blur-md border-r border-border/50 p-6 flex-col">
+            <h2 className="text-lg font-semibold text-foreground mb-1 tracking-tight">Schedule Interview</h2>
             <p className="text-xs text-muted-foreground mb-8">Set up a new interview session</p>
 
             <nav className="flex-1 space-y-2" aria-label="Progress">
@@ -272,13 +286,13 @@ export function ScheduleInterviewModal({ open, onOpenChange, onSuccess, initialD
                       <div
                         className={cn(
                           'w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-colors',
-                          isActive && 'bg-primary text-primary-foreground',
+                          isActive && 'bg-primary text-primary-foreground shadow-sm ring-2 ring-primary/20',
                           isCompleted && 'bg-primary/20 text-primary',
-                          !isActive && !isCompleted && 'bg-secondary text-muted-foreground'
+                          !isActive && !isCompleted && 'bg-secondary/50 text-muted-foreground border border-border/50'
                         )}
                       >
                         {isCompleted ? (
-                          <Check className="h-4 w-4" />
+                          <Check className="h-3.5 w-3.5" />
                         ) : (
                           <Icon className="h-4 w-4" />
                         )}

@@ -90,6 +90,7 @@ export async function listCandidates(
         perPage?: number;
         stage?: string;
         source?: string;
+        role?: string;
         q?: string;
     }
 ) {
@@ -98,6 +99,7 @@ export async function listCandidates(
     if (params?.perPage) backendParams.perPage = params.perPage;
     if (params?.stage) backendParams.stage = params.stage;
     if (params?.source) backendParams.source = params.source;
+    if (params?.role) backendParams.role = params.role;
     if (params?.q) backendParams.q = params.q;
 
     return client.get("/candidates", { params: backendParams });

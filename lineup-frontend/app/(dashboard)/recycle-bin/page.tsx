@@ -156,26 +156,28 @@ export default function RecycleBinPage() {
             {/* Stats Cards */}
             {stats && (
                 <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
-                    <Card>
+                    <Card className="bg-card/40 backdrop-blur-sm border-border/50 shadow-sm">
                         <CardContent className="p-4">
                             <div className="flex items-center justify-between">
                                 <div>
                                     <p className="text-sm text-muted-foreground">Total Deleted</p>
                                     <p className="text-2xl font-bold">{stats.total}</p>
                                 </div>
-                                <Trash2 className="h-8 w-8 text-muted-foreground" />
+                                <Trash2 className="h-8 w-8 text-primary/20" />
                             </div>
                         </CardContent>
                     </Card>
                     {stats.byModule.map(({ module, count }) => (
-                        <Card key={module}>
+                        <Card key={module} className="bg-card/40 backdrop-blur-sm border-border/50 shadow-sm transition-all hover:bg-card/60">
                             <CardContent className="p-4">
                                 <div className="flex items-center justify-between">
                                     <div>
                                         <p className="text-sm text-muted-foreground capitalize">{module}s</p>
                                         <p className="text-2xl font-bold">{count}</p>
                                     </div>
-                                    {getModuleIcon(module)}
+                                    <div className="text-primary/40">
+                                        {getModuleIcon(module)}
+                                    </div>
                                 </div>
                             </CardContent>
                         </Card>

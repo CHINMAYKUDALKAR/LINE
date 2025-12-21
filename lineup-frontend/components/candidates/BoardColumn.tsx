@@ -17,10 +17,10 @@ export function BoardColumn({ id, title, candidates, onCardClick }: BoardColumnP
     const { setNodeRef } = useDroppable({ id });
 
     return (
-        <div className="flex flex-col h-full bg-muted/30 rounded-lg border border-border/50">
-            <div className="p-3 border-b border-border/50 bg-muted/20 rounded-t-lg flex items-center justify-between">
-                <h3 className="font-semibold text-sm">{title}</h3>
-                <span className="text-xs font-medium text-muted-foreground bg-background px-2 py-0.5 rounded-full border">
+        <div className="flex flex-col h-full bg-muted/40 backdrop-blur-sm rounded-xl border border-border/50 shadow-sm transition-all hover:bg-muted/50">
+            <div className="p-3 border-b border-border/40 flex items-center justify-between">
+                <h3 className="font-semibold text-sm text-foreground/90">{title}</h3>
+                <span className="text-xs font-medium text-primary bg-primary/10 px-2 py-0.5 rounded-full border border-primary/20">
                     {candidates.length}
                 </span>
             </div>

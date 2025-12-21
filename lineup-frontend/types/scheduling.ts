@@ -8,6 +8,10 @@ export interface Candidate {
   hasResume: boolean;
   priorInterviews: number;
   appliedDate: string;
+  // Interview scheduling conflict fields
+  hasActiveInterview?: boolean;
+  activeInterviewId?: string;
+  activeInterviewDate?: string;
 }
 
 export interface Interviewer {

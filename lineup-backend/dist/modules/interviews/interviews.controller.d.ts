@@ -21,6 +21,9 @@ export declare class InterviewsController {
         avgRating: number | null;
         hasFeedback: boolean;
         isNoShow: boolean;
+        bulkMode: import(".prisma/client").$Enums.BulkMode | null;
+        bulkBatchId: string | null;
+        candidateIds: string[];
         createdAt: Date;
         updatedAt: Date;
         deletedAt: Date | null;
@@ -41,6 +44,9 @@ export declare class InterviewsController {
             avgRating: number | null;
             hasFeedback: boolean;
             isNoShow: boolean;
+            bulkMode: import(".prisma/client").$Enums.BulkMode | null;
+            bulkBatchId: string | null;
+            candidateIds: string[];
             createdAt: Date;
             updatedAt: Date;
             deletedAt: Date | null;
@@ -74,6 +80,9 @@ export declare class InterviewsController {
             avgRating: number | null;
             hasFeedback: boolean;
             isNoShow: boolean;
+            bulkMode: import(".prisma/client").$Enums.BulkMode | null;
+            bulkBatchId: string | null;
+            candidateIds: string[];
             createdAt: Date;
             updatedAt: Date;
             deletedAt: Date | null;
@@ -113,6 +122,9 @@ export declare class InterviewsController {
         avgRating: number | null;
         hasFeedback: boolean;
         isNoShow: boolean;
+        bulkMode: import(".prisma/client").$Enums.BulkMode | null;
+        bulkBatchId: string | null;
+        candidateIds: string[];
         createdAt: Date;
         updatedAt: Date;
         deletedAt: Date | null;
@@ -140,6 +152,9 @@ export declare class InterviewsController {
         avgRating: number | null;
         hasFeedback: boolean;
         isNoShow: boolean;
+        bulkMode: import(".prisma/client").$Enums.BulkMode | null;
+        bulkBatchId: string | null;
+        candidateIds: string[];
         createdAt: Date;
         updatedAt: Date;
         deletedAt: Date | null;
@@ -161,6 +176,9 @@ export declare class InterviewsController {
         avgRating: number | null;
         hasFeedback: boolean;
         isNoShow: boolean;
+        bulkMode: import(".prisma/client").$Enums.BulkMode | null;
+        bulkBatchId: string | null;
+        candidateIds: string[];
         createdAt: Date;
         updatedAt: Date;
         deletedAt: Date | null;

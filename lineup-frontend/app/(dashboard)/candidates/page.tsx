@@ -41,6 +41,7 @@ import {
 export default function Candidates() {
     const [filters, setFilters] = useState<CandidateListFilters>({
         search: '',
+        role: '',
         stage: 'all',
         source: 'all',
         recruiterId: 'all',
@@ -77,6 +78,7 @@ export default function Candidates() {
         page,
         perPage,
         q: filters.search || undefined,
+        role: filters.role || undefined,
         stage: filters.stage !== 'all' ? filters.stage : undefined,
         source: filters.source !== 'all' ? filters.source : undefined,
         recruiterId: filters.recruiterId !== 'all' ? filters.recruiterId : undefined,

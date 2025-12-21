@@ -83,6 +83,7 @@ export function CandidateFilters({ filters, onFiltersChange }: CandidateFiltersP
     onFiltersChange({
       ...filters,
       search: '', // Also clear search
+      role: '',
       stage: 'all',
       source: 'all',
       recruiterId: 'all',
@@ -120,6 +121,13 @@ export function CandidateFilters({ filters, onFiltersChange }: CandidateFiltersP
         setSearchValue('');
         onFiltersChange({ ...filters, search: '' });
       },
+    });
+  }
+  if (filters.role) {
+    activeFilterChips.push({
+      key: 'role',
+      label: `Role: ${filters.role}`,
+      onRemove: () => onFiltersChange({ ...filters, role: '' }),
     });
   }
   if (filters.stage !== 'all') {
@@ -169,6 +177,16 @@ export function CandidateFilters({ filters, onFiltersChange }: CandidateFiltersP
             value={searchValue}
             onChange={(e) => setSearchValue(e.target.value)}
             className="pl-10 bg-background"
+          />
+        </div>
+
+        {/* Role Filter - Advanced */}
+        <div className="relative flex-1 max-w-xs">
+          <Input
+            placeholder="Filter by role..."
+            value={filters.role || ''}
+            onChange={(e) => onFiltersChange({ ...filters, role: e.target.value })}
+            className="bg-background"
           />
         </div>
 

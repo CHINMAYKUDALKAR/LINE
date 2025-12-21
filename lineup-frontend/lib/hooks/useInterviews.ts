@@ -30,23 +30,29 @@ export interface BulkScheduleRequest {
     candidateIds: string[];
     interviewerIds: string[];
     durationMins: number;
-    strategy: 'AUTO' | 'SAME_TIME' | 'PER_CANDIDATE';
+    bulkMode: 'SEQUENTIAL' | 'GROUP';
+    startTime: string;
     stage?: string;
-    scheduledTime?: string;
-    rangeStart?: string;
-    rangeEnd?: string;
     timezone?: string;
+    // Legacy fields for backward compatibility
+    strategy?: 'AUTO' | 'SAME_TIME' | 'PER_CANDIDATE';
+    scheduledTime?: string;
 }
 
 export interface BulkScheduleResult {
     total: number;
     scheduled: number;
-    failed: number;
-    interviews: Array<{
+    skipped: number;
+    bulkBatchId: string;
+    bulkMode: 'SEQUENTIAL' | 'GROUP';
+    created: Array<{
         candidateId: string;
-        interviewId?: string;
-        scheduledAt?: string;
-        error?: string;
+        interviewId: string;
+        scheduledAt: string;
+    }>;
+    skippedCandidates: Array<{
+        candidateId: string;
+        reason: string;
     }>;
 }
 

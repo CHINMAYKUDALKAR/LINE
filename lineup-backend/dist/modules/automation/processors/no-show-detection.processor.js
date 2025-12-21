@@ -106,6 +106,16 @@ let NoShowDetectionProcessor = NoShowDetectionProcessor_1 = class NoShowDetectio
                 status: 'NO_SHOW'
             }
         });
+        const deletedBlocks = await this.prisma.busyBlock.deleteMany({
+            where: {
+                tenantId: interview.tenantId,
+                source: 'interview',
+                sourceId: interview.id
+            }
+        });
+        if (deletedBlocks.count > 0) {
+            this.logger.log(`Deleted ${deletedBlocks.count} BusyBlock(s) for no-show interview ${interview.id}`);
+        }
         await this.prisma.auditLog.create({
             data: {
                 tenantId: interview.tenantId,

@@ -41,15 +41,14 @@ export default function TenantSettings() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F7F9FC]">
+    <div className="min-h-screen bg-transparent">
       <motion.div
         initial="initial"
         animate="animate"
         variants={staggerContainer}
       >
         {/* Header */}
-        {/* Header */}
-        <motion.div variants={fadeInUp} className="border-b border-[#E5E7EB] bg-[#FFFFFF]">
+        <motion.div variants={fadeInUp} className="border-b border-border/40 bg-background/50 backdrop-blur-md sticky top-0 z-10">
           <div className="w-full p-4 md:px-8 md:py-8">
             <h1 className="text-3xl font-bold text-foreground">
               Tenant Settings
@@ -64,53 +63,55 @@ export default function TenantSettings() {
         {/* Content */}
         <motion.div variants={staggerItem} className="w-full p-4 md:px-8 md:py-8">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="flex flex-wrap h-auto gap-2 p-1 bg-[#FFFFFF] border border-[#E5E7EB] mb-8">
-              <TabsTrigger value="branding" className="flex-1 min-w-[120px] py-2">Branding</TabsTrigger>
-              <TabsTrigger value="domain" className="flex-1 min-w-[120px] py-2">Domain & URLs</TabsTrigger>
-              <TabsTrigger value="auth" className="flex-1 min-w-[120px] py-2">Auth & SSO</TabsTrigger>
-              <TabsTrigger value="security" className="flex-1 min-w-[120px] py-2">Security</TabsTrigger>
-              <TabsTrigger value="email" className="flex-1 min-w-[120px] py-2">Email/SMTP</TabsTrigger>
-              <TabsTrigger value="calendar" className="flex-1 min-w-[120px] py-2">Calendar</TabsTrigger>
-              <TabsTrigger value="hiring-stages" className="flex-1 min-w-[120px] py-2">Hiring Stages</TabsTrigger>
-              <TabsTrigger value="api-keys" className="flex-1 min-w-[120px] py-2">API Keys</TabsTrigger>
-              <TabsTrigger value="audit" className="flex-1 min-w-[120px] py-2">Audit Logs</TabsTrigger>
+            <TabsList className="flex flex-wrap h-auto gap-2 p-1 bg-muted/40 backdrop-blur-sm border border-border/50 mb-8 rounded-lg">
+              <TabsTrigger value="branding" className="flex-1 min-w-[120px] py-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">Branding</TabsTrigger>
+              <TabsTrigger value="domain" className="flex-1 min-w-[120px] py-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">Domain & URLs</TabsTrigger>
+              <TabsTrigger value="auth" className="flex-1 min-w-[120px] py-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">Auth & SSO</TabsTrigger>
+              <TabsTrigger value="security" className="flex-1 min-w-[120px] py-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">Security</TabsTrigger>
+              <TabsTrigger value="email" className="flex-1 min-w-[120px] py-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">Email/SMTP</TabsTrigger>
+              <TabsTrigger value="calendar" className="flex-1 min-w-[120px] py-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">Calendar</TabsTrigger>
+              <TabsTrigger value="hiring-stages" className="flex-1 min-w-[120px] py-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">Hiring Stages</TabsTrigger>
+              <TabsTrigger value="api-keys" className="flex-1 min-w-[120px] py-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">API Keys</TabsTrigger>
+              <TabsTrigger value="audit" className="flex-1 min-w-[120px] py-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">Audit Logs</TabsTrigger>
             </TabsList>
 
-            <TabsContent value="branding">
-              <BrandingTab />
-            </TabsContent>
+            <div className="bg-card/40 backdrop-blur-sm border border-border/50 rounded-xl p-6 shadow-sm">
+              <TabsContent value="branding" className="mt-0">
+                <BrandingTab />
+              </TabsContent>
 
-            <TabsContent value="domain">
-              <DomainTab />
-            </TabsContent>
+              <TabsContent value="domain" className="mt-0">
+                <DomainTab />
+              </TabsContent>
 
-            <TabsContent value="auth">
-              <AuthSSOTab />
-            </TabsContent>
+              <TabsContent value="auth" className="mt-0">
+                <AuthSSOTab />
+              </TabsContent>
 
-            <TabsContent value="security">
-              <SecurityTab />
-            </TabsContent>
+              <TabsContent value="security" className="mt-0">
+                <SecurityTab />
+              </TabsContent>
 
-            <TabsContent value="email">
-              <EmailTab />
-            </TabsContent>
+              <TabsContent value="email" className="mt-0">
+                <EmailTab />
+              </TabsContent>
 
-            <TabsContent value="calendar">
-              <CalendarSchedulingTab />
-            </TabsContent>
+              <TabsContent value="calendar" className="mt-0">
+                <CalendarSchedulingTab />
+              </TabsContent>
 
-            <TabsContent value="hiring-stages">
-              <HiringStagesTab />
-            </TabsContent>
+              <TabsContent value="hiring-stages" className="mt-0">
+                <HiringStagesTab />
+              </TabsContent>
 
-            <TabsContent value="api-keys">
-              <ApiKeysTab />
-            </TabsContent>
+              <TabsContent value="api-keys" className="mt-0">
+                <ApiKeysTab />
+              </TabsContent>
 
-            <TabsContent value="audit">
-              <AuditLogsTab />
-            </TabsContent>
+              <TabsContent value="audit" className="mt-0">
+                <AuditLogsTab />
+              </TabsContent>
+            </div>
           </Tabs>
         </motion.div>
       </motion.div>

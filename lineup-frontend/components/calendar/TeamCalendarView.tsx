@@ -151,7 +151,7 @@ export function TeamCalendarView({
                     </div>
                 ) : (
                     <div className="overflow-x-auto">
-                        <div className="min-w-[800px]">
+                        <div className="min-w-[600px]">
                             {/* Header - Days */}
                             <div className="grid grid-cols-8 border-b">
                                 <div className="p-2 text-sm text-muted-foreground" />

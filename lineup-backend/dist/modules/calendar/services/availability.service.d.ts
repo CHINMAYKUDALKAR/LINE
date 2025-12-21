@@ -16,6 +16,7 @@ export declare class AvailabilityService {
     invalidateTenantCache(tenantId: string): Promise<void>;
     getFreeIntervals(tenantId: string, userId: string, start: Date, end: Date): Promise<TimeInterval[]>;
     private computeFreeIntervals;
+    private getUserTimezone;
     private getCachedBusyBlocks;
     getMultiUserAvailability(tenantId: string, userIds: string[], start: Date, end: Date, durationMins: number, ruleId?: string): Promise<MultiUserAvailabilityResult>;
     private expandWeeklyPattern;

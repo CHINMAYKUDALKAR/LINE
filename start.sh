@@ -141,6 +141,10 @@ if port_in_use 3000; then
 else
     cd "$SCRIPT_DIR/lineup-frontend"
     
+    # Clean previous build to prevent ChunkLoadErrors
+    echo -e "${BLUE}Cleaning frontend cache...${NC}"
+    rm -rf .next
+    
     # Install deps if needed
     if [ ! -d "node_modules" ]; then
         echo -e "${BLUE}Installing frontend dependencies...${NC}"
@@ -198,8 +202,22 @@ echo -e "${YELLOW}Press Ctrl+C to stop all services${NC}"
 cleanup() {
     echo ""
     echo -e "${YELLOW}Stopping services...${NC}"
-    pkill -f "lineup-backend" 2>/dev/null || true
-    pkill -f "lineup-frontend" 2>/dev/null || true
+    
+    # Kill processes by port - more reliable than pattern matching
+    # Kill backend (port 4000)
+    if port_in_use 4000; then
+        lsof -ti:4000 | xargs kill -9 2>/dev/null || true
+    fi
+    
+    # Kill frontend (port 3000)
+    if port_in_use 3000; then
+        lsof -ti:3000 | xargs kill -9 2>/dev/null || true
+    fi
+    
+    # Also try the original pattern matching as fallback
+    pkill -f "nest start" 2>/dev/null || true
+    pkill -f "next dev" 2>/dev/null || true
+    
     echo -e "${GREEN}Done!${NC}"
     exit 0
 }

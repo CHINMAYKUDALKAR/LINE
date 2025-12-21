@@ -1,6 +1,7 @@
 import { cn } from '@/lib/utils';
 import { TrendingUp, TrendingDown, Calendar, Clock, CheckCircle, XCircle, LucideIcon, ArrowRight } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Area, AreaChart, ResponsiveContainer } from 'recharts';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface KPICardProps {
@@ -11,9 +12,10 @@ interface KPICardProps {
   description: string;
   isLoading?: boolean;
   onClick?: () => void;
+  data: number[];
 }
 
-export function KPICard({ title, value, trend, icon: Icon, description, isLoading, onClick }: KPICardProps) {
+export function KPICard({ title, value, trend, icon: Icon, description, isLoading, onClick, data }: KPICardProps) {
   const isPositive = trend >= 0;
 
   if (isLoading) {
@@ -52,8 +54,28 @@ export function KPICard({ title, value, trend, icon: Icon, description, isLoadin
               <Icon className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary" />
             </div>
           </div>
-          <div className="mt-3 sm:mt-4">
+          <div className="mt-3 sm:mt-4 flex items-center justify-between">
             <span className="text-2xl sm:text-3xl font-bold text-foreground tracking-tight">{value}</span>
+            <div className="h-8 w-16 sm:h-10 sm:w-20">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={data.map((val, i) => ({ value: val, index: i }))}>
+                  <defs>
+                    <linearGradient id={`gradient-${title}`} x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <Area
+                    type="monotone"
+                    dataKey="value"
+                    stroke="hsl(var(--primary))"
+                    strokeWidth={2}
+                    fill={`url(#gradient-${title})`}
+                    isAnimationActive={false}
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
           </div>
           <p className="mt-1 text-[10px] sm:text-xs text-muted-foreground line-clamp-1">{description}</p>
           <div className="mt-2 sm:mt-3 flex items-center justify-between">
@@ -105,7 +127,8 @@ export function KPICards({ metrics, isLoading, onCardClick }: KPICardsProps) {
       trend: metrics?.scheduledTodayTrend ?? 0,
       icon: Calendar,
       filter: 'scheduled-today',
-      description: 'Interviews happening today'
+      description: 'Interviews happening today',
+      data: [10, 15, 12, 18, 20, 15, metrics?.scheduledToday ?? 0]
     },
     {
       title: 'Pending Feedback',
@@ -113,7 +136,8 @@ export function KPICards({ metrics, isLoading, onCardClick }: KPICardsProps) {
       trend: metrics?.pendingFeedbackTrend ?? 0,
       icon: Clock,
       filter: 'pending-feedback',
-      description: 'Awaiting interviewer feedback'
+      description: 'Awaiting interviewer feedback',
+      data: [5, 8, 5, 10, 8, 6, metrics?.pendingFeedback ?? 0]
     },
     {
       title: 'Completed',
@@ -121,7 +145,8 @@ export function KPICards({ metrics, isLoading, onCardClick }: KPICardsProps) {
       trend: metrics?.completedTrend ?? 0,
       icon: CheckCircle,
       filter: 'completed',
-      description: 'Successfully completed this week'
+      description: 'Successfully completed this week',
+      data: [20, 25, 22, 30, 28, 35, metrics?.completed ?? 0]
     },
     {
       title: 'No-Shows',
@@ -129,7 +154,8 @@ export function KPICards({ metrics, isLoading, onCardClick }: KPICardsProps) {
       trend: metrics?.noShowsTrend ?? 0,
       icon: XCircle,
       filter: 'no-shows',
-      description: 'Candidates who missed interviews'
+      description: 'Candidates who missed interviews',
+      data: [3, 4, 2, 5, 3, 2, metrics?.noShows ?? 0]
     },
   ];
 
@@ -189,6 +215,7 @@ export function KPICards({ metrics, isLoading, onCardClick }: KPICardsProps) {
             description={card.description}
             isLoading={isLoading}
             onClick={() => onCardClick?.(card.filter)}
+            data={card.data}
           />
         ))}
       </div>

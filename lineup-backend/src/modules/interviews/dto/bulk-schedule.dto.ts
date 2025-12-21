@@ -1,6 +1,18 @@
 import { IsArray, IsISO8601, IsInt, IsString, IsEnum, IsOptional, Min, ArrayMinSize } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
+/**
+ * Bulk scheduling mode - explicit selection required
+ * SEQUENTIAL: One interview per candidate, times staggered by duration
+ * GROUP: One interview for all candidates at same time
+ */
+export enum BulkMode {
+    SEQUENTIAL = 'SEQUENTIAL',
+    GROUP = 'GROUP',
+}
+
+// Keep old enum for backward compatibility during transition
+/** @deprecated Use BulkMode instead */
 export enum BulkScheduleStrategy {
     AUTO = 'AUTO',
     SAME_TIME = 'SAME_TIME',
@@ -9,6 +21,7 @@ export enum BulkScheduleStrategy {
 
 /**
  * DTO for bulk scheduling interviews for multiple candidates
+ * Requires explicit mode selection - no implicit behavior
  */
 export class BulkScheduleDto {
     @ApiProperty({
@@ -37,56 +50,65 @@ export class BulkScheduleDto {
     durationMins: number;
 
     @ApiProperty({
-        description: 'Scheduling strategy',
-        enum: BulkScheduleStrategy,
-        example: BulkScheduleStrategy.AUTO
+        description: 'Bulk scheduling mode - REQUIRED. SEQUENTIAL creates one interview per candidate with staggered times. GROUP creates one interview for all candidates at same time.',
+        enum: BulkMode,
+        example: BulkMode.SEQUENTIAL
     })
-    @IsEnum(BulkScheduleStrategy)
-    strategy: BulkScheduleStrategy;
+    @IsEnum(BulkMode)
+    bulkMode: BulkMode;
+
+    @ApiProperty({
+        description: 'Start time for the first interview (ISO 8601). For SEQUENTIAL, subsequent interviews are offset by duration.',
+        example: '2024-01-15T14:00:00Z'
+    })
+    @IsISO8601()
+    startTime: string;
 
     @ApiPropertyOptional({ description: 'Interview stage/round', example: 'Technical Round' })
     @IsOptional()
     @IsString()
     stage?: string;
 
-    @ApiPropertyOptional({
-        description: 'For SAME_TIME strategy: the specific time to schedule all interviews',
-        example: '2024-01-15T14:00:00Z'
-    })
-    @IsOptional()
-    @IsISO8601()
-    scheduledTime?: string;
-
-    @ApiPropertyOptional({
-        description: 'For AUTO strategy: start of scheduling range',
-        example: '2024-01-15T09:00:00Z'
-    })
-    @IsOptional()
-    @IsISO8601()
-    rangeStart?: string;
-
-    @ApiPropertyOptional({
-        description: 'For AUTO strategy: end of scheduling range',
-        example: '2024-01-20T18:00:00Z'
-    })
-    @IsOptional()
-    @IsISO8601()
-    rangeEnd?: string;
-
     @ApiPropertyOptional({ description: 'Timezone for scheduling', example: 'Asia/Kolkata' })
     @IsOptional()
     @IsString()
     timezone?: string;
+
+    // Legacy fields - kept for backward compatibility
+    /** @deprecated Use bulkMode instead */
+    @IsOptional()
+    @IsEnum(BulkScheduleStrategy)
+    strategy?: BulkScheduleStrategy;
+
+    /** @deprecated Use startTime instead */
+    @IsOptional()
+    @IsISO8601()
+    scheduledTime?: string;
 }
 
+/**
+ * Result of bulk scheduling operation
+ */
 export interface BulkScheduleResult {
+    /** Total number of candidates in request */
     total: number;
+    /** Number successfully scheduled */
     scheduled: number;
-    failed: number;
-    interviews: Array<{
+    /** Number skipped/failed */
+    skipped: number;
+    /** Bulk batch ID linking all created interviews */
+    bulkBatchId: string;
+    /** Mode used for scheduling */
+    bulkMode: BulkMode;
+    /** Successfully created interviews */
+    created: Array<{
         candidateId: string;
-        interviewId?: string;
-        scheduledAt?: string;
-        error?: string;
+        interviewId: string;
+        scheduledAt: string;
+    }>;
+    /** Skipped candidates with reasons */
+    skippedCandidates: Array<{
+        candidateId: string;
+        reason: string;
     }>;
 }

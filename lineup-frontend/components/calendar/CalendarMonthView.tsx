@@ -56,11 +56,11 @@ export function CalendarMonthView({
   };
 
   return (
-    <div className="bg-card rounded-lg border border-border overflow-hidden">
+    <div className="bg-background/40 backdrop-blur-sm rounded-xl border border-border/50 overflow-hidden shadow-sm">
       <div className="overflow-x-auto">
-        <div className="min-w-[800px]">
+        <div className="min-w-[600px]">
           {/* Weekday Headers */}
-          <div className="grid grid-cols-7 border-b border-border">
+          <div className="grid grid-cols-7 border-b border-border/50">
             {WEEKDAYS.map((day) => (
               <div
                 key={day}
@@ -83,10 +83,10 @@ export function CalendarMonthView({
                 <div
                   key={idx}
                   className={cn(
-                    'min-h-[120px] border-b border-r border-border p-2 transition-colors',
-                    !isCurrentMonth && 'bg-muted/20',
+                    'min-h-[120px] border-b border-r border-border/30 p-2 transition-colors',
+                    !isCurrentMonth && 'bg-muted/10',
                     isCurrentDay && 'bg-primary/5',
-                    'hover:bg-muted/30 cursor-pointer'
+                    'hover:bg-muted/20 cursor-pointer'
                   )}
                   onClick={(e) => {
                     if (e.target === e.currentTarget) {

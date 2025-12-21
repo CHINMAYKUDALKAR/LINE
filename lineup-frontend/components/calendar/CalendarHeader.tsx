@@ -1,11 +1,14 @@
-import { ChevronLeft, ChevronRight, Plus, Calendar as CalendarIcon, Filter, Users } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, Calendar as CalendarIcon, Filter, Users, Globe } from 'lucide-react';
 import { format, addMonths, addWeeks, addDays, subMonths, subWeeks, subDays } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
 import { CalendarView, CalendarFilters } from '@/types/calendar';
 import { UserRole } from '@/types/navigation';
 import { cn } from '@/lib/utils';
+import { useState, useEffect } from 'react';
 
 interface Interviewer {
   id: string;
@@ -48,6 +51,11 @@ export function CalendarHeader({
   onBulkScheduleClick,
 }: CalendarHeaderProps) {
   const canSchedule = userRole !== 'interviewer';
+  const [timeZone, setTimeZone] = useState('');
+
+  useEffect(() => {
+    setTimeZone(Intl.DateTimeFormat().resolvedOptions().timeZone);
+  }, []);
 
   const getDateLabel = () => {
     switch (view) {
@@ -93,23 +101,43 @@ export function CalendarHeader({
   };
 
   return (
-    <div className="flex flex-col gap-6 pb-6 border-b border-border">
+    <div className="flex flex-col gap-6 pb-6 border-b border-border/40 bg-background/50 backdrop-blur-sm -mx-4 px-4 sticky top-0 z-10">
       {/* Row 1: Title + Actions */}
-      <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4">
+      <div className="flex flex-col 2xl:flex-row 2xl:items-center justify-between gap-4 pt-4">
         <div className="flex items-center gap-2">
-          <div className="p-2 bg-primary/10 rounded-lg">
-            <CalendarIcon className="w-5 h-5 text-primary" />
+          <Popover>
+            <PopoverTrigger asChild>
+              <div className="p-2 bg-primary/10 rounded-lg cursor-pointer hover:bg-primary/20 transition-colors">
+                <CalendarIcon className="w-5 h-5 text-primary" />
+              </div>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                mode="single"
+                selected={currentDate}
+                onSelect={(date) => date && onDateChange(date)}
+                initialFocus
+              />
+            </PopoverContent>
+          </Popover>
+          <div className="flex flex-col">
+            <h1 className="text-2xl font-bold tracking-tight text-foreground leading-none">Calendar</h1>
+            {timeZone && (
+              <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
+                <Globe className="w-3 h-3" />
+                <span>{timeZone}</span>
+              </div>
+            )}
           </div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">Calendar</h1>
         </div>
 
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-          <div className="grid grid-cols-2 sm:flex items-center gap-2 w-full sm:w-auto">
+        <div className="flex flex-col lg:flex-row items-start lg:items-center gap-3 flex-wrap 2xl:justify-end">
+          <div className="grid grid-cols-2 sm:flex flex-wrap items-center gap-2 w-full lg:w-auto">
             <Select
               value={filters.interviewerId}
               onValueChange={(value) => onFiltersChange({ ...filters, interviewerId: value as CalendarFilters['interviewerId'] })}
             >
-              <SelectTrigger className="w-full sm:w-[180px] h-9 bg-background border-border/60">
+              <SelectTrigger className="w-full sm:w-[160px] h-9 bg-background border-border/60">
                 <SelectValue placeholder="All Interviewers" />
               </SelectTrigger>
               <SelectContent>
@@ -126,7 +154,7 @@ export function CalendarHeader({
               value={filters.stage}
               onValueChange={(value) => onFiltersChange({ ...filters, stage: value as CalendarFilters['stage'] })}
             >
-              <SelectTrigger className="w-full sm:w-[140px] h-9 bg-background border-border/60">
+              <SelectTrigger className="w-full sm:w-[130px] h-9 bg-background border-border/60">
                 <SelectValue placeholder="All Stages" />
               </SelectTrigger>
               <SelectContent>
@@ -142,7 +170,7 @@ export function CalendarHeader({
               value={filters.status}
               onValueChange={(value) => onFiltersChange({ ...filters, status: value as CalendarFilters['status'] })}
             >
-              <SelectTrigger className="w-full sm:w-[140px] h-9 bg-background border-border/60">
+              <SelectTrigger className="w-full sm:w-[130px] h-9 bg-background/50 border-border/50 hover:bg-background/80 transition-colors">
                 <SelectValue placeholder="All Status" />
               </SelectTrigger>
               <SelectContent>
@@ -159,18 +187,18 @@ export function CalendarHeader({
               placeholder="Filter by Role..."
               value={filters.role === 'all' ? '' : filters.role}
               onChange={(e) => onFiltersChange({ ...filters, role: e.target.value || 'all' })}
-              className="w-full sm:w-[160px] h-9 bg-background border-border/60"
+              className="w-full sm:w-[140px] h-9 bg-background border-border/60"
             />
           </div>
 
           {canSchedule && (
-            <div className="flex flex-col sm:flex-row gap-2">
-              <Button onClick={onScheduleClick} className="w-full sm:w-auto gap-2 shadow-sm">
+            <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto">
+              <Button onClick={onScheduleClick} className="flex-1 sm:flex-none gap-2 shadow-sm whitespace-nowrap">
                 <Plus className="h-4 w-4" />
                 Schedule Interview
               </Button>
               {onBulkScheduleClick && (
-                <Button onClick={onBulkScheduleClick} variant="outline" className="w-full sm:w-auto gap-2">
+                <Button onClick={onBulkScheduleClick} variant="outline" className="flex-1 sm:flex-none gap-2 whitespace-nowrap">
                   <Users className="h-4 w-4" />
                   Bulk Schedule
                 </Button>

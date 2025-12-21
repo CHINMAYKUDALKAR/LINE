@@ -45,6 +45,7 @@ export interface CandidateListParams {
     perPage?: number;
     stage?: string;
     source?: string;
+    role?: string;
     q?: string;
     recruiterId?: string;
     dateFrom?: string;

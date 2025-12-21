@@ -82,6 +82,7 @@ export declare class AuthService {
         twoFactorEnabled: boolean;
         twoFactorSecret: string | null;
         recoveryCodes: string[];
+        timezone: string | null;
         lastLogin: Date | null;
         createdAt: Date;
         updatedAt: Date;

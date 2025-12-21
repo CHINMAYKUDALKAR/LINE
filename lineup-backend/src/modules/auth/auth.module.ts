@@ -11,6 +11,7 @@ import { AuditModule } from '../audit/audit.module';
 import { BruteForceService } from '../../common/brute-force.guard';
 import { PasswordPolicyService } from '../../common/password-policy.service';
 import { PermissionGuard } from './guards/permissions.guard';
+import { JwtStrategy } from './jwt.strategy';
 
 @Module({
   imports: [EmailModule, AuditModule],
@@ -25,6 +26,7 @@ import { PermissionGuard } from './guards/permissions.guard';
     BruteForceService,
     PasswordPolicyService,
     PermissionGuard,
+    JwtStrategy,
   ],
   exports: [
     AuthService,

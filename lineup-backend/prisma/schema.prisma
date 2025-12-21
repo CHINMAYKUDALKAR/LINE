@@ -143,6 +143,9 @@ model User {
   twoFactorSecret  String?  // Encrypted TOTP secret
   recoveryCodes    String[] @default([]) // Hashed one-time recovery codes
 
+  // Timezone preference for scheduling
+  timezone         String?  // IANA timezone like "Asia/Kolkata"
+
   lastLogin DateTime?
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
@@ -242,6 +245,11 @@ model CandidateStageHistory {
   @@index([candidateId, createdAt])
 }
 
+// Bulk scheduling mode for interview creation
+enum BulkMode {
+  SEQUENTIAL // One interview per candidate, staggered times
+  GROUP      // One interview for all candidates at same time
+}
 
 model Interview {
   id             String    @id @default(cuid())
@@ -261,6 +269,11 @@ model Interview {
   hasFeedback Boolean @default(false)
   isNoShow    Boolean @default(false)
 
+  // Bulk scheduling support
+  bulkMode     BulkMode? // null for single interviews, SEQUENTIAL or GROUP for bulk
+  bulkBatchId  String?   // Links interviews created in same bulk action
+  candidateIds String[]  @default([]) // For GROUP mode: multiple candidates in one interview
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   deletedAt DateTime?
@@ -270,6 +283,7 @@ model Interview {
 
   @@index([tenantId, date], name: "idx_interview_tenant_date")
   @@index([candidateId], name: "idx_interview_candidate")
+  @@index([bulkBatchId])
 }
 
 model Feedback {
