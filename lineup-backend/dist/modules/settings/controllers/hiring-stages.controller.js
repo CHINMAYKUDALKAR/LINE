@@ -26,7 +26,7 @@ let HiringStagesController = class HiringStagesController {
         this.stagesService = stagesService;
     }
     async list(req, includeInactive) {
-        return this.stagesService.list(req.user.tenantId, includeInactive === 'true');
+        return this.stagesService.list(req.user.tenantId, includeInactive === 'true', 100);
     }
     async get(req, id) {
         return this.stagesService.get(req.user.tenantId, id);

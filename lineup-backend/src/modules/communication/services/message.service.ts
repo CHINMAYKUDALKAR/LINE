@@ -35,7 +35,8 @@ export class MessageService {
      * Get paginated message logs with filters
      */
     async findAll(tenantId: string, filters: MessageFilterDto) {
-        const { channel, status, recipientType, recipientId, fromDate, toDate, search, page = 1, limit = 20 } = filters;
+        const { channel, status, recipientType, recipientId, fromDate, toDate, search, page = 1, limit: requestedLimit = 20 } = filters;
+        const limit = Math.min(requestedLimit, 100); // Cap at 100
 
         const where: any = { tenantId };
 
@@ -149,6 +150,19 @@ export class MessageService {
      * Schedule a future message
      */
     async schedule(tenantId: string, dto: ScheduleMessageDto, userId?: string) {
+        // Rate limiting for scheduled messages: max 20 per hour per tenant
+        const now = Date.now();
+        const rateLimitKey = `schedule:${tenantId}`;
+        const limit = this.retryRateLimits.get(rateLimitKey);
+        if (limit && limit.resetAt > now) {
+            if (limit.count >= 20) {
+                throw new BadRequestException('Rate limit exceeded: max 20 scheduled messages per hour');
+            }
+            limit.count++;
+        } else {
+            this.retryRateLimits.set(rateLimitKey, { count: 1, resetAt: now + 3600000 });
+        }
+
         const recipientInfo = await this.resolveRecipient(tenantId, dto.recipientType, dto.recipientId);
 
         const scheduled = await this.prisma.scheduledMessage.create({
@@ -192,16 +206,79 @@ export class MessageService {
         });
     }
 
+    // Rate limiting map for retries: key = tenantId:messageId, value = { count, resetAt }
+    private retryRateLimits = new Map<string, { count: number; resetAt: number }>();
+
+    // Rate limiting constants
+    private readonly RETRY_LIMIT_PER_MESSAGE = 5; // Max 5 retries per message per hour
+    private readonly RETRY_LIMIT_PER_TENANT = 50; // Max 50 retries per tenant per hour
+    private readonly RETRY_WINDOW_MS = 60 * 60 * 1000; // 1 hour window
+
+    /**
+     * Check and update rate limit for retries
+     * @returns true if rate limited (should block), false if OK
+     */
+    private checkRetryRateLimit(tenantId: string, messageId: string): { limited: boolean; reason?: string } {
+        const now = Date.now();
+
+        // Clean up expired entries periodically
+        if (Math.random() < 0.1) { // 10% chance to cleanup on each call
+            for (const [key, value] of this.retryRateLimits) {
+                if (now > value.resetAt) {
+                    this.retryRateLimits.delete(key);
+                }
+            }
+        }
+
+        // Check per-message limit
+        const messageKey = `msg:${tenantId}:${messageId}`;
+        const messageLimit = this.retryRateLimits.get(messageKey);
+        if (messageLimit && now < messageLimit.resetAt) {
+            if (messageLimit.count >= this.RETRY_LIMIT_PER_MESSAGE) {
+                return { limited: true, reason: `Message retry limit exceeded (max ${this.RETRY_LIMIT_PER_MESSAGE}/hour)` };
+            }
+            messageLimit.count++;
+        } else {
+            this.retryRateLimits.set(messageKey, { count: 1, resetAt: now + this.RETRY_WINDOW_MS });
+        }
+
+        // Check per-tenant limit
+        const tenantKey = `tenant:${tenantId}`;
+        const tenantLimit = this.retryRateLimits.get(tenantKey);
+        if (tenantLimit && now < tenantLimit.resetAt) {
+            if (tenantLimit.count >= this.RETRY_LIMIT_PER_TENANT) {
+                return { limited: true, reason: `Tenant retry limit exceeded (max ${this.RETRY_LIMIT_PER_TENANT}/hour)` };
+            }
+            tenantLimit.count++;
+        } else {
+            this.retryRateLimits.set(tenantKey, { count: 1, resetAt: now + this.RETRY_WINDOW_MS });
+        }
+
+        return { limited: false };
+    }
+
     /**
      * Retry a failed message - resets status and pushes to queue
+     * Rate limited to prevent abuse (5 retries per message/hour, 50 per tenant/hour)
      */
     async retry(tenantId: string, id: string) {
+        // Check rate limits before proceeding
+        const rateLimitCheck = this.checkRetryRateLimit(tenantId, id);
+        if (rateLimitCheck.limited) {
+            throw new BadRequestException(rateLimitCheck.reason);
+        }
+
         const message = await this.prisma.messageLog.findFirst({
             where: { id, tenantId, status: MessageStatus.FAILED },
         });
 
         if (!message) {
             throw new NotFoundException('Failed message not found');
+        }
+
+        // Check max retry count (hard limit of 10 total retries)
+        if (message.retryCount >= 10) {
+            throw new BadRequestException('Maximum retry attempts (10) reached for this message');
         }
 
         // Reset status to QUEUED
@@ -301,22 +378,41 @@ export class MessageService {
         switch (type) {
             case RecipientType.CANDIDATE:
                 const candidate = await this.prisma.candidate.findFirst({
-                    where: { id, tenantId },
+                    where: { id, tenantId, deletedAt: null },
                 });
                 if (!candidate) throw new BadRequestException('Candidate not found');
                 return { email: candidate.email, phone: candidate.phone, name: candidate.name };
 
             case RecipientType.INTERVIEWER:
             case RecipientType.USER:
-                const user = await this.prisma.user.findFirst({
-                    where: { id, tenantId },
+                // Check user exists AND has active membership in this tenant
+                const userTenant = await this.prisma.userTenant.findFirst({
+                    where: {
+                        userId: id,
+                        tenantId,
+                        status: 'ACTIVE',
+                    },
+                    include: {
+                        user: {
+                            select: { email: true, name: true },
+                        },
+                    },
                 });
-                if (!user) throw new BadRequestException('User not found');
-                return { email: user.email, phone: null, name: user.name };
+                if (!userTenant || !userTenant.user) {
+                    throw new BadRequestException('User not found or not active in tenant');
+                }
+                return { email: userTenant.user.email, phone: null, name: userTenant.user.name };
 
             case RecipientType.EXTERNAL:
-                // For external, the ID should be the email/phone
-                return { email: id, phone: id, name: 'External' };
+                // Validate external email/phone format
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                const phoneRegex = /^\+?[1-9]\d{6,14}$/;
+                const isEmail = emailRegex.test(id);
+                const isPhone = phoneRegex.test(id);
+                if (!isEmail && !isPhone) {
+                    throw new BadRequestException('External recipient must be a valid email or phone number');
+                }
+                return { email: isEmail ? id : null, phone: isPhone ? id : null, name: 'External' };
 
             default:
                 throw new BadRequestException('Invalid recipient type');

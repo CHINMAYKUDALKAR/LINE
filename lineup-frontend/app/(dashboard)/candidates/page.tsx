@@ -197,8 +197,12 @@ export default function Candidates() {
         }
     };
 
-    const handleBulkAction = (action: CandidateBulkAction) => {
+    const handleBulkAction = (action: CandidateBulkAction | string) => {
         const count = selectedIds.length;
+
+        // Get selected candidates for bulk operations
+        const selectedCandidates = candidates.filter(c => selectedIds.includes(c.id));
+
         switch (action) {
             case 'change-stage':
                 toast({
@@ -206,11 +210,37 @@ export default function Candidates() {
                     description: `Change stage for ${count} candidates.`,
                 });
                 break;
+            case 'email':
             case 'send-email':
+                // Open message dialog for bulk email
+                if (selectedCandidates.length > 0) {
+                    setMessageCandidate(selectedCandidates[0]);
+                    setMessageChannel('EMAIL');
+                    setMessageDialogOpen(true);
+                    toast({
+                        title: 'Bulk Email',
+                        description: `Composing email for ${count} candidate(s).`,
+                    });
+                }
+                break;
+            case 'schedule':
+                // Open schedule modal for bulk scheduling
+                setIsScheduleModalOpen(true);
                 toast({
-                    title: 'Bulk Send Email',
-                    description: `Send email to ${count} candidates.`,
+                    title: 'Schedule Interviews',
+                    description: `Opening scheduler for ${count} candidate(s).`,
                 });
+                break;
+            case 'sms':
+                if (selectedCandidates.length > 0) {
+                    setMessageCandidate(selectedCandidates[0]);
+                    setMessageChannel('SMS');
+                    setMessageDialogOpen(true);
+                    toast({
+                        title: 'Bulk SMS',
+                        description: `Composing SMS for ${count} candidate(s).`,
+                    });
+                }
                 break;
             case 'add-tag':
                 toast({

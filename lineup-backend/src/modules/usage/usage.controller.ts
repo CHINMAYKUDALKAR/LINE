@@ -8,6 +8,8 @@ import {
     UseGuards,
     Res,
     Header,
+    ForbiddenException,
+    Request,
 } from '@nestjs/common';
 import type { Response } from 'express';
 import { UsageService } from './usage.service';
@@ -28,9 +30,14 @@ export class UsageController {
      */
     @Get(':tenantId/monthly')
     async getMonthlyUsage(
+        @Request() req: any,
         @Param('tenantId') tenantId: string,
         @Query('month') month?: string,
     ) {
+        // Authorization: ADMIN can only see own tenant, SUPERADMIN can see any
+        if (req.user.role !== 'SUPERADMIN' && req.user.tenantId !== tenantId) {
+            throw new ForbiddenException('Access denied to this tenant');
+        }
         const targetMonth = month || this.getCurrentMonth();
         return this.usageService.getMonthlyUsage(tenantId, targetMonth);
     }
@@ -41,10 +48,15 @@ export class UsageController {
      */
     @Get(':tenantId/history')
     async getUsageHistory(
+        @Request() req: any,
         @Param('tenantId') tenantId: string,
         @Query('months') months?: string,
     ) {
-        return this.usageService.getUsageHistory(tenantId, parseInt(months || '6'));
+        if (req.user.role !== 'SUPERADMIN' && req.user.tenantId !== tenantId) {
+            throw new ForbiddenException('Access denied to this tenant');
+        }
+        const numMonths = Math.min(parseInt(months || '6', 10) || 6, 24); // Default 6, max 24
+        return this.usageService.getUsageHistory(tenantId, numMonths);
     }
 
     /**
@@ -52,7 +64,10 @@ export class UsageController {
      * Get tenant plan metadata
      */
     @Get(':tenantId/plan')
-    async getTenantPlan(@Param('tenantId') tenantId: string) {
+    async getTenantPlan(@Request() req: any, @Param('tenantId') tenantId: string) {
+        if (req.user.role !== 'SUPERADMIN' && req.user.tenantId !== tenantId) {
+            throw new ForbiddenException('Access denied to this tenant');
+        }
         return this.usageService.getTenantPlan(tenantId);
     }
 
@@ -76,18 +91,22 @@ export class UsageController {
     @Get(':tenantId/export')
     @Header('Content-Type', 'text/csv')
     async exportUsage(
+        @Request() req: any,
         @Param('tenantId') tenantId: string,
         @Res() res: Response,
         @Query('months') months?: string,
     ) {
-        const csv = await this.usageService.exportUsageCsv(
-            tenantId,
-            parseInt(months || '12'),
-        );
+        if (req.user.role !== 'SUPERADMIN' && req.user.tenantId !== tenantId) {
+            throw new ForbiddenException('Access denied to this tenant');
+        }
+        const numMonths = Math.min(parseInt(months || '12', 10) || 12, 36); // Default 12, max 36
+        const csv = await this.usageService.exportUsageCsv(tenantId, numMonths);
 
+        // Sanitize tenantId for filename
+        const safeTenantId = tenantId.replace(/[^a-zA-Z0-9-_]/g, '_');
         res.setHeader(
             'Content-Disposition',
-            `attachment; filename="usage-${tenantId}-${this.getCurrentMonth()}.csv"`,
+            `attachment; filename="usage-${safeTenantId}-${this.getCurrentMonth()}.csv"`,
         );
         res.send(csv);
     }

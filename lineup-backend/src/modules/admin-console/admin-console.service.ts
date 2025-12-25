@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, BadRequestException, OnModuleDestroy } from '@nestjs/common';
 import { PrismaService } from '../../common/prisma.service';
 import IORedis from 'ioredis';
 import { Queue } from 'bullmq';
@@ -6,13 +6,20 @@ import { randomPassword } from './utils/provisioning.util';
 import * as bcrypt from 'bcrypt';
 
 @Injectable()
-export class AdminConsoleService {
+export class AdminConsoleService implements OnModuleDestroy {
     private queue: Queue;
+    private redisConnection: IORedis;
+
     constructor(private prisma: PrismaService) {
-        const conn = new IORedis(process.env.REDIS_URL || 'redis://127.0.0.1:6379', {
+        this.redisConnection = new IORedis(process.env.REDIS_URL || 'redis://127.0.0.1:6379', {
             maxRetriesPerRequest: null
         });
-        this.queue = new Queue('tenant-provision', { connection: conn });
+        this.queue = new Queue('tenant-provision', { connection: this.redisConnection });
+    }
+
+    async onModuleDestroy() {
+        await this.queue.close();
+        await this.redisConnection.quit();
     }
 
     // Platform user management
@@ -21,7 +28,8 @@ export class AdminConsoleService {
         if (exists) throw new BadRequestException('User already exists');
 
         const pwd = dto.password || randomPassword();
-        const hashed = await bcrypt.hash(pwd, 10);
+        const saltRounds = Number(process.env.BCRYPT_SALT_ROUNDS || 12);
+        const hashed = await bcrypt.hash(pwd, saltRounds);
 
         const user = await this.prisma.user.create({
             data: {
@@ -94,7 +102,8 @@ export class AdminConsoleService {
 
     async createTenantAdmin(tenantId: string, email: string, adminUserId: string) {
         const pwd = randomPassword();
-        const hashed = await bcrypt.hash(pwd, 10);
+        const saltRounds = Number(process.env.BCRYPT_SALT_ROUNDS || 12);
+        const hashed = await bcrypt.hash(pwd, saltRounds);
 
         const user = await this.prisma.user.create({
             data: {

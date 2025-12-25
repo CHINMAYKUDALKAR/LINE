@@ -16,4 +16,9 @@ export class GetReportDto {
     @IsOptional()
     @IsString()
     role?: string;
+
+    @ApiPropertyOptional({ description: 'Force refresh cached data' })
+    @IsOptional()
+    @IsString()
+    refresh?: string;
 }

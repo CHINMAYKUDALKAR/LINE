@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException, Logger } from '@nestjs/common';
 import { PrismaService } from '../../common/prisma.service';
 import { EmailService } from '../email/email.service';
 import * as crypto from 'crypto';
@@ -6,6 +6,8 @@ import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class PasswordResetService {
+    private readonly logger = new Logger(PasswordResetService.name);
+
     constructor(
         private prisma: PrismaService,
         private emailService: EmailService,
@@ -22,7 +24,8 @@ export class PasswordResetService {
      * Hash token for storage
      */
     private async hashToken(token: string): Promise<string> {
-        return bcrypt.hash(token, 10);
+        const saltRounds = Number(process.env.BCRYPT_SALT_ROUNDS || 12);
+        return bcrypt.hash(token, saltRounds);
     }
 
     /**
@@ -75,7 +78,7 @@ export class PasswordResetService {
                 },
             });
         } catch (error) {
-            console.error('Failed to send password reset email:', error);
+            this.logger.error('Failed to send password reset email:', error);
             // Don't fail if email fails - still return success to not reveal user existence
         }
 

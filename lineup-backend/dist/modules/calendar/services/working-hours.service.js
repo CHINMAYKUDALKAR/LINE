@@ -37,8 +37,11 @@ let WorkingHoursService = class WorkingHoursService {
         });
         return workingHours;
     }
-    async setWorkingHours(tenantId, currentUserId, dto) {
+    async setWorkingHours(tenantId, currentUserId, currentUserRole, dto) {
         const userId = dto.userId || currentUserId;
+        if (userId !== currentUserId && !['ADMIN', 'SUPERADMIN', 'MANAGER'].includes(currentUserRole)) {
+            throw new common_1.ForbiddenException('You can only modify your own working hours');
+        }
         this.validateWeeklyPattern(dto.weekly);
         const userTenant = await this.prisma.userTenant.findFirst({
             where: { tenantId, userId },
@@ -81,17 +84,19 @@ let WorkingHoursService = class WorkingHoursService {
     }
     getDefaultPattern(timezone = 'UTC') {
         return [
-            { dow: 1, start: '09:00', end: '17:00' },
-            { dow: 2, start: '09:00', end: '17:00' },
-            { dow: 3, start: '09:00', end: '17:00' },
-            { dow: 4, start: '09:00', end: '17:00' },
-            { dow: 5, start: '09:00', end: '17:00' },
+            { dow: 0, start: '08:00', end: '20:00' },
+            { dow: 1, start: '08:00', end: '20:00' },
+            { dow: 2, start: '08:00', end: '20:00' },
+            { dow: 3, start: '08:00', end: '20:00' },
+            { dow: 4, start: '08:00', end: '20:00' },
+            { dow: 5, start: '08:00', end: '20:00' },
+            { dow: 6, start: '08:00', end: '20:00' },
         ];
     }
     validateWeeklyPattern(weekly) {
         for (const pattern of weekly) {
             if (pattern.dow < 0 || pattern.dow > 6) {
-                throw new Error(`Invalid day of week: ${pattern.dow}`);
+                throw new common_1.BadRequestException(`Invalid day of week: ${pattern.dow}`);
             }
             const startParts = pattern.start.split(':').map(Number);
             const endParts = pattern.end.split(':').map(Number);
@@ -101,12 +106,12 @@ let WorkingHoursService = class WorkingHoursService {
                 isNaN(startParts[1]) ||
                 isNaN(endParts[0]) ||
                 isNaN(endParts[1])) {
-                throw new Error('Invalid time format. Use HH:mm');
+                throw new common_1.BadRequestException('Invalid time format. Use HH:mm');
             }
             const startMins = startParts[0] * 60 + startParts[1];
             const endMins = endParts[0] * 60 + endParts[1];
             if (endMins <= startMins) {
-                throw new Error('End time must be after start time');
+                throw new common_1.BadRequestException('End time must be after start time');
             }
         }
     }

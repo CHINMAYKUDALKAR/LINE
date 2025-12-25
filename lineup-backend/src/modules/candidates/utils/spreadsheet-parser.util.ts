@@ -12,10 +12,22 @@ export interface ParsedRow {
     resumeUrl?: string;
 }
 
+// Limits to prevent DoS
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+const MAX_ROWS = 10000;
+
+// Simple email validation regex
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 /**
  * Parse CSV or XLSX buffer into candidate rows
  */
 export function parseSpreadsheet(buffer: Buffer, mimeType: string): ParsedRow[] {
+    // Validate file size
+    if (buffer.length > MAX_FILE_SIZE) {
+        throw new Error(`File too large. Maximum size is ${MAX_FILE_SIZE / 1024 / 1024}MB`);
+    }
+
     const workbook = XLSX.read(buffer, { type: 'buffer' });
 
     // Get first sheet
@@ -31,6 +43,11 @@ export function parseSpreadsheet(buffer: Buffer, mimeType: string): ParsedRow[] 
         throw new Error('File contains no data rows');
     }
 
+    // Enforce row limit
+    if (rawData.length > MAX_ROWS) {
+        throw new Error(`Too many rows. Maximum is ${MAX_ROWS} rows`);
+    }
+
     // Normalize column headers (case-insensitive mapping)
     const rows: ParsedRow[] = rawData.map((row) => {
         const normalized: Record<string, string> = {};
@@ -42,7 +59,7 @@ export function parseSpreadsheet(buffer: Buffer, mimeType: string): ParsedRow[] 
 
         return {
             name: normalized['name'] || normalized['full name'] || normalized['candidate name'] || '',
-            email: normalized['email'] || normalized['email address'] || undefined,
+            email: (normalized['email'] || normalized['email address'] || undefined) as string | undefined,
             phone: normalized['phone'] || normalized['phone number'] || normalized['mobile'] || undefined,
             roleTitle: normalized['roletitle'] || normalized['role'] || normalized['position'] || normalized['job title'] || undefined,
             source: normalized['source'] || undefined,
@@ -53,8 +70,14 @@ export function parseSpreadsheet(buffer: Buffer, mimeType: string): ParsedRow[] 
         };
     });
 
-    // Filter out rows without names
-    return rows.filter(row => row.name && row.name.length > 0);
+    // Filter out rows without names and validate emails
+    return rows
+        .filter(row => row.name && row.name.length > 0)
+        .map(row => ({
+            ...row,
+            // Validate email format - set to undefined if invalid
+            email: row.email && EMAIL_REGEX.test(row.email) ? row.email : undefined,
+        }));
 }
 
 /**

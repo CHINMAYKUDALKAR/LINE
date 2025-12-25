@@ -8,11 +8,13 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
+var IPAllowlistGuard_1;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.IPAllowlistService = exports.IPAllowlistGuard = exports.SkipIPAllowlist = exports.RequireIPAllowlist = void 0;
 const common_1 = require("@nestjs/common");
 const core_1 = require("@nestjs/core");
 const prisma_service_1 = require("./prisma.service");
+const TRUSTED_PROXIES = (process.env.TRUSTED_PROXIES || '127.0.0.1,::1').split(',').map(p => p.trim());
 const RequireIPAllowlist = () => {
     return (target, propertyKey, descriptor) => {
         Reflect.defineMetadata('security:ipAllowlist', true, descriptor?.value || target);
@@ -27,9 +29,10 @@ const SkipIPAllowlist = () => {
     };
 };
 exports.SkipIPAllowlist = SkipIPAllowlist;
-let IPAllowlistGuard = class IPAllowlistGuard {
+let IPAllowlistGuard = IPAllowlistGuard_1 = class IPAllowlistGuard {
     reflector;
     prisma;
+    logger = new common_1.Logger(IPAllowlistGuard_1.name);
     constructor(reflector, prisma) {
         this.reflector = reflector;
         this.prisma = prisma;
@@ -68,16 +71,20 @@ let IPAllowlistGuard = class IPAllowlistGuard {
             if (error instanceof common_1.HttpException) {
                 throw error;
             }
-            console.error('IP allowlist check error:', error.message);
+            this.logger.error('IP allowlist check error:', error.message);
             return true;
         }
     }
     getClientIP(request) {
-        const forwarded = request.headers['x-forwarded-for'];
-        if (forwarded) {
-            return forwarded.split(',')[0].trim();
+        const connectionIP = request.ip || request.connection?.remoteAddress || '';
+        const normalizedConnectionIP = connectionIP.replace(/^::ffff:/, '');
+        if (TRUSTED_PROXIES.includes(normalizedConnectionIP)) {
+            const forwarded = request.headers['x-forwarded-for'];
+            if (forwarded) {
+                return forwarded.split(',')[0].trim();
+            }
         }
-        return request.ip || request.connection?.remoteAddress || 'unknown';
+        return normalizedConnectionIP || 'unknown';
     }
     isIPAllowed(clientIP, allowedIPs) {
         const normalizedClientIP = clientIP.replace(/^::ffff:/, '');
@@ -112,7 +119,7 @@ let IPAllowlistGuard = class IPAllowlistGuard {
     }
 };
 exports.IPAllowlistGuard = IPAllowlistGuard;
-exports.IPAllowlistGuard = IPAllowlistGuard = __decorate([
+exports.IPAllowlistGuard = IPAllowlistGuard = IPAllowlistGuard_1 = __decorate([
     (0, common_1.Injectable)(),
     __metadata("design:paramtypes", [core_1.Reflector,
         prisma_service_1.PrismaService])

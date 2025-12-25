@@ -1,6 +1,9 @@
-import { Injectable, CanActivate, ExecutionContext, HttpException, HttpStatus } from '@nestjs/common';
+import { Injectable, CanActivate, ExecutionContext, HttpException, HttpStatus, Logger } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { PrismaService } from './prisma.service';
+
+// Trusted proxies - only trust x-forwarded-for from these
+const TRUSTED_PROXIES = (process.env.TRUSTED_PROXIES || '127.0.0.1,::1').split(',').map(p => p.trim());
 
 // Decorator to require IP allowlist check
 export const RequireIPAllowlist = () => {
@@ -45,6 +48,8 @@ export const SkipIPAllowlist = () => {
 
 @Injectable()
 export class IPAllowlistGuard implements CanActivate {
+    private readonly logger = new Logger(IPAllowlistGuard.name);
+
     constructor(
         private reflector: Reflector,
         private prisma: PrismaService,
@@ -101,17 +106,23 @@ export class IPAllowlistGuard implements CanActivate {
                 throw error;
             }
             // If policy table doesn't exist yet or other DB error, allow request
-            console.error('IP allowlist check error:', error.message);
+            this.logger.error('IP allowlist check error:', error.message);
             return true;
         }
     }
 
     private getClientIP(request: any): string {
-        const forwarded = request.headers['x-forwarded-for'];
-        if (forwarded) {
-            return forwarded.split(',')[0].trim();
+        const connectionIP = request.ip || request.connection?.remoteAddress || '';
+        const normalizedConnectionIP = connectionIP.replace(/^::ffff:/, '');
+
+        // Only trust x-forwarded-for if request comes from trusted proxy
+        if (TRUSTED_PROXIES.includes(normalizedConnectionIP)) {
+            const forwarded = request.headers['x-forwarded-for'];
+            if (forwarded) {
+                return forwarded.split(',')[0].trim();
+            }
         }
-        return request.ip || request.connection?.remoteAddress || 'unknown';
+        return normalizedConnectionIP || 'unknown';
     }
 
     private isIPAllowed(clientIP: string, allowedIPs: string[]): boolean {

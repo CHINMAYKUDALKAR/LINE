@@ -1,23 +1,5 @@
 import { CanActivate, ExecutionContext } from '@nestjs/common';
 import Redis from 'ioredis';
-export declare class BruteForceGuard implements CanActivate {
-    private redis;
-    constructor(redis: Redis);
-    canActivate(context: ExecutionContext): Promise<boolean>;
-    recordFailedAttempt(ip: string, email: string): Promise<{
-        locked: boolean;
-        attempts: number;
-    }>;
-    clearFailedAttempts(ip: string, email: string): Promise<void>;
-    unlockAccount(ip: string, email: string): Promise<void>;
-    getLockStatus(ip: string, email: string): Promise<{
-        locked: boolean;
-        ttl: number;
-        attempts: number;
-    }>;
-    private isLoginEndpoint;
-    private getClientIP;
-}
 export declare class BruteForceService {
     private redis;
     constructor(redis: Redis);
@@ -31,5 +13,19 @@ export declare class BruteForceService {
         locked: boolean;
         ttl: number;
     }>;
+    getLockStatus(ip: string, email: string): Promise<{
+        locked: boolean;
+        ttl: number;
+        attempts: number;
+    }>;
     unlockAccount(ip: string, email: string): Promise<void>;
+    getClientIP(request: any): string;
+    private getLockKey;
+    private getAttemptKey;
+}
+export declare class BruteForceGuard implements CanActivate {
+    private bruteForceService;
+    constructor(bruteForceService: BruteForceService);
+    canActivate(context: ExecutionContext): Promise<boolean>;
+    private isLoginEndpoint;
 }

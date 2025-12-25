@@ -93,7 +93,7 @@ export class CandidatesService {
 
     async list(tenantId: string, dto: ListCandidatesDto) {
         const page = Number(dto.page) || 1;
-        const perPage = Number(dto.perPage) || 20;
+        const perPage = Math.min(Number(dto.perPage) || 20, 100); // Cap at 100
         const where: any = {
             tenantId,
             deletedAt: null
@@ -129,6 +129,7 @@ export class CandidatesService {
                     id: true,
                     name: true,
                     email: true,
+                    phone: true,
                     stage: true,
                     roleTitle: true,
                     createdAt: true,
@@ -143,7 +144,6 @@ export class CandidatesService {
         // This helps the scheduling UI show which candidates already have a scheduled interview
         const candidateIds = data.map(c => c.id);
         const now = new Date();
-        console.log('[DEBUG] Checking active interviews for', candidateIds.length, 'candidates, now:', now.toISOString());
 
         const activeInterviews = await this.prisma.interview.findMany({
             where: {
@@ -154,10 +154,6 @@ export class CandidatesService {
             },
             select: { candidateId: true, id: true, date: true, status: true },
         });
-
-        console.log('[DEBUG] Found', activeInterviews.length, 'active interviews:',
-            activeInterviews.map(i => ({ candidateId: i.candidateId, date: i.date, status: i.status }))
-        );
 
         // Create a map for quick lookup
         const activeInterviewMap = new Map(
@@ -272,6 +268,50 @@ export class CandidatesService {
             errors: [] as Array<{ row: number; message: string }>,
         };
 
+        // Fetch valid hiring stages for this tenant once
+        const validStages = await this.prisma.hiringStage.findMany({
+            where: { tenantId, isActive: true },
+            select: { key: true, name: true },
+        });
+
+        // Create a map for quick lookup (both by key and by name, case-insensitive)
+        const stageMap = new Map<string, string>();
+        for (const stage of validStages) {
+            stageMap.set(stage.key.toLowerCase(), stage.key);
+            stageMap.set(stage.name.toLowerCase(), stage.key);
+            // Also handle common variations
+            stageMap.set(stage.key.toLowerCase().replace(/-/g, '_'), stage.key);
+            stageMap.set(stage.key.toLowerCase().replace(/_/g, '-'), stage.key);
+            stageMap.set(stage.name.toLowerCase().replace(/ /g, '-'), stage.key);
+            stageMap.set(stage.name.toLowerCase().replace(/ /g, '_'), stage.key);
+        }
+
+        // Helper to normalize stage from Excel to valid hiring stage key
+        const normalizeStage = (inputStage?: string): string => {
+            if (!inputStage) return 'APPLIED';
+
+            const normalized = inputStage.trim().toLowerCase();
+
+            // Try direct lookup
+            if (stageMap.has(normalized)) {
+                return stageMap.get(normalized)!;
+            }
+
+            // Try with hyphens replaced by underscores and vice versa
+            const withUnderscores = normalized.replace(/-/g, '_');
+            if (stageMap.has(withUnderscores)) {
+                return stageMap.get(withUnderscores)!;
+            }
+
+            const withHyphens = normalized.replace(/_/g, '-');
+            if (stageMap.has(withHyphens)) {
+                return stageMap.get(withHyphens)!;
+            }
+
+            // Default to APPLIED if no match
+            return 'APPLIED';
+        };
+
         for (let i = 0; i < rows.length; i++) {
             const row = rows[i];
 
@@ -318,6 +358,9 @@ export class CandidatesService {
                 // Parse tags if provided as comma-separated string
                 const tags = row.tags ? row.tags.split(',').map(t => t.trim()).filter(Boolean) : [];
 
+                // Normalize stage from Excel to match hiring stage keys
+                const normalizedStage = normalizeStage(row.stage);
+
                 await this.prisma.candidate.create({
                     data: {
                         tenantId,
@@ -327,7 +370,7 @@ export class CandidatesService {
                         phone: row.phone || null,
                         roleTitle: row.roleTitle || null,
                         source: row.source || null,
-                        stage: row.stage || 'applied',
+                        stage: normalizedStage,
                         tags,
                         notes: row.notes || null,
                         resumeUrl: row.resumeUrl || null,

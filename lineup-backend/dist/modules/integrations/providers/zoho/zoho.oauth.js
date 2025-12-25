@@ -20,8 +20,8 @@ const crypto_util_1 = require("../../utils/crypto.util");
 const oauth_util_1 = require("../../utils/oauth.util");
 let ZohoOAuthService = class ZohoOAuthService {
     prisma;
-    authUrl = 'https://accounts.zoho.com/oauth/v2/auth';
-    tokenUrl = 'https://accounts.zoho.com/oauth/v2/token';
+    authUrl = 'https://accounts.zoho.in/oauth/v2/auth';
+    tokenUrl = 'https://accounts.zoho.in/oauth/v2/token';
     constructor(prisma) {
         this.prisma = prisma;
     }

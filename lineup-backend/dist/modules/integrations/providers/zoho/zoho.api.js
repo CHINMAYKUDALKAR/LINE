@@ -20,7 +20,7 @@ const zoho_oauth_1 = require("./zoho.oauth");
 let ZohoApiService = ZohoApiService_1 = class ZohoApiService {
     zohoOAuth;
     logger = new common_1.Logger(ZohoApiService_1.name);
-    baseUrl = 'https://www.zohoapis.com/crm/v2';
+    baseUrl = 'https://www.zohoapis.in/crm/v2';
     maxRetries = 3;
     retryDelay = 1000;
     constructor(zohoOAuth) {
@@ -112,6 +112,66 @@ let ZohoApiService = ZohoApiService_1 = class ZohoApiService {
         return this.executeWithRetry(tenantId, async (client) => {
             const response = await client.get(`/${module}/${recordId}`);
             return response.data?.data?.[0] || null;
+        });
+    }
+    async getUsers(tenantId) {
+        return this.executeWithRetry(tenantId, async (client) => {
+            const response = await client.get('/users', {
+                params: { type: 'AllUsers' },
+            });
+            return response.data?.users || [];
+        });
+    }
+    async getCurrentUser(tenantId) {
+        return this.executeWithRetry(tenantId, async (client) => {
+            const response = await client.get('/users', {
+                params: { type: 'CurrentUser' },
+            });
+            return response.data?.users?.[0] || null;
+        });
+    }
+    async getLeadStages(tenantId) {
+        return this.executeWithRetry(tenantId, async (client) => {
+            const response = await client.get('/settings/fields', {
+                params: { module: 'Leads' },
+            });
+            const fields = response.data?.fields || [];
+            const statusField = fields.find((f) => f.api_name === 'Lead_Status' || f.field_label === 'Lead Status');
+            if (statusField?.pick_list_values) {
+                return statusField.pick_list_values.map((v, index) => ({
+                    id: v.id || `stage_${index}`,
+                    name: v.display_value || v.actual_value,
+                    order: index,
+                }));
+            }
+            return [];
+        });
+    }
+    async getContactStages(tenantId) {
+        return this.executeWithRetry(tenantId, async (client) => {
+            const response = await client.get('/settings/fields', {
+                params: { module: 'Contacts' },
+            });
+            const fields = response.data?.fields || [];
+            const statusField = fields.find((f) => f.api_name === 'Contact_Status' ||
+                f.field_label === 'Status' ||
+                f.api_name === 'Lead_Source');
+            if (statusField?.pick_list_values) {
+                return statusField.pick_list_values.map((v, index) => ({
+                    id: v.id || `stage_${index}`,
+                    name: v.display_value || v.actual_value,
+                    order: index,
+                }));
+            }
+            return [];
+        });
+    }
+    async getLeads(tenantId, page = 1, perPage = 200) {
+        return this.executeWithRetry(tenantId, async (client) => {
+            const response = await client.get('/Leads', {
+                params: { page, per_page: perPage },
+            });
+            return response.data?.data || [];
         });
     }
     async testConnection(tenantId) {

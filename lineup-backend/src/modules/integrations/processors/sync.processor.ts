@@ -5,6 +5,7 @@ import { PrismaService } from '../../../common/prisma.service';
 import { ProviderFactory } from '../provider.factory';
 import { AuditService } from '../../audit/audit.service';
 import { IntegrationEventType, SyncEntityType } from '../types/standard-entities';
+import { ZohoSyncService } from '../zoho/zoho.sync.service';
 
 /**
  * Provider interface for sync operations
@@ -44,6 +45,7 @@ export class SyncProcessor extends WorkerHost {
         private prisma: PrismaService,
         private providerFactory: ProviderFactory,
         private auditService: AuditService,
+        private zohoSyncService: ZohoSyncService,
     ) {
         super();
     }
@@ -232,7 +234,27 @@ export class SyncProcessor extends WorkerHost {
         try {
             const providerInstance = this.providerFactory.getProvider(provider);
 
-            // Pull candidates from provider (inbound sync - not enabled in v1 for Zoho)
+            // Special handling for Zoho - use dedicated ZohoSyncService
+            if (provider === 'zoho') {
+                this.logger.log(`Using ZohoSyncService for inbound sync`);
+                const result = await this.zohoSyncService.syncAll(tenantId, 'leads');
+
+                // Create audit log
+                await this.auditService.log({
+                    tenantId,
+                    userId: null,
+                    action: 'integration.sync.completed',
+                    metadata: {
+                        provider,
+                        ...result,
+                        triggeredBy,
+                    },
+                });
+
+                return { success: true, ...result };
+            }
+
+            // Pull candidates from provider (inbound sync - for non-Zoho providers)
             if (providerInstance.pullCandidates) {
                 const sinceDate = since ? new Date(since) : undefined;
                 const candidates = await providerInstance.pullCandidates(

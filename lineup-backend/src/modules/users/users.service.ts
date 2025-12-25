@@ -104,7 +104,7 @@ export class UsersService {
 
     async listUsers(tenantId: string, dto: ListUsersDto) {
         const page = dto.page || 1;
-        const perPage = dto.perPage || 20;
+        const perPage = Math.min(dto.perPage || 20, 100);
         const where: any = { tenantId };
 
         if (dto.q) {

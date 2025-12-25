@@ -5,24 +5,24 @@ export declare class FeedbackController {
     constructor(svc: FeedbackService);
     submit(req: any, dto: SubmitFeedbackDto): Promise<{
         id: string;
+        createdAt: Date;
+        updatedAt: Date;
         tenantId: string;
+        comments: string | null;
         interviewId: string;
         interviewerId: string;
         rating: number;
-        criteria: import(".prisma/client").Prisma.JsonValue | null;
-        comments: string | null;
-        createdAt: Date;
-        updatedAt: Date;
+        criteria: import("@prisma/client/runtime/library").JsonValue | null;
     }>;
     getForInterview(req: any, id: string): Promise<{
         id: string;
+        createdAt: Date;
+        updatedAt: Date;
         tenantId: string;
+        comments: string | null;
         interviewId: string;
         interviewerId: string;
         rating: number;
-        criteria: import(".prisma/client").Prisma.JsonValue | null;
-        comments: string | null;
-        createdAt: Date;
-        updatedAt: Date;
+        criteria: import("@prisma/client/runtime/library").JsonValue | null;
     }[]>;
 }

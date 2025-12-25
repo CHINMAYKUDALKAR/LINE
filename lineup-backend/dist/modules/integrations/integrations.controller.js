@@ -22,11 +22,30 @@ const sync_dto_1 = require("./dto/sync.dto");
 const jwt_guard_1 = require("../auth/guards/jwt.guard");
 const rbac_guard_1 = require("../auth/guards/rbac.guard");
 const roles_decorator_1 = require("../auth/decorators/roles.decorator");
+const public_decorator_1 = require("../auth/decorators/public.decorator");
 const client_1 = require("@prisma/client");
 let IntegrationsController = class IntegrationsController {
     integrationsService;
     constructor(integrationsService) {
         this.integrationsService = integrationsService;
+    }
+    async oauthCallback(code, state, res) {
+        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+        try {
+            let provider = 'zoho';
+            try {
+                const stateData = JSON.parse(Buffer.from(state, 'base64').toString());
+                provider = stateData.provider || 'zoho';
+            }
+            catch {
+            }
+            const result = await this.integrationsService.callback(provider, code, state, 'oauth-callback');
+            return res.redirect(`${frontendUrl}/integrations?status=success&provider=${result.provider}`);
+        }
+        catch (error) {
+            console.error('OAuth callback failed:', error.message);
+            return res.redirect(`${frontendUrl}/integrations?status=error&message=${encodeURIComponent(error.message)}`);
+        }
     }
     async listIntegrations(req) {
         const tenantId = req.user.tenantId;
@@ -40,10 +59,6 @@ let IntegrationsController = class IntegrationsController {
         const tenantId = req.user.tenantId;
         const userId = req.user.id;
         return this.integrationsService.connect(tenantId, connectDto.provider, userId);
-    }
-    async callback(provider, code, state, req) {
-        const userId = req.user?.id || 'system';
-        return this.integrationsService.callback(provider, code, state, userId);
     }
     async updateMapping(req, mappingDto) {
         const tenantId = req.user.tenantId;
@@ -85,8 +100,34 @@ let IntegrationsController = class IntegrationsController {
         const tenantId = req.user.tenantId;
         return this.integrationsService.getFailureSummary(tenantId, provider);
     }
+    async testZohoConnection(req) {
+        const tenantId = req.user.tenantId;
+        return this.integrationsService.testZohoConnection(tenantId);
+    }
+    async getZohoContacts(req, page, perPage) {
+        const tenantId = req.user.tenantId;
+        return this.integrationsService.getZohoContacts(tenantId, parseInt(page || '1'), parseInt(perPage || '20'));
+    }
+    async getZohoLeads(req, page, perPage) {
+        const tenantId = req.user.tenantId;
+        return this.integrationsService.getZohoLeads(tenantId, parseInt(page || '1'), parseInt(perPage || '20'));
+    }
 };
 exports.IntegrationsController = IntegrationsController;
+__decorate([
+    (0, common_1.Get)('callback'),
+    (0, public_decorator_1.Public)(),
+    (0, swagger_1.ApiOperation)({ summary: 'Handle OAuth callback from provider (public endpoint)' }),
+    (0, swagger_1.ApiQuery)({ name: 'code', description: 'Authorization code from provider' }),
+    (0, swagger_1.ApiQuery)({ name: 'state', description: 'State parameter containing tenant info' }),
+    (0, swagger_1.ApiResponse)({ status: 302, description: 'Redirects to frontend after success' }),
+    __param(0, (0, common_1.Query)('code')),
+    __param(1, (0, common_1.Query)('state')),
+    __param(2, (0, common_1.Res)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, String, Object]),
+    __metadata("design:returntype", Promise)
+], IntegrationsController.prototype, "oauthCallback", null);
 __decorate([
     (0, common_1.Get)(),
     (0, roles_decorator_1.Roles)(client_1.Role.ADMIN, client_1.Role.MANAGER),
@@ -123,22 +164,6 @@ __decorate([
     __metadata("design:paramtypes", [Object, connect_dto_1.ConnectDto]),
     __metadata("design:returntype", Promise)
 ], IntegrationsController.prototype, "connect", null);
-__decorate([
-    (0, common_1.Get)('callback'),
-    (0, swagger_1.ApiOperation)({ summary: 'Handle OAuth callback from provider' }),
-    (0, swagger_1.ApiQuery)({ name: 'provider', description: 'Integration provider' }),
-    (0, swagger_1.ApiQuery)({ name: 'code', description: 'Authorization code from provider' }),
-    (0, swagger_1.ApiQuery)({ name: 'state', description: 'State parameter for CSRF protection' }),
-    (0, swagger_1.ApiResponse)({ status: 200, description: 'Integration connected successfully' }),
-    (0, swagger_1.ApiResponse)({ status: 400, description: 'Invalid code or state' }),
-    __param(0, (0, common_1.Query)('provider')),
-    __param(1, (0, common_1.Query)('code')),
-    __param(2, (0, common_1.Query)('state')),
-    __param(3, (0, common_1.Req)()),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, String, String, Object]),
-    __metadata("design:returntype", Promise)
-], IntegrationsController.prototype, "callback", null);
 __decorate([
     (0, common_1.Post)('mapping'),
     (0, roles_decorator_1.Roles)(client_1.Role.ADMIN),
@@ -256,6 +281,44 @@ __decorate([
     __metadata("design:paramtypes", [Object, String]),
     __metadata("design:returntype", Promise)
 ], IntegrationsController.prototype, "getFailureSummary", null);
+__decorate([
+    (0, common_1.Get)('zoho/test'),
+    (0, roles_decorator_1.Roles)(client_1.Role.ADMIN),
+    (0, swagger_1.ApiOperation)({ summary: 'Test Zoho CRM connection' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Connection test result' }),
+    __param(0, (0, common_1.Req)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], IntegrationsController.prototype, "testZohoConnection", null);
+__decorate([
+    (0, common_1.Get)('zoho/contacts'),
+    (0, roles_decorator_1.Roles)(client_1.Role.ADMIN, client_1.Role.MANAGER),
+    (0, swagger_1.ApiOperation)({ summary: 'Fetch contacts from Zoho CRM' }),
+    (0, swagger_1.ApiQuery)({ name: 'page', required: false, description: 'Page number (default: 1)' }),
+    (0, swagger_1.ApiQuery)({ name: 'perPage', required: false, description: 'Items per page (default: 20)' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'List of contacts from Zoho CRM' }),
+    __param(0, (0, common_1.Req)()),
+    __param(1, (0, common_1.Query)('page')),
+    __param(2, (0, common_1.Query)('perPage')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String, String]),
+    __metadata("design:returntype", Promise)
+], IntegrationsController.prototype, "getZohoContacts", null);
+__decorate([
+    (0, common_1.Get)('zoho/leads'),
+    (0, roles_decorator_1.Roles)(client_1.Role.ADMIN, client_1.Role.MANAGER),
+    (0, swagger_1.ApiOperation)({ summary: 'Fetch leads from Zoho CRM' }),
+    (0, swagger_1.ApiQuery)({ name: 'page', required: false, description: 'Page number (default: 1)' }),
+    (0, swagger_1.ApiQuery)({ name: 'perPage', required: false, description: 'Items per page (default: 20)' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'List of leads from Zoho CRM' }),
+    __param(0, (0, common_1.Req)()),
+    __param(1, (0, common_1.Query)('page')),
+    __param(2, (0, common_1.Query)('perPage')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String, String]),
+    __metadata("design:returntype", Promise)
+], IntegrationsController.prototype, "getZohoLeads", null);
 exports.IntegrationsController = IntegrationsController = __decorate([
     (0, swagger_1.ApiTags)('integrations'),
     (0, swagger_1.ApiBearerAuth)('JWT-auth'),

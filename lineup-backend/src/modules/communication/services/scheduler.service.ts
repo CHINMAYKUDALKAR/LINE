@@ -1,10 +1,12 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../../common/prisma.service';
 import { MessageService } from './message.service';
 import { ScheduleStatus } from '@prisma/client';
 
 @Injectable()
 export class SchedulerService {
+    private readonly logger = new Logger(SchedulerService.name);
+
     constructor(
         private prisma: PrismaService,
         private messageService: MessageService,
@@ -54,7 +56,7 @@ export class SchedulerService {
 
                 results.processed++;
             } catch (error) {
-                console.error(`Failed to send scheduled message ${scheduled.id}:`, error);
+                this.logger.error(`Failed to send scheduled message ${scheduled.id}:`, error);
 
                 // Mark as failed
                 await this.prisma.scheduledMessage.update({

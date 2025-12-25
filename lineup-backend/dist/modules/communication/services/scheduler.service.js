@@ -8,15 +8,17 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
+var SchedulerService_1;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SchedulerService = void 0;
 const common_1 = require("@nestjs/common");
 const prisma_service_1 = require("../../../common/prisma.service");
 const message_service_1 = require("./message.service");
 const client_1 = require("@prisma/client");
-let SchedulerService = class SchedulerService {
+let SchedulerService = SchedulerService_1 = class SchedulerService {
     prisma;
     messageService;
+    logger = new common_1.Logger(SchedulerService_1.name);
     constructor(prisma, messageService) {
         this.prisma = prisma;
         this.messageService = messageService;
@@ -53,7 +55,7 @@ let SchedulerService = class SchedulerService {
                 results.processed++;
             }
             catch (error) {
-                console.error(`Failed to send scheduled message ${scheduled.id}:`, error);
+                this.logger.error(`Failed to send scheduled message ${scheduled.id}:`, error);
                 await this.prisma.scheduledMessage.update({
                     where: { id: scheduled.id },
                     data: { status: client_1.ScheduleStatus.FAILED },
@@ -81,7 +83,7 @@ let SchedulerService = class SchedulerService {
     }
 };
 exports.SchedulerService = SchedulerService;
-exports.SchedulerService = SchedulerService = __decorate([
+exports.SchedulerService = SchedulerService = SchedulerService_1 = __decorate([
     (0, common_1.Injectable)(),
     __metadata("design:paramtypes", [prisma_service_1.PrismaService,
         message_service_1.MessageService])

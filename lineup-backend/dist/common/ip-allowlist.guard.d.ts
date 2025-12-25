@@ -6,6 +6,7 @@ export declare const SkipIPAllowlist: () => (target: any, propertyKey?: string, 
 export declare class IPAllowlistGuard implements CanActivate {
     private reflector;
     private prisma;
+    private readonly logger;
     constructor(reflector: Reflector, prisma: PrismaService);
     canActivate(context: ExecutionContext): Promise<boolean>;
     private getClientIP;
@@ -18,6 +19,8 @@ export declare class IPAllowlistService {
     constructor(prisma: PrismaService);
     getPolicy(tenantId: string): Promise<{
         id: string;
+        createdAt: Date;
+        updatedAt: Date;
         tenantId: string;
         ipAllowlistEnabled: boolean;
         allowedIPs: string[];
@@ -31,11 +34,11 @@ export declare class IPAllowlistService {
         sessionTimeoutMinutes: number | null;
         enforce2FA: boolean;
         enforce2FAForAdmins: boolean;
-        createdAt: Date;
-        updatedAt: Date;
     } | null>;
     updateIPAllowlist(tenantId: string, allowedIPs: string[], enabled: boolean): Promise<{
         id: string;
+        createdAt: Date;
+        updatedAt: Date;
         tenantId: string;
         ipAllowlistEnabled: boolean;
         allowedIPs: string[];
@@ -49,11 +52,11 @@ export declare class IPAllowlistService {
         sessionTimeoutMinutes: number | null;
         enforce2FA: boolean;
         enforce2FAForAdmins: boolean;
-        createdAt: Date;
-        updatedAt: Date;
     }>;
     addIP(tenantId: string, ip: string): Promise<{
         id: string;
+        createdAt: Date;
+        updatedAt: Date;
         tenantId: string;
         ipAllowlistEnabled: boolean;
         allowedIPs: string[];
@@ -67,11 +70,11 @@ export declare class IPAllowlistService {
         sessionTimeoutMinutes: number | null;
         enforce2FA: boolean;
         enforce2FAForAdmins: boolean;
-        createdAt: Date;
-        updatedAt: Date;
     } | null>;
     removeIP(tenantId: string, ip: string): Promise<{
         id: string;
+        createdAt: Date;
+        updatedAt: Date;
         tenantId: string;
         ipAllowlistEnabled: boolean;
         allowedIPs: string[];
@@ -85,11 +88,11 @@ export declare class IPAllowlistService {
         sessionTimeoutMinutes: number | null;
         enforce2FA: boolean;
         enforce2FAForAdmins: boolean;
-        createdAt: Date;
-        updatedAt: Date;
     }>;
     toggleIPAllowlist(tenantId: string, enabled: boolean): Promise<{
         id: string;
+        createdAt: Date;
+        updatedAt: Date;
         tenantId: string;
         ipAllowlistEnabled: boolean;
         allowedIPs: string[];
@@ -103,7 +106,5 @@ export declare class IPAllowlistService {
         sessionTimeoutMinutes: number | null;
         enforce2FA: boolean;
         enforce2FAForAdmins: boolean;
-        createdAt: Date;
-        updatedAt: Date;
     }>;
 }

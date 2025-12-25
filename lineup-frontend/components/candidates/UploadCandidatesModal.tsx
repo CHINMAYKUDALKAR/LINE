@@ -1,9 +1,12 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import Papa from 'papaparse';
 import * as XLSX from 'xlsx';
-import { Loader2, Upload, FileSpreadsheet, AlertCircle, CheckCircle2, X } from 'lucide-react';
+import {
+    Loader2, Upload, FileSpreadsheet, AlertCircle, CheckCircle2, X,
+    ChevronLeft, ChevronRight, AlertTriangle, Edit2, Check, Copy
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -32,11 +35,17 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Input } from '@/components/ui/input';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { toast } from 'sonner';
 import { useBulkImportCandidates, BulkImportRow } from '@/lib/hooks/useCandidates';
+import { cn } from '@/lib/utils';
 
 // Maximum number of candidates per import
 const MAX_ROWS = 1000;
+const ROWS_PER_PAGE = 20;
+const MAX_FILE_SIZE_MB = 10;
+const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
 
 // Candidate fields that can be mapped
 const CANDIDATE_FIELDS = [
@@ -51,7 +60,19 @@ const CANDIDATE_FIELDS = [
     { key: 'resumeUrl', label: 'Resume URL', required: false },
 ];
 
+// Validation helpers
+const isValidEmail = (email: string): boolean => {
+    if (!email) return true; // Empty is valid (not required)
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email.trim());
+};
 
+const isValidPhone = (phone: string): boolean => {
+    if (!phone) return true; // Empty is valid (not required)
+    // Allow various formats: +1234567890, (123) 456-7890, 123-456-7890, etc.
+    const phoneRegex = /^[\d\s\-\+\(\)\.]{7,20}$/;
+    return phoneRegex.test(phone.trim());
+};
 
 type FieldMapping = Record<string, string>; // CSV header -> candidate field
 
@@ -63,12 +84,29 @@ interface UploadCandidatesModalProps {
 
 type UploadStep = 'upload' | 'mapping' | 'preview' | 'importing' | 'complete';
 
+interface RowValidation {
+    isValid: boolean;
+    hasWarnings: boolean;
+    errors: string[];
+    warnings: string[];
+    isDuplicate: boolean;
+}
+
+interface EditingCell {
+    rowIndex: number;
+    field: string;
+}
+
 export function UploadCandidatesModal({ open, onOpenChange, onSuccess }: UploadCandidatesModalProps) {
     const [step, setStep] = useState<UploadStep>('upload');
     const [file, setFile] = useState<File | null>(null);
     const [csvHeaders, setCsvHeaders] = useState<string[]>([]);
     const [csvData, setCsvData] = useState<Record<string, string>[]>([]);
     const [fieldMapping, setFieldMapping] = useState<FieldMapping>({});
+    const [currentPage, setCurrentPage] = useState(0);
+    const [editingCell, setEditingCell] = useState<EditingCell | null>(null);
+    const [editValue, setEditValue] = useState('');
+    const [editedCells, setEditedCells] = useState<Set<string>>(new Set());
     const [importResult, setImportResult] = useState<{
         success: number;
         failed: number;
@@ -78,8 +116,129 @@ export function UploadCandidatesModal({ open, onOpenChange, onSuccess }: UploadC
 
     const bulkImport = useBulkImportCandidates();
 
+    // Get mapped data for validation and preview
+    const getMappedData = useCallback((): BulkImportRow[] => {
+        return csvData.map((row) => {
+            const mappedRow: Record<string, string> = {};
+            Object.entries(fieldMapping).forEach(([csvHeader, candidateField]) => {
+                if (candidateField && row[csvHeader]) {
+                    mappedRow[candidateField] = row[csvHeader];
+                }
+            });
+            return mappedRow as unknown as BulkImportRow;
+        });
+    }, [csvData, fieldMapping]);
+
+    // Validate all rows and detect duplicates
+    const rowValidations = useMemo((): RowValidation[] => {
+        const mappedData = getMappedData();
+        const emailCounts = new Map<string, number>();
+
+        // Count email occurrences for duplicate detection
+        mappedData.forEach((row) => {
+            const email = (row.email || '').toLowerCase().trim();
+            if (email) {
+                emailCounts.set(email, (emailCounts.get(email) || 0) + 1);
+            }
+        });
+
+        return mappedData.map((row) => {
+            const errors: string[] = [];
+            const warnings: string[] = [];
+
+            // Check required fields
+            if (!row.name || !row.name.trim()) {
+                errors.push('Name is required');
+            }
+
+            // Validate email format
+            if (row.email && !isValidEmail(row.email)) {
+                errors.push('Invalid email format');
+            }
+
+            // Validate phone format
+            if (row.phone && !isValidPhone(row.phone)) {
+                warnings.push('Phone format may be invalid');
+            }
+
+            // Check for duplicates within import
+            const email = (row.email || '').toLowerCase().trim();
+            const isDuplicate = email ? (emailCounts.get(email) || 0) > 1 : false;
+            if (isDuplicate) {
+                warnings.push('Duplicate email in import');
+            }
+
+            return {
+                isValid: errors.length === 0,
+                hasWarnings: warnings.length > 0,
+                errors,
+                warnings,
+                isDuplicate,
+            };
+        });
+    }, [getMappedData]);
+
+    // Summary stats
+    const validationStats = useMemo(() => {
+        const valid = rowValidations.filter(v => v.isValid && !v.hasWarnings).length;
+        const warnings = rowValidations.filter(v => v.isValid && v.hasWarnings).length;
+        const errors = rowValidations.filter(v => !v.isValid).length;
+        const duplicates = rowValidations.filter(v => v.isDuplicate).length;
+        return { valid, warnings, errors, duplicates };
+    }, [rowValidations]);
+
+    // Pagination
+    const totalPages = Math.ceil(csvData.length / ROWS_PER_PAGE);
+    const paginatedData = useMemo(() => {
+        const start = currentPage * ROWS_PER_PAGE;
+        return getMappedData().slice(start, start + ROWS_PER_PAGE);
+    }, [getMappedData, currentPage]);
+    const paginatedValidations = useMemo(() => {
+        const start = currentPage * ROWS_PER_PAGE;
+        return rowValidations.slice(start, start + ROWS_PER_PAGE);
+    }, [rowValidations, currentPage]);
+
+    // Cell editing handlers
+    const startEditing = (rowIndex: number, field: string, currentValue: string) => {
+        setEditingCell({ rowIndex, field });
+        setEditValue(currentValue || '');
+    };
+
+    const saveEdit = () => {
+        if (!editingCell) return;
+
+        const actualRowIndex = currentPage * ROWS_PER_PAGE + editingCell.rowIndex;
+        const csvHeader = Object.entries(fieldMapping).find(([_, v]) => v === editingCell.field)?.[0];
+
+        if (csvHeader) {
+            const newData = [...csvData];
+            newData[actualRowIndex] = {
+                ...newData[actualRowIndex],
+                [csvHeader]: editValue,
+            };
+            setCsvData(newData);
+            setEditedCells(prev => new Set(prev).add(`${actualRowIndex}-${editingCell.field}`));
+        }
+
+        setEditingCell(null);
+        setEditValue('');
+    };
+
+    const cancelEdit = () => {
+        setEditingCell(null);
+        setEditValue('');
+    };
+
     const handleFileSelect = useCallback((selectedFile: File) => {
+        // Validate file size
+        if (selectedFile.size > MAX_FILE_SIZE_BYTES) {
+            toast.error(`File too large. Maximum size is ${MAX_FILE_SIZE_MB}MB.`);
+            return;
+        }
+
         setFile(selectedFile);
+        setCurrentPage(0);
+        setEditedCells(new Set());
 
         const isExcel = selectedFile.name.endsWith('.xlsx') ||
             selectedFile.name.endsWith('.xls') ||
@@ -221,20 +380,6 @@ export function UploadCandidatesModal({ open, onOpenChange, onSuccess }: UploadC
         }));
     };
 
-    const getMappedData = (): BulkImportRow[] => {
-        return csvData.map((row) => {
-            const mappedRow: Record<string, string> = {};
-            Object.entries(fieldMapping).forEach(([csvHeader, candidateField]) => {
-                if (candidateField && row[csvHeader]) {
-                    mappedRow[candidateField] = row[csvHeader];
-                }
-            });
-            // Cast through unknown since we validate required fields separately
-            return mappedRow as unknown as BulkImportRow;
-        });
-    };
-
-
     const handleImport = async () => {
         const mappedData = getMappedData();
 
@@ -264,6 +409,9 @@ export function UploadCandidatesModal({ open, onOpenChange, onSuccess }: UploadC
         setCsvData([]);
         setFieldMapping({});
         setImportResult(null);
+        setCurrentPage(0);
+        setEditingCell(null);
+        setEditedCells(new Set());
         onOpenChange(false);
     };
 
@@ -273,11 +421,61 @@ export function UploadCandidatesModal({ open, onOpenChange, onSuccess }: UploadC
     };
 
     const isMappingValid = Object.values(fieldMapping).includes('name');
-    const previewData = getMappedData().slice(0, 5);
+    const mappedFields = CANDIDATE_FIELDS.filter((f) => Object.values(fieldMapping).includes(f.key));
+
+    // Get validation status icon
+    const getStatusIcon = (validation: RowValidation) => {
+        if (!validation.isValid) {
+            return (
+                <Tooltip>
+                    <TooltipTrigger>
+                        <X className="h-4 w-4 text-red-500" />
+                    </TooltipTrigger>
+                    <TooltipContent side="right" className="max-w-xs">
+                        <ul className="text-xs space-y-1">
+                            {validation.errors.map((e, i) => <li key={i}>• {e}</li>)}
+                        </ul>
+                    </TooltipContent>
+                </Tooltip>
+            );
+        }
+        if (validation.hasWarnings) {
+            return (
+                <Tooltip>
+                    <TooltipTrigger>
+                        <AlertTriangle className="h-4 w-4 text-yellow-500" />
+                    </TooltipTrigger>
+                    <TooltipContent side="right" className="max-w-xs">
+                        <ul className="text-xs space-y-1">
+                            {validation.warnings.map((w, i) => <li key={i}>• {w}</li>)}
+                        </ul>
+                    </TooltipContent>
+                </Tooltip>
+            );
+        }
+        return <CheckCircle2 className="h-4 w-4 text-green-500" />;
+    };
+
+    // Get cell styling based on validation
+    const getCellStyle = (field: string, value: string, rowIndex: number) => {
+        const actualRowIndex = currentPage * ROWS_PER_PAGE + rowIndex;
+        const isEdited = editedCells.has(`${actualRowIndex}-${field}`);
+
+        let borderColor = '';
+        if (field === 'email' && value && !isValidEmail(value)) {
+            borderColor = 'border-l-2 border-l-red-500';
+        } else if (field === 'phone' && value && !isValidPhone(value)) {
+            borderColor = 'border-l-2 border-l-yellow-500';
+        } else if (field === 'name' && !value) {
+            borderColor = 'border-l-2 border-l-red-500';
+        }
+
+        return cn(borderColor, isEdited && 'bg-blue-50 dark:bg-blue-950/30');
+    };
 
     return (
         <Dialog open={open} onOpenChange={handleClose}>
-            <DialogContent className="w-screen h-[100dvh] max-w-none sm:max-w-[800px] sm:h-auto sm:max-h-[90vh] sm:rounded-lg flex flex-col gap-0 p-0">
+            <DialogContent className="w-screen h-[100dvh] max-w-none sm:max-w-[900px] sm:h-auto sm:max-h-[90vh] sm:rounded-lg flex flex-col gap-0 p-0">
                 <DialogHeader className="p-6 pb-2 sm:pb-6 flex-shrink-0">
                     <DialogTitle className="flex items-center gap-2">
                         <FileSpreadsheet className="h-5 w-5" />
@@ -424,44 +622,170 @@ export function UploadCandidatesModal({ open, onOpenChange, onSuccess }: UploadC
                     {/* Step 3: Preview */}
                     {step === 'preview' && (
                         <div className="space-y-4">
-                            <Alert>
-                                <AlertCircle className="h-4 w-4" />
-                                <AlertTitle>Ready to import {csvData.length} candidates</AlertTitle>
-                                <AlertDescription>
-                                    Review the preview below. Duplicates will be skipped.
-                                </AlertDescription>
-                            </Alert>
+                            {/* Summary Stats */}
+                            <div className="grid grid-cols-4 gap-3">
+                                <div className="p-3 bg-green-50 dark:bg-green-950/30 rounded-lg border border-green-200 dark:border-green-900">
+                                    <div className="flex items-center gap-2">
+                                        <CheckCircle2 className="h-4 w-4 text-green-600" />
+                                        <span className="text-lg font-bold text-green-600">{validationStats.valid}</span>
+                                    </div>
+                                    <p className="text-xs text-muted-foreground mt-1">Valid</p>
+                                </div>
+                                <div className="p-3 bg-yellow-50 dark:bg-yellow-950/30 rounded-lg border border-yellow-200 dark:border-yellow-900">
+                                    <div className="flex items-center gap-2">
+                                        <AlertTriangle className="h-4 w-4 text-yellow-600" />
+                                        <span className="text-lg font-bold text-yellow-600">{validationStats.warnings}</span>
+                                    </div>
+                                    <p className="text-xs text-muted-foreground mt-1">Warnings</p>
+                                </div>
+                                <div className="p-3 bg-red-50 dark:bg-red-950/30 rounded-lg border border-red-200 dark:border-red-900">
+                                    <div className="flex items-center gap-2">
+                                        <X className="h-4 w-4 text-red-600" />
+                                        <span className="text-lg font-bold text-red-600">{validationStats.errors}</span>
+                                    </div>
+                                    <p className="text-xs text-muted-foreground mt-1">Errors</p>
+                                </div>
+                                <div className="p-3 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-900">
+                                    <div className="flex items-center gap-2">
+                                        <Copy className="h-4 w-4 text-blue-600" />
+                                        <span className="text-lg font-bold text-blue-600">{validationStats.duplicates}</span>
+                                    </div>
+                                    <p className="text-xs text-muted-foreground mt-1">Duplicates</p>
+                                </div>
+                            </div>
 
-                            <ScrollArea className="h-[250px] border rounded-lg">
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow>
-                                            {CANDIDATE_FIELDS.filter((f) =>
-                                                Object.values(fieldMapping).includes(f.key)
-                                            ).map((field) => (
-                                                <TableHead key={field.key}>{field.label}</TableHead>
-                                            ))}
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {previewData.map((row, idx) => (
-                                            <TableRow key={idx}>
-                                                {CANDIDATE_FIELDS.filter((f) =>
-                                                    Object.values(fieldMapping).includes(f.key)
-                                                ).map((field) => (
-                                                    <TableCell key={field.key}>
-                                                        {(row as any)[field.key] || '-'}
-                                                    </TableCell>
+                            {validationStats.errors > 0 && (
+                                <Alert variant="destructive">
+                                    <AlertCircle className="h-4 w-4" />
+                                    <AlertTitle>Fix errors before importing</AlertTitle>
+                                    <AlertDescription>
+                                        {validationStats.errors} rows have errors that must be fixed. Click on a cell to edit.
+                                    </AlertDescription>
+                                </Alert>
+                            )}
+
+                            {/* Data Table */}
+                            <div className="border rounded-lg overflow-hidden">
+                                <ScrollArea className="h-[320px]">
+                                    <Table>
+                                        <TableHeader className="sticky top-0 bg-background z-10">
+                                            <TableRow className="bg-muted/50">
+                                                <TableHead className="w-12 text-center">#</TableHead>
+                                                <TableHead className="w-12 text-center">Status</TableHead>
+                                                {mappedFields.map((field) => (
+                                                    <TableHead key={field.key} className="min-w-[120px]">
+                                                        {field.label}
+                                                        {field.required && <span className="text-red-500 ml-1">*</span>}
+                                                    </TableHead>
                                                 ))}
                                             </TableRow>
-                                        ))}
-                                    </TableBody>
-                                </Table>
-                            </ScrollArea>
-                            {csvData.length > 5 && (
-                                <p className="text-sm text-muted-foreground text-center">
-                                    Showing first 5 of {csvData.length} rows
-                                </p>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {paginatedData.map((row, idx) => {
+                                                const validation = paginatedValidations[idx];
+                                                const actualRowNum = currentPage * ROWS_PER_PAGE + idx + 1;
+
+                                                return (
+                                                    <TableRow
+                                                        key={idx}
+                                                        className={cn(
+                                                            idx % 2 === 0 ? 'bg-background' : 'bg-muted/30',
+                                                            !validation?.isValid && 'bg-red-50/50 dark:bg-red-950/20',
+                                                            validation?.isDuplicate && 'bg-yellow-50/50 dark:bg-yellow-950/20'
+                                                        )}
+                                                    >
+                                                        <TableCell className="text-center text-muted-foreground font-mono text-xs">
+                                                            {actualRowNum}
+                                                        </TableCell>
+                                                        <TableCell className="text-center">
+                                                            {validation && getStatusIcon(validation)}
+                                                        </TableCell>
+                                                        {mappedFields.map((field) => {
+                                                            const value = (row as any)[field.key] || '';
+                                                            const isEditing = editingCell?.rowIndex === idx && editingCell?.field === field.key;
+
+                                                            return (
+                                                                <TableCell
+                                                                    key={field.key}
+                                                                    className={cn(
+                                                                        'p-1',
+                                                                        getCellStyle(field.key, value, idx)
+                                                                    )}
+                                                                >
+                                                                    {isEditing ? (
+                                                                        <div className="flex items-center gap-1">
+                                                                            <Input
+                                                                                value={editValue}
+                                                                                onChange={(e) => setEditValue(e.target.value)}
+                                                                                className="h-7 text-sm"
+                                                                                autoFocus
+                                                                                onKeyDown={(e) => {
+                                                                                    if (e.key === 'Enter') saveEdit();
+                                                                                    if (e.key === 'Escape') cancelEdit();
+                                                                                }}
+                                                                            />
+                                                                            <Button size="icon" variant="ghost" className="h-6 w-6" onClick={saveEdit}>
+                                                                                <Check className="h-3 w-3" />
+                                                                            </Button>
+                                                                            <Button size="icon" variant="ghost" className="h-6 w-6" onClick={cancelEdit}>
+                                                                                <X className="h-3 w-3" />
+                                                                            </Button>
+                                                                        </div>
+                                                                    ) : (
+                                                                        <div
+                                                                            className="group flex items-center justify-between cursor-pointer hover:bg-muted/50 rounded px-2 py-1"
+                                                                            onClick={() => startEditing(idx, field.key, value)}
+                                                                        >
+                                                                            <span className={cn(
+                                                                                'text-sm truncate max-w-[150px]',
+                                                                                !value && 'text-muted-foreground italic'
+                                                                            )}>
+                                                                                {value || 'empty'}
+                                                                            </span>
+                                                                            <Edit2 className="h-3 w-3 opacity-0 group-hover:opacity-50 ml-1 flex-shrink-0" />
+                                                                        </div>
+                                                                    )}
+                                                                </TableCell>
+                                                            );
+                                                        })}
+                                                    </TableRow>
+                                                );
+                                            })}
+                                        </TableBody>
+                                    </Table>
+                                </ScrollArea>
+                            </div>
+
+                            {/* Pagination */}
+                            {totalPages > 1 && (
+                                <div className="flex items-center justify-between">
+                                    <p className="text-sm text-muted-foreground">
+                                        Showing {currentPage * ROWS_PER_PAGE + 1} - {Math.min((currentPage + 1) * ROWS_PER_PAGE, csvData.length)} of {csvData.length} rows
+                                    </p>
+                                    <div className="flex items-center gap-2">
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => setCurrentPage(p => Math.max(0, p - 1))}
+                                            disabled={currentPage === 0}
+                                        >
+                                            <ChevronLeft className="h-4 w-4 mr-1" />
+                                            Previous
+                                        </Button>
+                                        <span className="text-sm text-muted-foreground px-2">
+                                            Page {currentPage + 1} of {totalPages}
+                                        </span>
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => setCurrentPage(p => Math.min(totalPages - 1, p + 1))}
+                                            disabled={currentPage >= totalPages - 1}
+                                        >
+                                            Next
+                                            <ChevronRight className="h-4 w-4 ml-1" />
+                                        </Button>
+                                    </div>
+                                </div>
                             )}
                         </div>
                     )}
@@ -546,8 +870,11 @@ export function UploadCandidatesModal({ open, onOpenChange, onSuccess }: UploadC
                             <Button variant="outline" onClick={() => setStep('mapping')}>
                                 Back to Mapping
                             </Button>
-                            <Button onClick={handleImport}>
-                                Import {csvData.length} Candidates
+                            <Button
+                                onClick={handleImport}
+                                disabled={validationStats.errors > 0}
+                            >
+                                Import {csvData.length - validationStats.errors} Candidates
                             </Button>
                         </>
                     )}

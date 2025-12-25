@@ -5,54 +5,55 @@ import { Queue } from 'bullmq';
 export declare class TenantsService {
     private prisma;
     private domainQueue;
+    private domainVerifyRateLimiter;
     constructor(prisma: PrismaService, domainQueue: Queue);
     create(dto: CreateTenantDto, userId: string): Promise<{
-        id: string;
         name: string;
+        id: string;
         domain: string | null;
         domainVerified: boolean;
-        settings: import(".prisma/client").Prisma.JsonValue | null;
+        settings: import("@prisma/client/runtime/library").JsonValue | null;
         brandingLogoUrl: string | null;
-        brandingColors: import(".prisma/client").Prisma.JsonValue | null;
+        brandingColors: import("@prisma/client/runtime/library").JsonValue | null;
         trialActive: boolean;
         trialEndsAt: Date | null;
         createdAt: Date;
         updatedAt: Date;
     }>;
     findAll(): Promise<{
-        id: string;
         name: string;
+        id: string;
         domain: string | null;
         domainVerified: boolean;
-        settings: import(".prisma/client").Prisma.JsonValue | null;
+        settings: import("@prisma/client/runtime/library").JsonValue | null;
         brandingLogoUrl: string | null;
-        brandingColors: import(".prisma/client").Prisma.JsonValue | null;
+        brandingColors: import("@prisma/client/runtime/library").JsonValue | null;
         trialActive: boolean;
         trialEndsAt: Date | null;
         createdAt: Date;
         updatedAt: Date;
     }[]>;
     findOne(id: string): Promise<{
-        id: string;
         name: string;
+        id: string;
         domain: string | null;
         domainVerified: boolean;
-        settings: import(".prisma/client").Prisma.JsonValue | null;
+        settings: import("@prisma/client/runtime/library").JsonValue | null;
         brandingLogoUrl: string | null;
-        brandingColors: import(".prisma/client").Prisma.JsonValue | null;
+        brandingColors: import("@prisma/client/runtime/library").JsonValue | null;
         trialActive: boolean;
         trialEndsAt: Date | null;
         createdAt: Date;
         updatedAt: Date;
     }>;
     update(id: string, dto: UpdateTenantDto, userId: string): Promise<{
-        id: string;
         name: string;
+        id: string;
         domain: string | null;
         domainVerified: boolean;
-        settings: import(".prisma/client").Prisma.JsonValue | null;
+        settings: import("@prisma/client/runtime/library").JsonValue | null;
         brandingLogoUrl: string | null;
-        brandingColors: import(".prisma/client").Prisma.JsonValue | null;
+        brandingColors: import("@prisma/client/runtime/library").JsonValue | null;
         trialActive: boolean;
         trialEndsAt: Date | null;
         createdAt: Date;
@@ -72,9 +73,9 @@ export declare class TenantsService {
         id: string;
         name: string;
         domain: string | null;
-        role: import(".prisma/client").$Enums.Role;
+        role: import("@prisma/client").$Enums.Role;
         brandingLogoUrl: string | null;
-        brandingColors: import(".prisma/client").Prisma.JsonValue;
+        brandingColors: import("@prisma/client/runtime/library").JsonValue;
         trialActive: boolean;
         trialEndsAt: Date | null;
     }[]>;
@@ -82,8 +83,9 @@ export declare class TenantsService {
         name: string;
         id: string;
         brandingLogoUrl: string | null;
-        brandingColors: import(".prisma/client").Prisma.JsonValue;
+        brandingColors: import("@prisma/client/runtime/library").JsonValue;
     }>;
+    private isValidHexColor;
     updateBranding(tenantId: string, userId: string, branding: {
         logoUrl?: string;
         colors?: Record<string, string>;
@@ -91,6 +93,6 @@ export declare class TenantsService {
         name: string;
         id: string;
         brandingLogoUrl: string | null;
-        brandingColors: import(".prisma/client").Prisma.JsonValue;
+        brandingColors: import("@prisma/client/runtime/library").JsonValue;
     }>;
 }

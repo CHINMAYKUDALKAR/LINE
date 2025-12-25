@@ -16,4 +16,15 @@ export declare class GoogleCalendarOAuthService {
     refreshAccessToken(accountId: string): Promise<string>;
     getValidAccessToken(accountId: string): Promise<string>;
     disconnect(tenantId: string, userId: string): Promise<void>;
+    getBusySlots(accountId: string, from: Date, to: Date): Promise<{
+        busySlots: Array<{
+            start: Date;
+            end: Date;
+            source: 'google';
+            reason?: string;
+        }>;
+        success: boolean;
+        error?: string;
+    }>;
+    isTokenExpired(accountId: string): Promise<boolean>;
 }

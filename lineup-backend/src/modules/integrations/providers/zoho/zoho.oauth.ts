@@ -7,8 +7,8 @@ import { generateState, parseState, computeExpiry, buildAuthUrl } from '../../ut
 
 @Injectable()
 export class ZohoOAuthService {
-    private readonly authUrl = 'https://accounts.zoho.com/oauth/v2/auth';
-    private readonly tokenUrl = 'https://accounts.zoho.com/oauth/v2/token';
+    private readonly authUrl = 'https://accounts.zoho.in/oauth/v2/auth'; // India region
+    private readonly tokenUrl = 'https://accounts.zoho.in/oauth/v2/token'; // India region
 
     constructor(private prisma: PrismaService) { }
 

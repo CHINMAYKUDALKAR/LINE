@@ -22,7 +22,7 @@ let AuditService = class AuditService {
     }
     async findAll(tenantId, filters) {
         const page = filters?.page || 1;
-        const perPage = filters?.perPage || 50;
+        const perPage = Math.min(filters?.perPage || 50, 200);
         const skip = (page - 1) * perPage;
         const where = { tenantId };
         if (filters?.user) {
@@ -72,15 +72,27 @@ let AuditService = class AuditService {
             return 'warning';
         return 'info';
     }
+    sanitizeForCsv(value) {
+        if (!value)
+            return '';
+        const dangerous = ['=', '@', '+', '-'];
+        if (dangerous.some(char => value.startsWith(char))) {
+            return `'${value}`;
+        }
+        if (value.includes('"') || value.includes(',')) {
+            return `"${value.replace(/"/g, '""')}"`;
+        }
+        return value;
+    }
     async exportCSV(tenantId) {
         const { data } = await this.findAll(tenantId, { perPage: 1000 });
         const header = ['Timestamp', 'User', 'Action', 'IP Address', 'Severity'];
         const rows = data.map(log => [
-            log.timestamp,
-            log.user,
-            log.action,
-            log.ipAddress,
-            log.severity
+            this.sanitizeForCsv(log.timestamp),
+            this.sanitizeForCsv(log.user),
+            this.sanitizeForCsv(log.action),
+            this.sanitizeForCsv(log.ipAddress),
+            this.sanitizeForCsv(log.severity)
         ]);
         const csv = [header, ...rows].map(r => r.join(',')).join('\n');
         return { csv, filename: `audit-logs-${Date.now()}.csv` };

@@ -212,6 +212,11 @@ model Candidate {
   tags        String[]
   createdById String?
 
+  // External system tracking for sync
+  externalId       String?  // ID in external system (e.g., Zoho record ID)
+  externalSource   String?  // External source system (e.g., 'ZOHO_CRM', 'greenhouse')
+  rawExternalData  Json?    // Complete raw payload from external system
+
   overallScore   Float?
   lastFeedbackAt DateTime?
 
@@ -223,7 +228,9 @@ model Candidate {
   candidateNotes CandidateNote[]
   stageHistory   CandidateStageHistory[]
 
+  @@unique([tenantId, externalId, externalSource], name: "unique_external_candidate")
   @@index([tenantId, createdAt], name: "idx_candidate_tenant_created")
+  @@index([tenantId, externalId], name: "idx_candidate_external")
 }
 
 // Track all candidate stage transitions for audit trail

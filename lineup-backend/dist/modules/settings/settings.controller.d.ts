@@ -9,7 +9,7 @@ import { UpdateSecurityPolicyDto } from './dto/update-security.dto';
 export declare class SettingsController {
     private svc;
     constructor(svc: SettingsService);
-    getSettings(req: any): Promise<string | number | true | import(".prisma/client").Prisma.JsonObject | import(".prisma/client").Prisma.JsonArray>;
+    getSettings(req: any): Promise<string | number | true | import("@prisma/client/runtime/library").JsonObject | import("@prisma/client/runtime/library").JsonArray>;
     updateBranding(req: any, dto: UpdateBrandingDto): Promise<any>;
     updateSso(req: any, dto: UpdateSsoDto): Promise<any>;
     updateSmtp(req: any, dto: UpdateSmtpDto): Promise<{
@@ -36,6 +36,8 @@ export declare class SettingsController {
     }>;
     getSecurityPolicy(req: any): Promise<{
         id: string;
+        createdAt: Date;
+        updatedAt: Date;
         tenantId: string;
         ipAllowlistEnabled: boolean;
         allowedIPs: string[];
@@ -49,11 +51,11 @@ export declare class SettingsController {
         sessionTimeoutMinutes: number | null;
         enforce2FA: boolean;
         enforce2FAForAdmins: boolean;
-        createdAt: Date;
-        updatedAt: Date;
     } | null>;
     updateSecurityPolicy(req: any, dto: UpdateSecurityPolicyDto): Promise<{
         id: string;
+        createdAt: Date;
+        updatedAt: Date;
         tenantId: string;
         ipAllowlistEnabled: boolean;
         allowedIPs: string[];
@@ -67,7 +69,5 @@ export declare class SettingsController {
         sessionTimeoutMinutes: number | null;
         enforce2FA: boolean;
         enforce2FAForAdmins: boolean;
-        createdAt: Date;
-        updatedAt: Date;
     }>;
 }

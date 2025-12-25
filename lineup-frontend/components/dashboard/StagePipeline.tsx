@@ -4,7 +4,63 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { ArrowRight, Users } from 'lucide-react';
 
-const stageColors: Record<InterviewStage, { bg: string; border: string; text: string; activeBg: string }> = {
+const stageColors: Record<string, { bg: string; border: string; text: string; activeBg: string }> = {
+  // Uppercase keys (matching database format)
+  'APPLIED': {
+    bg: 'bg-purple-50',
+    border: 'border-purple-200',
+    text: 'text-purple-700',
+    activeBg: 'bg-purple-100'
+  },
+  'SCREENING': {
+    bg: 'bg-blue-50',
+    border: 'border-blue-200',
+    text: 'text-blue-700',
+    activeBg: 'bg-blue-100'
+  },
+  'INTERVIEW': {
+    bg: 'bg-cyan-50',
+    border: 'border-cyan-200',
+    text: 'text-cyan-700',
+    activeBg: 'bg-cyan-100'
+  },
+  'INTERVIEW_1': {
+    bg: 'bg-cyan-50',
+    border: 'border-cyan-200',
+    text: 'text-cyan-700',
+    activeBg: 'bg-cyan-100'
+  },
+  'INTERVIEW_2': {
+    bg: 'bg-indigo-50',
+    border: 'border-indigo-200',
+    text: 'text-indigo-700',
+    activeBg: 'bg-indigo-100'
+  },
+  'HR_ROUND': {
+    bg: 'bg-violet-50',
+    border: 'border-violet-200',
+    text: 'text-violet-700',
+    activeBg: 'bg-violet-100'
+  },
+  'OFFER': {
+    bg: 'bg-emerald-50',
+    border: 'border-emerald-200',
+    text: 'text-emerald-700',
+    activeBg: 'bg-emerald-100'
+  },
+  'HIRED': {
+    bg: 'bg-green-50',
+    border: 'border-green-200',
+    text: 'text-green-700',
+    activeBg: 'bg-green-100'
+  },
+  'REJECTED': {
+    bg: 'bg-red-50',
+    border: 'border-red-200',
+    text: 'text-red-700',
+    activeBg: 'bg-red-100'
+  },
+  // Legacy lowercase keys for backward compatibility
   'applied': {
     bg: 'bg-purple-50',
     border: 'border-purple-200',
@@ -22,6 +78,12 @@ const stageColors: Record<InterviewStage, { bg: string; border: string; text: st
     border: 'border-blue-200',
     text: 'text-blue-700',
     activeBg: 'bg-blue-100'
+  },
+  'interview': {
+    bg: 'bg-cyan-50',
+    border: 'border-cyan-200',
+    text: 'text-cyan-700',
+    activeBg: 'bg-cyan-100'
   },
   'interview-1': {
     bg: 'bg-cyan-50',
@@ -46,6 +108,18 @@ const stageColors: Record<InterviewStage, { bg: string; border: string; text: st
     border: 'border-emerald-200',
     text: 'text-emerald-700',
     activeBg: 'bg-emerald-100'
+  },
+  'hired': {
+    bg: 'bg-green-50',
+    border: 'border-green-200',
+    text: 'text-green-700',
+    activeBg: 'bg-green-100'
+  },
+  'rejected': {
+    bg: 'bg-red-50',
+    border: 'border-red-200',
+    text: 'text-red-700',
+    activeBg: 'bg-red-100'
   },
 };
 

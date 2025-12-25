@@ -13,6 +13,7 @@ exports.SlotQueryDto = exports.RescheduleSlotDto = exports.BookSlotDto = exports
 const class_validator_1 = require("class-validator");
 const class_transformer_1 = require("class-transformer");
 const swagger_1 = require("@nestjs/swagger");
+const timezone_validator_1 = require("../../../common/validators/timezone.validator");
 class SlotParticipantDto {
     type;
     id;
@@ -79,7 +80,7 @@ __decorate([
 ], CreateSlotDto.prototype, "endAt", void 0);
 __decorate([
     (0, swagger_1.ApiProperty)({ description: 'Timezone', example: 'Asia/Kolkata' }),
-    (0, class_validator_1.IsString)(),
+    (0, timezone_validator_1.IsTimezone)(),
     __metadata("design:type", String)
 ], CreateSlotDto.prototype, "timezone", void 0);
 __decorate([
@@ -95,6 +96,7 @@ class GenerateSlotsDto {
     slotDurationMins;
     ruleId;
     timezone;
+    maxSlots;
 }
 exports.GenerateSlotsDto = GenerateSlotsDto;
 __decorate([
@@ -131,14 +133,22 @@ __decorate([
 ], GenerateSlotsDto.prototype, "ruleId", void 0);
 __decorate([
     (0, swagger_1.ApiProperty)({ description: 'Timezone for slot generation', example: 'Asia/Kolkata' }),
-    (0, class_validator_1.IsString)(),
+    (0, timezone_validator_1.IsTimezone)(),
     __metadata("design:type", String)
 ], GenerateSlotsDto.prototype, "timezone", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: 'Maximum number of slots to generate (default: 50, max: 100)', example: 50, minimum: 1 }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsInt)(),
+    (0, class_validator_1.Min)(1),
+    __metadata("design:type", Number)
+], GenerateSlotsDto.prototype, "maxSlots", void 0);
 class BookSlotDto {
     interviewId;
     candidate;
     candidateId;
     metadata;
+    forceBook;
 }
 exports.BookSlotDto = BookSlotDto;
 __decorate([
@@ -165,6 +175,15 @@ __decorate([
     (0, class_validator_1.IsObject)(),
     __metadata("design:type", Object)
 ], BookSlotDto.prototype, "metadata", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: 'Force booking even if slot overlaps with busy time (Admin only). Returns warning in response.',
+        example: false,
+        default: false
+    }),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", Boolean)
+], BookSlotDto.prototype, "forceBook", void 0);
 class RescheduleSlotDto {
     newStartAt;
     newEndAt;

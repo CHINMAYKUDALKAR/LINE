@@ -7,25 +7,25 @@ export declare class WorkingHoursService {
     constructor(prisma: PrismaService, availabilityService: AvailabilityService);
     getWorkingHours(tenantId: string, userId: string): Promise<{
         id: string;
-        tenantId: string;
-        userId: string;
-        weekly: import(".prisma/client").Prisma.JsonValue;
-        timezone: string;
-        effectiveFrom: Date | null;
-        effectiveTo: Date | null;
         createdAt: Date;
         updatedAt: Date;
+        tenantId: string;
+        userId: string;
+        timezone: string;
+        weekly: import("@prisma/client/runtime/library").JsonValue;
+        effectiveFrom: Date | null;
+        effectiveTo: Date | null;
     } | null>;
-    setWorkingHours(tenantId: string, currentUserId: string, dto: SetWorkingHoursDto): Promise<{
+    setWorkingHours(tenantId: string, currentUserId: string, currentUserRole: string, dto: SetWorkingHoursDto): Promise<{
         id: string;
-        tenantId: string;
-        userId: string;
-        weekly: import(".prisma/client").Prisma.JsonValue;
-        timezone: string;
-        effectiveFrom: Date | null;
-        effectiveTo: Date | null;
         createdAt: Date;
         updatedAt: Date;
+        tenantId: string;
+        userId: string;
+        timezone: string;
+        weekly: import("@prisma/client/runtime/library").JsonValue;
+        effectiveFrom: Date | null;
+        effectiveTo: Date | null;
     }>;
     getDefaultPattern(timezone?: string): WeeklyPatternDto[];
     private validateWeeklyPattern;

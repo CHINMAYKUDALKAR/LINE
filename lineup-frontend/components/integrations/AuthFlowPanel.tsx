@@ -107,7 +107,7 @@ export function AuthFlowPanel({ integration, onAuthComplete, onCancel }: AuthFlo
         </Alert>
       )}
 
-      {integration.authType === 'oauth2' ? (
+      {(integration.authType === 'oauth2' || !integration.authType) ? (
         <div className="space-y-4">
           <p className="text-sm text-muted-foreground">
             Click the button below to securely connect your {integration.name} account using OAuth 2.0.

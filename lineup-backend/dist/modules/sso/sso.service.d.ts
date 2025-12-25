@@ -8,7 +8,7 @@ export declare class SSOService {
     constructor(prisma: PrismaService, identityProviderService: IdentityProviderService);
     initiate(tenantId: string, callerRole: string | undefined, dto: InitiateSSODto): Promise<{
         redirectUrl: string;
-        provider: import(".prisma/client").$Enums.SSOProviderType;
+        provider: import("@prisma/client").$Enums.SSOProviderType;
         tenant: string;
         mock: boolean;
     }>;
@@ -19,7 +19,7 @@ export declare class SSOService {
             id: string;
             email: string;
             name: string | null;
-            role: import(".prisma/client").$Enums.Role;
+            role: import("@prisma/client").$Enums.Role;
         };
         tenant: {
             id: string;
@@ -27,7 +27,7 @@ export declare class SSOService {
         };
     }>;
     getAvailableProviders(tenantId: string): Promise<{
-        type: import(".prisma/client").$Enums.SSOProviderType;
+        type: import("@prisma/client").$Enums.SSOProviderType;
         domainRestriction: string | null;
     }[]>;
 }

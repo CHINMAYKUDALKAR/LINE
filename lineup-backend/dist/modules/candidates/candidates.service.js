@@ -93,7 +93,7 @@ let CandidatesService = class CandidatesService {
     }
     async list(tenantId, dto) {
         const page = Number(dto.page) || 1;
-        const perPage = Number(dto.perPage) || 20;
+        const perPage = Math.min(Number(dto.perPage) || 20, 100);
         const where = {
             tenantId,
             deletedAt: null
@@ -131,6 +131,7 @@ let CandidatesService = class CandidatesService {
                     id: true,
                     name: true,
                     email: true,
+                    phone: true,
                     stage: true,
                     roleTitle: true,
                     createdAt: true,
@@ -142,7 +143,6 @@ let CandidatesService = class CandidatesService {
         ]);
         const candidateIds = data.map(c => c.id);
         const now = new Date();
-        console.log('[DEBUG] Checking active interviews for', candidateIds.length, 'candidates, now:', now.toISOString());
         const activeInterviews = await this.prisma.interview.findMany({
             where: {
                 tenantId,
@@ -152,7 +152,6 @@ let CandidatesService = class CandidatesService {
             },
             select: { candidateId: true, id: true, date: true, status: true },
         });
-        console.log('[DEBUG] Found', activeInterviews.length, 'active interviews:', activeInterviews.map(i => ({ candidateId: i.candidateId, date: i.date, status: i.status })));
         const activeInterviewMap = new Map(activeInterviews.map(i => [i.candidateId, { interviewId: i.id, interviewDate: i.date }]));
         const enrichedData = data.map(candidate => ({
             ...candidate,
@@ -219,6 +218,36 @@ let CandidatesService = class CandidatesService {
             duplicates: [],
             errors: [],
         };
+        const validStages = await this.prisma.hiringStage.findMany({
+            where: { tenantId, isActive: true },
+            select: { key: true, name: true },
+        });
+        const stageMap = new Map();
+        for (const stage of validStages) {
+            stageMap.set(stage.key.toLowerCase(), stage.key);
+            stageMap.set(stage.name.toLowerCase(), stage.key);
+            stageMap.set(stage.key.toLowerCase().replace(/-/g, '_'), stage.key);
+            stageMap.set(stage.key.toLowerCase().replace(/_/g, '-'), stage.key);
+            stageMap.set(stage.name.toLowerCase().replace(/ /g, '-'), stage.key);
+            stageMap.set(stage.name.toLowerCase().replace(/ /g, '_'), stage.key);
+        }
+        const normalizeStage = (inputStage) => {
+            if (!inputStage)
+                return 'APPLIED';
+            const normalized = inputStage.trim().toLowerCase();
+            if (stageMap.has(normalized)) {
+                return stageMap.get(normalized);
+            }
+            const withUnderscores = normalized.replace(/-/g, '_');
+            if (stageMap.has(withUnderscores)) {
+                return stageMap.get(withUnderscores);
+            }
+            const withHyphens = normalized.replace(/_/g, '-');
+            if (stageMap.has(withHyphens)) {
+                return stageMap.get(withHyphens);
+            }
+            return 'APPLIED';
+        };
         for (let i = 0; i < rows.length; i++) {
             const row = rows[i];
             if (!row.name) {
@@ -255,6 +284,7 @@ let CandidatesService = class CandidatesService {
                     }
                 }
                 const tags = row.tags ? row.tags.split(',').map(t => t.trim()).filter(Boolean) : [];
+                const normalizedStage = normalizeStage(row.stage);
                 await this.prisma.candidate.create({
                     data: {
                         tenantId,
@@ -264,7 +294,7 @@ let CandidatesService = class CandidatesService {
                         phone: row.phone || null,
                         roleTitle: row.roleTitle || null,
                         source: row.source || null,
-                        stage: row.stage || 'applied',
+                        stage: normalizedStage,
                         tags,
                         notes: row.notes || null,
                         resumeUrl: row.resumeUrl || null,

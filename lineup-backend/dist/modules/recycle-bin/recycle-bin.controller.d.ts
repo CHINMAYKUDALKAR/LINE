@@ -7,14 +7,14 @@ export declare class RecycleBinController {
         data: {
             id: string;
             tenantId: string;
+            expiresAt: Date | null;
             module: string;
             itemId: string;
-            itemSnapshot: import(".prisma/client").Prisma.JsonValue;
+            itemSnapshot: import("@prisma/client/runtime/library").JsonValue;
             deletedBy: string;
             deletedAt: Date;
             restoredAt: Date | null;
             purgedAt: Date | null;
-            expiresAt: Date | null;
         }[];
         meta: {
             total: number;
@@ -33,14 +33,14 @@ export declare class RecycleBinController {
     findOne(req: any, id: string): Promise<{
         id: string;
         tenantId: string;
+        expiresAt: Date | null;
         module: string;
         itemId: string;
-        itemSnapshot: import(".prisma/client").Prisma.JsonValue;
+        itemSnapshot: import("@prisma/client/runtime/library").JsonValue;
         deletedBy: string;
         deletedAt: Date;
         restoredAt: Date | null;
         purgedAt: Date | null;
-        expiresAt: Date | null;
     }>;
     restore(req: any, id: string): Promise<{
         success: boolean;

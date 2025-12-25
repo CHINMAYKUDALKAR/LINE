@@ -10,14 +10,14 @@ export declare class InvitationService {
     createInvite(tenantId: string, email: string, role?: Role, createdBy?: string, expiresInDays?: number): Promise<{
         id: string;
         email: string;
-        role: import(".prisma/client").$Enums.Role;
+        role: import("@prisma/client").$Enums.Role;
         expiresAt: Date;
         inviteUrl: string;
     }>;
     getInviteByToken(token: string): Promise<{
         id: string;
         email: string;
-        role: import(".prisma/client").$Enums.Role;
+        role: import("@prisma/client").$Enums.Role;
         expiresAt: Date;
         tenant: {
             name: string;
@@ -29,36 +29,36 @@ export declare class InvitationService {
     verifyToken(token: string): Promise<string>;
     markInviteUsed(inviteId: string): Promise<{
         id: string;
-        tenantId: string;
         email: string;
-        role: import(".prisma/client").$Enums.Role;
+        createdAt: Date;
+        tenantId: string;
+        role: import("@prisma/client").$Enums.Role;
         tokenHash: string;
         expiresAt: Date;
         createdBy: string | null;
         usedAt: Date | null;
-        createdAt: Date;
     }>;
     listPendingInvites(tenantId: string): Promise<{
         id: string;
-        tenantId: string;
         email: string;
-        role: import(".prisma/client").$Enums.Role;
+        createdAt: Date;
+        tenantId: string;
+        role: import("@prisma/client").$Enums.Role;
         tokenHash: string;
         expiresAt: Date;
         createdBy: string | null;
         usedAt: Date | null;
-        createdAt: Date;
     }[]>;
     cancelInvite(tenantId: string, inviteId: string): Promise<{
         id: string;
-        tenantId: string;
         email: string;
-        role: import(".prisma/client").$Enums.Role;
+        createdAt: Date;
+        tenantId: string;
+        role: import("@prisma/client").$Enums.Role;
         tokenHash: string;
         expiresAt: Date;
         createdBy: string | null;
         usedAt: Date | null;
-        createdAt: Date;
     }>;
     private getInviteEmailTemplate;
 }

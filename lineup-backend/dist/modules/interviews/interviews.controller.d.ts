@@ -9,47 +9,47 @@ export declare class InterviewsController {
     constructor(svc: InterviewsService);
     create(req: any, dto: CreateInterviewDto): Promise<{
         id: string;
+        createdAt: Date;
+        updatedAt: Date;
+        date: Date;
         tenantId: string;
+        status: string;
+        deletedAt: Date | null;
+        stage: string;
+        notes: string | null;
         candidateId: string;
         interviewerIds: string[];
-        date: Date;
         durationMins: number;
-        stage: string;
-        status: string;
         meetingLink: string | null;
-        notes: string | null;
         avgRating: number | null;
         hasFeedback: boolean;
         isNoShow: boolean;
-        bulkMode: import(".prisma/client").$Enums.BulkMode | null;
+        bulkMode: import("@prisma/client").$Enums.BulkMode | null;
         bulkBatchId: string | null;
         candidateIds: string[];
-        createdAt: Date;
-        updatedAt: Date;
-        deletedAt: Date | null;
     }>;
     bulkSchedule(req: any, dto: BulkScheduleDto): Promise<import("./dto/bulk-schedule.dto").BulkScheduleResult>;
     reschedule(req: any, id: string, dto: RescheduleInterviewDto): Promise<{
         interview: {
             id: string;
+            createdAt: Date;
+            updatedAt: Date;
+            date: Date;
             tenantId: string;
+            status: string;
+            deletedAt: Date | null;
+            stage: string;
+            notes: string | null;
             candidateId: string;
             interviewerIds: string[];
-            date: Date;
             durationMins: number;
-            stage: string;
-            status: string;
             meetingLink: string | null;
-            notes: string | null;
             avgRating: number | null;
             hasFeedback: boolean;
             isNoShow: boolean;
-            bulkMode: import(".prisma/client").$Enums.BulkMode | null;
+            bulkMode: import("@prisma/client").$Enums.BulkMode | null;
             bulkBatchId: string | null;
             candidateIds: string[];
-            createdAt: Date;
-            updatedAt: Date;
-            deletedAt: Date | null;
         };
         conflicts: {
             interviewId: string;
@@ -68,24 +68,24 @@ export declare class InterviewsController {
             };
         } & {
             id: string;
+            createdAt: Date;
+            updatedAt: Date;
+            date: Date;
             tenantId: string;
+            status: string;
+            deletedAt: Date | null;
+            stage: string;
+            notes: string | null;
             candidateId: string;
             interviewerIds: string[];
-            date: Date;
             durationMins: number;
-            stage: string;
-            status: string;
             meetingLink: string | null;
-            notes: string | null;
             avgRating: number | null;
             hasFeedback: boolean;
             isNoShow: boolean;
-            bulkMode: import(".prisma/client").$Enums.BulkMode | null;
+            bulkMode: import("@prisma/client").$Enums.BulkMode | null;
             bulkBatchId: string | null;
             candidateIds: string[];
-            createdAt: Date;
-            updatedAt: Date;
-            deletedAt: Date | null;
         } & {
             interviewers: Array<{
                 id: string;
@@ -110,24 +110,24 @@ export declare class InterviewsController {
         };
     } & {
         id: string;
+        createdAt: Date;
+        updatedAt: Date;
+        date: Date;
         tenantId: string;
+        status: string;
+        deletedAt: Date | null;
+        stage: string;
+        notes: string | null;
         candidateId: string;
         interviewerIds: string[];
-        date: Date;
         durationMins: number;
-        stage: string;
-        status: string;
         meetingLink: string | null;
-        notes: string | null;
         avgRating: number | null;
         hasFeedback: boolean;
         isNoShow: boolean;
-        bulkMode: import(".prisma/client").$Enums.BulkMode | null;
+        bulkMode: import("@prisma/client").$Enums.BulkMode | null;
         bulkBatchId: string | null;
         candidateIds: string[];
-        createdAt: Date;
-        updatedAt: Date;
-        deletedAt: Date | null;
     } & {
         interviewers: Array<{
             id: string;
@@ -140,48 +140,48 @@ export declare class InterviewsController {
     }>;
     cancel(req: any, id: string): Promise<{
         id: string;
+        createdAt: Date;
+        updatedAt: Date;
+        date: Date;
         tenantId: string;
+        status: string;
+        deletedAt: Date | null;
+        stage: string;
+        notes: string | null;
         candidateId: string;
         interviewerIds: string[];
-        date: Date;
         durationMins: number;
-        stage: string;
-        status: string;
         meetingLink: string | null;
-        notes: string | null;
         avgRating: number | null;
         hasFeedback: boolean;
         isNoShow: boolean;
-        bulkMode: import(".prisma/client").$Enums.BulkMode | null;
+        bulkMode: import("@prisma/client").$Enums.BulkMode | null;
         bulkBatchId: string | null;
         candidateIds: string[];
-        createdAt: Date;
-        updatedAt: Date;
-        deletedAt: Date | null;
     }>;
     sync(req: any, id: string): {
         message: string;
     };
     complete(req: any, id: string): Promise<{
         id: string;
+        createdAt: Date;
+        updatedAt: Date;
+        date: Date;
         tenantId: string;
+        status: string;
+        deletedAt: Date | null;
+        stage: string;
+        notes: string | null;
         candidateId: string;
         interviewerIds: string[];
-        date: Date;
         durationMins: number;
-        stage: string;
-        status: string;
         meetingLink: string | null;
-        notes: string | null;
         avgRating: number | null;
         hasFeedback: boolean;
         isNoShow: boolean;
-        bulkMode: import(".prisma/client").$Enums.BulkMode | null;
+        bulkMode: import("@prisma/client").$Enums.BulkMode | null;
         bulkBatchId: string | null;
         candidateIds: string[];
-        createdAt: Date;
-        updatedAt: Date;
-        deletedAt: Date | null;
     }>;
     listNotes(req: any, id: string): Promise<{
         data: {
@@ -206,21 +206,21 @@ export declare class InterviewsController {
             email: string;
         };
         id: string;
-        tenantId: string;
-        interviewId: string;
-        authorId: string;
-        content: string;
         createdAt: Date;
         updatedAt: Date;
+        tenantId: string;
+        content: string;
+        authorId: string;
+        interviewId: string;
     }>;
     updateNote(req: any, noteId: string, dto: UpdateInterviewNoteDto): Promise<{
         id: string;
-        tenantId: string;
-        interviewId: string;
-        authorId: string;
-        content: string;
         createdAt: Date;
         updatedAt: Date;
+        tenantId: string;
+        content: string;
+        authorId: string;
+        interviewId: string;
     }>;
     deleteNote(req: any, noteId: string): Promise<{
         success: boolean;

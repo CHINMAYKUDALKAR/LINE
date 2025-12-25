@@ -36,6 +36,7 @@ export class RolesService {
                 _count: { select: { userRoles: true } },
             },
             orderBy: { name: 'asc' },
+            take: 100,
         });
 
         // Add system roles for reference

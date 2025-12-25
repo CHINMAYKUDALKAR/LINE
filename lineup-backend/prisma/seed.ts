@@ -32,6 +32,36 @@ async function main() {
     });
     console.log('✅ Created tenant:', tenant.name);
 
+    // Create default hiring stages for the tenant
+    const defaultStages = [
+        { key: 'APPLIED', name: 'Applied', order: 1, isTerminal: false },
+        { key: 'SCREENING', name: 'Screening', order: 2, isTerminal: false },
+        { key: 'INTERVIEW', name: 'Interview', order: 3, isTerminal: false },
+        { key: 'INTERVIEW_1', name: 'Interview 1', order: 4, isTerminal: false },
+        { key: 'INTERVIEW_2', name: 'Interview 2', order: 5, isTerminal: false },
+        { key: 'HR_ROUND', name: 'HR Round', order: 6, isTerminal: false },
+        { key: 'OFFER', name: 'Offer', order: 7, isTerminal: false },
+        { key: 'HIRED', name: 'Hired', order: 8, isTerminal: true },
+        { key: 'REJECTED', name: 'Rejected', order: 9, isTerminal: true },
+    ];
+
+    for (const stage of defaultStages) {
+        await prisma.hiringStage.upsert({
+            where: { tenantId_key: { tenantId: tenant.id, key: stage.key } },
+            update: {},
+            create: {
+                tenantId: tenant.id,
+                key: stage.key,
+                name: stage.name,
+                order: stage.order,
+                isTerminal: stage.isTerminal,
+                isActive: true,
+            },
+        });
+    }
+    console.log('✅ Created', defaultStages.length, 'hiring stages');
+
+
     // Create SUPERADMIN user (Platform Admin - Chinmay Kudalkar)
     const hashedPassword = await bcrypt.hash('password123', 12);
     const superadminUser = await prisma.user.create({

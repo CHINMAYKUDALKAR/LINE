@@ -137,7 +137,7 @@ __decorate([
 exports.SystemMetricsController = SystemMetricsController = __decorate([
     (0, common_1.Controller)('api/v1/system-metrics'),
     (0, common_1.UseGuards)(jwt_guard_1.JwtAuthGuard, rbac_guard_1.RbacGuard),
-    (0, roles_decorator_1.Roles)('ADMIN'),
+    (0, roles_decorator_1.Roles)('SUPERADMIN'),
     __metadata("design:paramtypes", [platform_metrics_service_1.PlatformMetricsService,
         queue_metrics_service_1.QueueMetricsService,
         communication_metrics_service_1.CommunicationMetricsService,

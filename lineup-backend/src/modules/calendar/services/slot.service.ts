@@ -98,10 +98,12 @@ export class SlotService {
 
     /**
      * Create a single slot directly
+     * @param forceCreate - If true, create slot even if unavailable (Admin override)
      */
-    async createSlot(tenantId: string, organizerId: string, dto: CreateSlotDto) {
+    async createSlot(tenantId: string, organizerId: string, dto: CreateSlotDto, forceCreate = false) {
         const startAt = new Date(dto.startAt);
         const endAt = new Date(dto.endAt);
+        let warning: string | undefined;
 
         if (endAt <= startAt) {
             throw new Error('End time must be after start time');
@@ -122,13 +124,19 @@ export class SlotService {
             );
 
             if (!isAvailable) {
-                throw new ConflictException(
-                    'One or more participants are not available at this time',
-                );
+                if (forceCreate) {
+                    // Admin override - proceed with warning
+                    warning = 'Slot overlaps with busy time. Created with admin override.';
+                    this.logger.warn(`Admin override: Creating slot despite busy conflict for tenant ${tenantId}`);
+                } else {
+                    throw new ConflictException(
+                        'One or more participants are not available at this time',
+                    );
+                }
             }
         }
 
-        return this.prisma.interviewSlot.create({
+        const slot = await this.prisma.interviewSlot.create({
             data: {
                 tenantId,
                 organizerId,
@@ -137,13 +145,19 @@ export class SlotService {
                 endAt,
                 timezone: dto.timezone,
                 status: 'AVAILABLE',
-                metadata: dto.metadata,
+                metadata: {
+                    ...dto.metadata,
+                    ...(forceCreate && { createdWithOverride: true }),
+                },
             },
         });
+
+        return warning ? { ...slot, warning } : slot;
     }
 
     /**
      * Generate multiple available slots based on availability
+     * Limited to prevent excessive slot creation
      */
     async generateSlots(tenantId: string, organizerId: string, dto: GenerateSlotsDto) {
         const startRange = new Date(dto.startRange);
@@ -159,9 +173,13 @@ export class SlotService {
             dto.ruleId,
         );
 
+        // Limit the number of slots to create (default: 50, max: 100)
+        const maxSlots = Math.min(dto.maxSlots || 50, 100);
+        const slotsToCreate = availability.combined.slice(0, maxSlots);
+
         // Create slots for each available time
         const slots = await Promise.all(
-            availability.combined.map((timeSlot) =>
+            slotsToCreate.map((timeSlot) =>
                 this.prisma.interviewSlot.create({
                     data: {
                         tenantId,
@@ -176,7 +194,11 @@ export class SlotService {
             ),
         );
 
-        return slots;
+        return {
+            created: slots,
+            total: availability.combined.length,
+            limited: availability.combined.length > maxSlots,
+        };
     }
 
     /**
@@ -299,6 +321,7 @@ export class SlotService {
 
     /**
      * Reschedule a booked slot
+     * Uses transaction to prevent race conditions and data loss
      */
     async rescheduleSlot(
         tenantId: string,
@@ -315,78 +338,79 @@ export class SlotService {
         const newStartAt = new Date(dto.newStartAt);
         const newEndAt = new Date(dto.newEndAt);
 
-        // Check availability for new time
+        // Get user participants for availability check
         const participants = slot.participants as unknown as SlotParticipantDto[];
         const userIds = participants.filter((p) => p.type === 'user').map((p) => p.id);
 
-        // Temporarily remove old busy blocks to check availability
-        if (slot.interviewId) {
-            await this.busyBlockService.deleteBySourceId(tenantId, slot.interviewId);
-        }
-
-        const isAvailable = await this.availabilityService.isSlotAvailable(
-            tenantId,
-            userIds,
-            newStartAt,
-            newEndAt,
-        );
-
-        if (!isAvailable) {
-            // Recreate old busy blocks since reschedule failed
-            if (slot.interviewId) {
-                for (const uId of userIds) {
-                    await this.busyBlockService.createFromInterview(
-                        tenantId,
-                        uId,
-                        slot.interviewId,
-                        slot.startAt,
-                        slot.endAt,
-                    );
-                }
-            }
-            throw new ConflictException('New time slot is not available');
-        }
-
-        // Update slot
-        const updatedSlot = await this.prisma.interviewSlot.update({
-            where: { id: slotId },
-            data: {
-                startAt: newStartAt,
-                endAt: newEndAt,
-                metadata: {
-                    ...(slot.metadata as any),
-                    rescheduledAt: new Date().toISOString(),
-                    rescheduledBy: userId,
-                    rescheduleReason: dto.reason,
-                },
+        // Check availability BEFORE making any changes
+        // We need to exclude the current slot's busy blocks from the check
+        // This is done by checking if there are OTHER conflicts at the new time
+        const potentialConflicts = await this.prisma.busyBlock.findMany({
+            where: {
+                tenantId,
+                userId: { in: userIds },
+                sourceId: { not: slot.interviewId }, // Exclude current slot's blocks
+                OR: [
+                    // Starts during new slot
+                    { startAt: { gte: newStartAt, lt: newEndAt } },
+                    // Ends during new slot  
+                    { endAt: { gt: newStartAt, lte: newEndAt } },
+                    // Encompasses new slot
+                    { startAt: { lte: newStartAt }, endAt: { gte: newEndAt } },
+                ],
             },
         });
 
-        // Update interview if linked
-        if (slot.interviewId) {
-            await this.prisma.interview.update({
-                where: { id: slot.interviewId },
+        if (potentialConflicts.length > 0) {
+            throw new ConflictException('New time slot is not available');
+        }
+
+        // Use transaction to atomically update slot, interview, and busy blocks
+        const updatedSlot = await this.prisma.$transaction(async (tx) => {
+            // Update slot
+            const updated = await tx.interviewSlot.update({
+                where: { id: slotId },
                 data: {
-                    date: newStartAt,
-                    durationMins: Math.round(
-                        (newEndAt.getTime() - newStartAt.getTime()) / 60000,
-                    ),
+                    startAt: newStartAt,
+                    endAt: newEndAt,
+                    metadata: {
+                        ...(slot.metadata as any),
+                        rescheduledAt: new Date().toISOString(),
+                        rescheduledBy: userId,
+                        rescheduleReason: dto.reason,
+                    },
                 },
             });
 
-            // Create new busy blocks
-            for (const uId of userIds) {
-                await this.busyBlockService.createFromInterview(
-                    tenantId,
-                    uId,
-                    slot.interviewId,
-                    newStartAt,
-                    newEndAt,
-                );
-            }
-        }
+            // Update interview if linked
+            if (slot.interviewId) {
+                await tx.interview.update({
+                    where: { id: slot.interviewId },
+                    data: {
+                        date: newStartAt,
+                        durationMins: Math.round(
+                            (newEndAt.getTime() - newStartAt.getTime()) / 60000,
+                        ),
+                    },
+                });
 
-        // Trigger automation for interview rescheduled
+                // Update busy blocks in place (atomic update, not delete/recreate)
+                await tx.busyBlock.updateMany({
+                    where: {
+                        tenantId,
+                        sourceId: slot.interviewId,
+                    },
+                    data: {
+                        startAt: newStartAt,
+                        endAt: newEndAt,
+                    },
+                });
+            }
+
+            return updated;
+        });
+
+        // Trigger automation for interview rescheduled (outside transaction, non-critical)
         if (slot.interviewId) {
             try {
                 const interview = await this.prisma.interview.findUnique({

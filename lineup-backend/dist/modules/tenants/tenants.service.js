@@ -54,6 +54,7 @@ const crypto = __importStar(require("crypto"));
 let TenantsService = class TenantsService {
     prisma;
     domainQueue;
+    domainVerifyRateLimiter = new Map();
     constructor(prisma, domainQueue) {
         this.prisma = prisma;
         this.domainQueue = domainQueue;
@@ -72,7 +73,7 @@ let TenantsService = class TenantsService {
         return tenant;
     }
     async findAll() {
-        return this.prisma.tenant.findMany();
+        return this.prisma.tenant.findMany({ take: 100 });
     }
     async findOne(id) {
         const tenant = await this.prisma.tenant.findUnique({ where: { id } });
@@ -92,6 +93,17 @@ let TenantsService = class TenantsService {
         return updated;
     }
     async generateDomainVerificationToken(tenantId, domain) {
+        const now = Date.now();
+        const limit = this.domainVerifyRateLimiter.get(tenantId);
+        if (limit && limit.resetAt > now) {
+            if (limit.count >= 3) {
+                throw new common_1.BadRequestException('Rate limit exceeded: max 3 domain verifications per hour');
+            }
+            limit.count++;
+        }
+        else {
+            this.domainVerifyRateLimiter.set(tenantId, { count: 1, resetAt: now + 3600000 });
+        }
         const token = crypto.randomBytes(32).toString('hex');
         const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
         const tenant = await this.findOne(tenantId);
@@ -182,8 +194,18 @@ let TenantsService = class TenantsService {
         }
         return tenant;
     }
+    isValidHexColor(color) {
+        return /^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/.test(color);
+    }
     async updateBranding(tenantId, userId, branding) {
         const tenant = await this.findOne(tenantId);
+        if (branding.colors) {
+            for (const [key, value] of Object.entries(branding.colors)) {
+                if (!this.isValidHexColor(value)) {
+                    throw new common_1.BadRequestException(`Invalid color format for ${key}: ${value}. Use hex format like #fff or #ffffff`);
+                }
+            }
+        }
         const updated = await this.prisma.tenant.update({
             where: { id: tenantId },
             data: {

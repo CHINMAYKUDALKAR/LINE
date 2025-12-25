@@ -33,7 +33,8 @@ export class HiringStagesController {
     async list(@Req() req: any, @Query('includeInactive') includeInactive?: string) {
         return this.stagesService.list(
             req.user.tenantId,
-            includeInactive === 'true'
+            includeInactive === 'true',
+            100 // Limit to 100 stages
         );
     }
 

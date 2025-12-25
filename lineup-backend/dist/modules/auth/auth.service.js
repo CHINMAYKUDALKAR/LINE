@@ -65,6 +65,7 @@ let AuthService = class AuthService {
     emailService;
     bruteForceService;
     passwordPolicyService;
+    TRIAL_DURATION_DAYS = Number(process.env.TRIAL_DURATION_DAYS) || 14;
     constructor(prisma, invitationService, passwordResetService, emailService, bruteForceService, passwordPolicyService) {
         this.prisma = prisma;
         this.invitationService = invitationService;
@@ -87,7 +88,7 @@ let AuthService = class AuthService {
                     name: dto.companyName,
                     domain: dto.domain || null,
                     trialActive: true,
-                    trialEndsAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
+                    trialEndsAt: new Date(Date.now() + this.TRIAL_DURATION_DAYS * 24 * 60 * 60 * 1000),
                 },
             });
             const user = await tx.user.create({
@@ -437,6 +438,18 @@ let AuthService = class AuthService {
             data: { revoked: true },
         });
         return { success: true };
+    }
+    async cleanupOldTokens(olderThanDays = 30) {
+        const cutoffDate = new Date(Date.now() - olderThanDays * 24 * 60 * 60 * 1000);
+        const result = await this.prisma.refreshToken.deleteMany({
+            where: {
+                OR: [
+                    { revoked: true, createdAt: { lt: cutoffDate } },
+                    { expiresAt: { lt: cutoffDate } },
+                ],
+            },
+        });
+        return { deleted: result.count };
     }
     async forgotPassword(email) {
         return this.passwordResetService.initiateReset(email);

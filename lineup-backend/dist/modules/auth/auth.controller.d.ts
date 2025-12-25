@@ -66,7 +66,7 @@ export declare class AuthController {
         tenants: {
             id: string;
             name: string;
-            role: import(".prisma/client").$Enums.Role;
+            role: import("@prisma/client").$Enums.Role;
             brandingLogoUrl: string | null;
         }[];
     }>;
@@ -92,13 +92,13 @@ export declare class AuthController {
     getInvitePreview(token: string): Promise<{
         id: string;
         email: string;
-        role: import(".prisma/client").$Enums.Role;
+        role: import("@prisma/client").$Enums.Role;
         expiresAt: Date;
         tenant: {
             name: string;
             id: string;
             brandingLogoUrl: string | null;
-            brandingColors: import(".prisma/client").Prisma.JsonValue;
+            brandingColors: import("@prisma/client/runtime/library").JsonValue;
         };
     }>;
     acceptInvite(dto: AcceptInviteDto, req: express.Request, res: express.Response): Promise<{
@@ -120,20 +120,20 @@ export declare class AuthController {
     createInvitation(req: any, dto: CreateInvitationDto): Promise<{
         id: string;
         email: string;
-        role: import(".prisma/client").$Enums.Role;
+        role: import("@prisma/client").$Enums.Role;
         expiresAt: Date;
         inviteUrl: string;
     }>;
     listInvitations(req: any): Promise<{
         id: string;
-        tenantId: string;
         email: string;
-        role: import(".prisma/client").$Enums.Role;
+        createdAt: Date;
+        tenantId: string;
+        role: import("@prisma/client").$Enums.Role;
         tokenHash: string;
         expiresAt: Date;
         createdBy: string | null;
         usedAt: Date | null;
-        createdAt: Date;
     }[]>;
     forgotPassword(dto: ForgotPasswordDto): Promise<{
         success: boolean;

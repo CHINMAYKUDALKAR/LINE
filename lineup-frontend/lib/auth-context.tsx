@@ -56,9 +56,9 @@ interface AcceptInviteData {
 const getApiBaseUrl = () => {
     if (typeof window !== 'undefined') {
         const hostname = window.location.hostname;
-        return process.env.NEXT_PUBLIC_API_URL || `http://${hostname}:4000`;
+        return process.env.NEXT_PUBLIC_API_URL || `http://${hostname}:3001`;
     }
-    return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+    return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 };
 
 const API_URL = getApiBaseUrl();

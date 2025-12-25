@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Patch, Body, Param, UseGuards, Req } from '@nestjs/common';
+import { Controller, Post, Get, Patch, Body, Param, UseGuards, Req, ForbiddenException } from '@nestjs/common';
 import { TenantsService } from './tenants.service';
 import { CreateTenantDto } from './dto/create-tenant.dto';
 import { UpdateTenantDto } from './dto/update-tenant.dto';
@@ -29,8 +29,11 @@ export class TenantsController {
     @Get(':id')
     @UseGuards(JwtAuthGuard, RbacGuard)
     @Roles('SUPERADMIN', 'ADMIN')
-    findOne(@Param('id') id: string) {
-        // Ideally check if req.user.tenantId matches id if not SUPERADMIN
+    findOne(@Req() req: any, @Param('id') id: string) {
+        // ADMIN can only access their own tenant
+        if (req.user.role !== 'SUPERADMIN' && req.user.tenantId !== id) {
+            throw new ForbiddenException('Cannot access tenant you do not belong to');
+        }
         return this.svc.findOne(id);
     }
 
@@ -92,9 +95,8 @@ export class TenantsController {
         @Body() dto: { logoUrl?: string; colors?: Record<string, string> },
     ) {
         // Verify user has access to this tenant
-        const userTenantId = req.tenantId;
-        if (req.user.role !== 'SUPERADMIN' && userTenantId !== id) {
-            throw new Error('Cannot update branding for a different tenant');
+        if (req.user.role !== 'SUPERADMIN' && req.user.tenantId !== id) {
+            throw new ForbiddenException('Cannot update branding for a different tenant');
         }
         return this.svc.updateBranding(id, req.user.sub, dto);
     }

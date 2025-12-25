@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { PrismaService } from '../../../common/prisma.service';
 import { S3Service } from '../../../common/s3.service';
 import { extractText } from '../../storage/utils/text-extract.util';
@@ -64,6 +64,8 @@ const COMMON_SKILLS = [
 
 @Injectable()
 export class ResumeParserService {
+    private readonly logger = new Logger(ResumeParserService.name);
+
     constructor(
         private prisma: PrismaService,
         private s3: S3Service,
@@ -101,7 +103,7 @@ export class ResumeParserService {
             const stream = await this.s3.streamFile(file.key);
             buffer = await this.streamToBuffer(stream);
         } catch (error) {
-            console.error('Failed to download file from S3:', error);
+            this.logger.error('Failed to download file from S3:', error);
             return {
                 status: 'UNPARSABLE',
                 fields: { skills: [] },
@@ -176,9 +178,12 @@ export class ResumeParserService {
             unparsable: number;
         };
     }> {
+        // Limit batch size to prevent resource exhaustion
+        const MAX_BATCH_SIZE = 50;
+        const limitedFileIds = fileIds.slice(0, MAX_BATCH_SIZE);
         const results: ParsedResume[] = [];
 
-        for (const fileId of fileIds) {
+        for (const fileId of limitedFileIds) {
             try {
                 const result = await this.parseResume(tenantId, fileId);
                 results.push(result);

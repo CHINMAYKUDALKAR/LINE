@@ -7,6 +7,7 @@ import { MockMicrosoftProvider } from './providers/mock-microsoft.provider';
 import { InitiateSSODto } from './dto/initiate-sso.dto';
 import { SSOCallbackDto } from './dto/sso-callback.dto';
 import * as jwt from 'jsonwebtoken';
+import * as crypto from 'crypto';
 
 // MintSkill platform superadmin roles - must NEVER use tenant SSO
 const PLATFORM_ADMIN_ROLES = ['SUPERADMIN', 'SUPPORT'];
@@ -183,10 +184,10 @@ export class SSOService {
                 user = await this.prisma.user.create({
                     data: {
                         email: claims.email,
-                        password: '', // No password for SSO users
+                        password: crypto.randomBytes(32).toString('hex'), // Random unguessable password for SSO users
                         name,
                         tenantId,
-                        role: 'RECRUITER', // Default role for auto-provisioned users
+                        role: (process.env.SSO_DEFAULT_ROLE as any) || 'RECRUITER', // Configurable default role
                         emailVerified: true // SSO users are verified by IdP
                     }
                 });
@@ -228,13 +229,13 @@ export class SSOService {
                 role: userTenant?.role || user.role
             },
             process.env.JWT_SECRET as string,
-            { expiresIn: '1h' }
+            { expiresIn: (process.env.JWT_ACCESS_EXPIRY || '1h') as any }
         );
 
         const refreshToken = jwt.sign(
             { sub: user.id, tenantId, type: 'refresh' },
             process.env.JWT_SECRET as string,
-            { expiresIn: '7d' }
+            { expiresIn: (process.env.JWT_REFRESH_EXPIRY || '7d') as any }
         );
 
         // Audit log

@@ -17,6 +17,11 @@ export declare class ZohoApiService {
     createActivity(tenantId: string, activityData: Record<string, any>): Promise<any>;
     updateActivity(tenantId: string, activityId: string, activityData: Record<string, any>): Promise<any>;
     getRecord(tenantId: string, module: string, recordId: string): Promise<any>;
+    getUsers(tenantId: string): Promise<any[]>;
+    getCurrentUser(tenantId: string): Promise<any>;
+    getLeadStages(tenantId: string): Promise<any[]>;
+    getContactStages(tenantId: string): Promise<any[]>;
+    getLeads(tenantId: string, page?: number, perPage?: number): Promise<any[]>;
     testConnection(tenantId: string): Promise<{
         success: boolean;
         message: string;

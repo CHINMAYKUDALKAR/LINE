@@ -19,7 +19,7 @@ export class AuditService {
         perPage?: number;
     }) {
         const page = filters?.page || 1;
-        const perPage = filters?.perPage || 50;
+        const perPage = Math.min(filters?.perPage || 50, 200); // Cap at 200
         const skip = (page - 1) * perPage;
 
         const where: any = { tenantId };
@@ -73,16 +73,33 @@ export class AuditService {
         return 'info';
     }
 
+    /**
+     * Sanitize a field for CSV to prevent formula injection
+     * Fields starting with =, @, +, - could trigger formula execution in spreadsheet apps
+     */
+    private sanitizeForCsv(value: string): string {
+        if (!value) return '';
+        const dangerous = ['=', '@', '+', '-'];
+        if (dangerous.some(char => value.startsWith(char))) {
+            return `'${value}`;
+        }
+        // Also escape quotes and commas
+        if (value.includes('"') || value.includes(',')) {
+            return `"${value.replace(/"/g, '""')}"`;
+        }
+        return value;
+    }
+
     async exportCSV(tenantId: string) {
         const { data } = await this.findAll(tenantId, { perPage: 1000 });
 
         const header = ['Timestamp', 'User', 'Action', 'IP Address', 'Severity'];
         const rows = data.map(log => [
-            log.timestamp,
-            log.user,
-            log.action,
-            log.ipAddress,
-            log.severity
+            this.sanitizeForCsv(log.timestamp),
+            this.sanitizeForCsv(log.user),
+            this.sanitizeForCsv(log.action),
+            this.sanitizeForCsv(log.ipAddress),
+            this.sanitizeForCsv(log.severity)
         ]);
 
         const csv = [header, ...rows].map(r => r.join(',')).join('\n');

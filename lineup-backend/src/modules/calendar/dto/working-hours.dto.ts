@@ -8,6 +8,7 @@ import {
     ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
+import { IsTimezone } from '../../../common/validators/timezone.validator';
 
 // Working Hours DTOs
 
@@ -33,7 +34,7 @@ export class SetWorkingHoursDto {
     @Type(() => WeeklyPatternDto)
     weekly: WeeklyPatternDto[];
 
-    @IsString()
+    @IsTimezone()
     timezone: string; // IANA timezone
 
     @IsOptional()

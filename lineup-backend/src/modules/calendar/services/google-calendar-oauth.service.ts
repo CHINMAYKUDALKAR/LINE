@@ -188,4 +188,80 @@ export class GoogleCalendarOAuthService {
         });
         this.logger.log(`Disconnected Google Calendar for user ${userId} in tenant ${tenantId}`);
     }
+
+    /**
+     * Get busy slots using Google Calendar FreeBusy API.
+     * Returns only start/end times - no event metadata.
+     * Never throws - returns empty result on failure for graceful degradation.
+     */
+    async getBusySlots(
+        accountId: string,
+        from: Date,
+        to: Date,
+    ): Promise<{ busySlots: Array<{ start: Date; end: Date; source: 'google'; reason?: string }>; success: boolean; error?: string }> {
+        try {
+            const accessToken = await this.getValidAccessToken(accountId);
+
+            // Use FreeBusy API - only returns busy/free status, not event details
+            const response = await axios.post(
+                'https://www.googleapis.com/calendar/v3/freeBusy',
+                {
+                    timeMin: from.toISOString(),
+                    timeMax: to.toISOString(),
+                    items: [{ id: 'primary' }],
+                },
+                {
+                    headers: { Authorization: `Bearer ${accessToken}` },
+                },
+            );
+
+            const busySlots: Array<{ start: Date; end: Date; source: 'google'; reason?: string }> = [];
+
+            // Extract busy periods from primary calendar
+            const calendars = response.data.calendars || {};
+            const primaryBusy = calendars.primary?.busy || [];
+
+            for (const period of primaryBusy) {
+                busySlots.push({
+                    start: new Date(period.start),
+                    end: new Date(period.end),
+                    source: 'google',
+                    reason: 'Google Calendar: Busy',
+                });
+            }
+
+            this.logger.debug(`Fetched ${busySlots.length} busy slots from Google Calendar for account ${accountId}`);
+            return { busySlots, success: true };
+        } catch (error: any) {
+            // Graceful failure - log error but don't block scheduling
+            this.logger.warn(`Failed to fetch Google Calendar busy slots for account ${accountId}: ${error.message}`);
+
+            return {
+                busySlots: [],
+                success: false,
+                error: error.message || 'Failed to fetch Google Calendar availability',
+            };
+        }
+    }
+
+    /**
+     * Check if token is expired or will expire soon
+     */
+    async isTokenExpired(accountId: string): Promise<boolean> {
+        try {
+            const account = await this.prisma.calendarSyncAccount.findUnique({
+                where: { id: accountId },
+            });
+
+            if (!account) return true;
+
+            const tokens = account.credentials as unknown as GoogleTokens;
+            const expiresAt = tokens?.expires_at || 0;
+
+            // Consider expired if within 5 minutes
+            return expiresAt - Date.now() < 5 * 60 * 1000;
+        } catch {
+            return true;
+        }
+    }
 }

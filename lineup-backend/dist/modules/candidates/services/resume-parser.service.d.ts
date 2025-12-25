@@ -24,6 +24,7 @@ export interface ParsedResume {
 export declare class ResumeParserService {
     private prisma;
     private s3;
+    private readonly logger;
     constructor(prisma: PrismaService, s3: S3Service);
     parseResume(tenantId: string, fileId: string): Promise<ParsedResume>;
     parseResumes(tenantId: string, fileIds: string[]): Promise<{

@@ -137,10 +137,30 @@ export class TwoFactorService {
         return authenticator.verify({ token, secret });
     }
 
+    // Rate limiting for recovery code attempts
+    private recoveryCodeAttempts = new Map<string, { count: number; resetAt: number }>();
+    private readonly MAX_RECOVERY_ATTEMPTS = 5;
+    private readonly RECOVERY_WINDOW_MS = 60 * 60 * 1000; // 1 hour
+
     /**
      * Verify and consume a recovery code
+     * Rate limited to prevent brute force attacks
      */
     async verifyRecoveryCode(userId: string, code: string): Promise<boolean> {
+        // Check rate limit
+        const now = Date.now();
+        const key = `recovery:${userId}`;
+        const limit = this.recoveryCodeAttempts.get(key);
+
+        if (limit && now < limit.resetAt) {
+            if (limit.count >= this.MAX_RECOVERY_ATTEMPTS) {
+                throw new UnauthorizedException('Too many recovery code attempts. Please try again later.');
+            }
+            limit.count++;
+        } else {
+            this.recoveryCodeAttempts.set(key, { count: 1, resetAt: now + this.RECOVERY_WINDOW_MS });
+        }
+
         const user = await this.prisma.user.findUnique({
             where: { id: userId },
             select: { recoveryCodes: true, twoFactorEnabled: true },
@@ -165,6 +185,8 @@ export class TwoFactorService {
                     data: { recoveryCodes: updatedCodes },
                 });
 
+                // Clear rate limit on success
+                this.recoveryCodeAttempts.delete(key);
                 return true;
             }
         }
@@ -353,7 +375,8 @@ export class TwoFactorService {
             throw new Error('ENCRYPTION_KEY or JWT_SECRET must be set');
         }
 
-        // Derive a 32-byte key from the secret
-        return crypto.scryptSync(key, 'lineup-2fa-salt', 32);
+        // Derive a 32-byte key from the secret using configurable salt
+        const salt = process.env.ENCRYPTION_SALT || 'lineup-2fa-salt';
+        return crypto.scryptSync(key, salt, 32);
     }
 }

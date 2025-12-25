@@ -18,6 +18,7 @@ const email_service_1 = require("./email.service");
 const auth_guard_1 = require("../../common/auth.guard");
 const rbac_guard_1 = require("../../common/rbac.guard");
 const roles_decorator_1 = require("../auth/decorators/roles.decorator");
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 let EmailController = class EmailController {
     svc;
     constructor(svc) {
@@ -27,6 +28,9 @@ let EmailController = class EmailController {
         return this.svc.previewTemplate(body.template, body.context);
     }
     sendTest(req, body) {
+        if (!body.to || !EMAIL_REGEX.test(body.to)) {
+            throw new common_1.BadRequestException('Invalid email address');
+        }
         return this.svc.enqueue(req.tenantId, { to: body.to, template: body.template, context: body.context });
     }
 };

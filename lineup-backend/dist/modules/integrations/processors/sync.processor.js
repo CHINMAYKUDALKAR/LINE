@@ -17,16 +17,19 @@ const prisma_service_1 = require("../../../common/prisma.service");
 const provider_factory_1 = require("../provider.factory");
 const audit_service_1 = require("../../audit/audit.service");
 const standard_entities_1 = require("../types/standard-entities");
+const zoho_sync_service_1 = require("../zoho/zoho.sync.service");
 let SyncProcessor = SyncProcessor_1 = class SyncProcessor extends bullmq_1.WorkerHost {
     prisma;
     providerFactory;
     auditService;
+    zohoSyncService;
     logger = new common_1.Logger(SyncProcessor_1.name);
-    constructor(prisma, providerFactory, auditService) {
+    constructor(prisma, providerFactory, auditService, zohoSyncService) {
         super();
         this.prisma = prisma;
         this.providerFactory = providerFactory;
         this.auditService = auditService;
+        this.zohoSyncService = zohoSyncService;
     }
     async process(job) {
         if (job.name === 'integration-event') {
@@ -147,6 +150,21 @@ let SyncProcessor = SyncProcessor_1 = class SyncProcessor extends bullmq_1.Worke
         this.logger.log(`Processing full sync job for tenant ${tenantId}, provider ${provider}`);
         try {
             const providerInstance = this.providerFactory.getProvider(provider);
+            if (provider === 'zoho') {
+                this.logger.log(`Using ZohoSyncService for inbound sync`);
+                const result = await this.zohoSyncService.syncAll(tenantId, 'leads');
+                await this.auditService.log({
+                    tenantId,
+                    userId: null,
+                    action: 'integration.sync.completed',
+                    metadata: {
+                        provider,
+                        ...result,
+                        triggeredBy,
+                    },
+                });
+                return { success: true, ...result };
+            }
             if (providerInstance.pullCandidates) {
                 const sinceDate = since ? new Date(since) : undefined;
                 const candidates = await providerInstance.pullCandidates(tenantId, sinceDate);
@@ -278,6 +296,7 @@ exports.SyncProcessor = SyncProcessor = SyncProcessor_1 = __decorate([
     (0, common_1.Injectable)(),
     __metadata("design:paramtypes", [prisma_service_1.PrismaService,
         provider_factory_1.ProviderFactory,
-        audit_service_1.AuditService])
+        audit_service_1.AuditService,
+        zoho_sync_service_1.ZohoSyncService])
 ], SyncProcessor);
 //# sourceMappingURL=sync.processor.js.map

@@ -194,6 +194,44 @@ export async function getAvailability(
     return client.get('/calendar/availability', { params: params as any });
 }
 
+// Per-Interviewer Availability with external calendar busy slots
+export interface InterviewerAvailabilityQuery {
+    start: string;
+    end: string;
+    durationMins?: number;
+}
+
+export interface BusySlotInfo {
+    start: string;
+    end: string;
+    source: 'internal' | 'google' | 'microsoft';
+    reason?: string;
+}
+
+export interface InterviewerAvailabilityResponse {
+    userId: string;
+    freeSlots: Array<{
+        start: string;
+        end: string;
+        durationMins: number;
+    }>;
+    busySlots: BusySlotInfo[];
+    calendarConnected: boolean;
+    connectedCalendars: Array<{
+        provider: string;
+        syncEnabled: boolean;
+        lastSyncAt?: string;
+    }>;
+    calendarSyncError?: string;
+}
+
+export async function getInterviewerAvailability(
+    interviewerId: string,
+    params: InterviewerAvailabilityQuery
+): Promise<InterviewerAvailabilityResponse> {
+    return client.get(`/calendar/interviewers/${interviewerId}/availability`, { params: params as any });
+}
+
 // Slots
 export async function getSlots(params?: SlotQueryParams): Promise<PaginatedSlots> {
     return client.get('/calendar/slots', { params: params as any });

@@ -9,7 +9,7 @@ export declare class AuditController {
             timestamp: string;
             user: string;
             action: string;
-            metadata: import(".prisma/client").Prisma.JsonValue;
+            metadata: import("@prisma/client/runtime/library").JsonValue;
             ipAddress: any;
             severity: "error" | "info" | "warning";
         }[];

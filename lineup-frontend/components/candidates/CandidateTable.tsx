@@ -325,7 +325,13 @@ export function CandidateTable({
                   </TableCell>
                   {/* Hidden on mobile: Source */}
                   <TableCell className="hidden lg:table-cell">
-                    <span className="text-sm text-muted-foreground">{candidate.source}</span>
+                    {candidate.source === 'ZOHO_CRM' || candidate.source === 'zoho' ? (
+                      <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">
+                        Zoho CRM
+                      </Badge>
+                    ) : (
+                      <span className="text-sm text-muted-foreground">{candidate.source}</span>
+                    )}
                   </TableCell>
                   {/* Hidden on mobile: Status */}
                   <TableCell className="hidden sm:table-cell">

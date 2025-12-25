@@ -16,16 +16,17 @@ exports.ZohoOAuthService = void 0;
 const common_1 = require("@nestjs/common");
 const prisma_service_1 = require("../../../common/prisma.service");
 const axios_1 = __importDefault(require("axios"));
+const crypto_util_1 = require("../utils/crypto.util");
 let ZohoOAuthService = class ZohoOAuthService {
     prisma;
     clientId = process.env.ZOHO_CLIENT_ID;
     clientSecret = process.env.ZOHO_CLIENT_SECRET;
-    tokenUrl = 'https://accounts.zoho.com/oauth/v2/token';
+    tokenUrl = 'https://accounts.zoho.in/oauth/v2/token';
     constructor(prisma) {
         this.prisma = prisma;
     }
     getAuthUrl(tenantId, redirectUri) {
-        return `https://accounts.zoho.com/oauth/v2/auth?scope=ZohoCRM.modules.ALL&client_id=${this.clientId}&response_type=code&access_type=offline&redirect_uri=${redirectUri}&state=${tenantId}`;
+        return `https://accounts.zoho.in/oauth/v2/auth?scope=ZohoCRM.modules.ALL&client_id=${this.clientId}&response_type=code&access_type=offline&redirect_uri=${redirectUri}&state=${tenantId}`;
     }
     async exchangeCode(tenantId, code, redirectUri) {
         const params = new URLSearchParams();
@@ -78,10 +79,30 @@ let ZohoOAuthService = class ZohoOAuthService {
         const integ = await this.prisma.integration.findFirst({
             where: { tenantId, provider: 'zoho' }
         });
-        const tokens = integ?.tokens;
-        if (!integ || !tokens?.access_token)
+        if (!integ || !integ.tokens) {
             throw new common_1.BadRequestException('Zoho integration not configured');
-        return tokens.access_token;
+        }
+        const rawTokens = integ.tokens;
+        let tokens;
+        if (typeof rawTokens === 'string') {
+            try {
+                tokens = (0, crypto_util_1.decryptObject)(rawTokens);
+                if (tokens.accessToken) {
+                    return tokens.accessToken;
+                }
+            }
+            catch (e) {
+                throw new common_1.BadRequestException('Failed to decrypt Zoho tokens');
+            }
+        }
+        else {
+            tokens = rawTokens;
+        }
+        const accessToken = tokens?.accessToken || tokens?.access_token;
+        if (!accessToken) {
+            throw new common_1.BadRequestException('Zoho access token not found');
+        }
+        return accessToken;
     }
 };
 exports.ZohoOAuthService = ZohoOAuthService;

@@ -43,7 +43,8 @@ let MessageService = class MessageService {
         }
     }
     async findAll(tenantId, filters) {
-        const { channel, status, recipientType, recipientId, fromDate, toDate, search, page = 1, limit = 20 } = filters;
+        const { channel, status, recipientType, recipientId, fromDate, toDate, search, page = 1, limit: requestedLimit = 20 } = filters;
+        const limit = Math.min(requestedLimit, 100);
         const where = { tenantId };
         if (channel)
             where.channel = channel;
@@ -133,6 +134,18 @@ let MessageService = class MessageService {
         return messageLog;
     }
     async schedule(tenantId, dto, userId) {
+        const now = Date.now();
+        const rateLimitKey = `schedule:${tenantId}`;
+        const limit = this.retryRateLimits.get(rateLimitKey);
+        if (limit && limit.resetAt > now) {
+            if (limit.count >= 20) {
+                throw new common_1.BadRequestException('Rate limit exceeded: max 20 scheduled messages per hour');
+            }
+            limit.count++;
+        }
+        else {
+            this.retryRateLimits.set(rateLimitKey, { count: 1, resetAt: now + 3600000 });
+        }
         const recipientInfo = await this.resolveRecipient(tenantId, dto.recipientType, dto.recipientId);
         const scheduled = await this.prisma.scheduledMessage.create({
             data: {
@@ -167,12 +180,56 @@ let MessageService = class MessageService {
             data: { status: client_1.ScheduleStatus.CANCELLED },
         });
     }
+    retryRateLimits = new Map();
+    RETRY_LIMIT_PER_MESSAGE = 5;
+    RETRY_LIMIT_PER_TENANT = 50;
+    RETRY_WINDOW_MS = 60 * 60 * 1000;
+    checkRetryRateLimit(tenantId, messageId) {
+        const now = Date.now();
+        if (Math.random() < 0.1) {
+            for (const [key, value] of this.retryRateLimits) {
+                if (now > value.resetAt) {
+                    this.retryRateLimits.delete(key);
+                }
+            }
+        }
+        const messageKey = `msg:${tenantId}:${messageId}`;
+        const messageLimit = this.retryRateLimits.get(messageKey);
+        if (messageLimit && now < messageLimit.resetAt) {
+            if (messageLimit.count >= this.RETRY_LIMIT_PER_MESSAGE) {
+                return { limited: true, reason: `Message retry limit exceeded (max ${this.RETRY_LIMIT_PER_MESSAGE}/hour)` };
+            }
+            messageLimit.count++;
+        }
+        else {
+            this.retryRateLimits.set(messageKey, { count: 1, resetAt: now + this.RETRY_WINDOW_MS });
+        }
+        const tenantKey = `tenant:${tenantId}`;
+        const tenantLimit = this.retryRateLimits.get(tenantKey);
+        if (tenantLimit && now < tenantLimit.resetAt) {
+            if (tenantLimit.count >= this.RETRY_LIMIT_PER_TENANT) {
+                return { limited: true, reason: `Tenant retry limit exceeded (max ${this.RETRY_LIMIT_PER_TENANT}/hour)` };
+            }
+            tenantLimit.count++;
+        }
+        else {
+            this.retryRateLimits.set(tenantKey, { count: 1, resetAt: now + this.RETRY_WINDOW_MS });
+        }
+        return { limited: false };
+    }
     async retry(tenantId, id) {
+        const rateLimitCheck = this.checkRetryRateLimit(tenantId, id);
+        if (rateLimitCheck.limited) {
+            throw new common_1.BadRequestException(rateLimitCheck.reason);
+        }
         const message = await this.prisma.messageLog.findFirst({
             where: { id, tenantId, status: client_1.MessageStatus.FAILED },
         });
         if (!message) {
             throw new common_1.NotFoundException('Failed message not found');
+        }
+        if (message.retryCount >= 10) {
+            throw new common_1.BadRequestException('Maximum retry attempts (10) reached for this message');
         }
         await this.prisma.messageLog.update({
             where: { id },
@@ -249,21 +306,38 @@ let MessageService = class MessageService {
         switch (type) {
             case client_1.RecipientType.CANDIDATE:
                 const candidate = await this.prisma.candidate.findFirst({
-                    where: { id, tenantId },
+                    where: { id, tenantId, deletedAt: null },
                 });
                 if (!candidate)
                     throw new common_1.BadRequestException('Candidate not found');
                 return { email: candidate.email, phone: candidate.phone, name: candidate.name };
             case client_1.RecipientType.INTERVIEWER:
             case client_1.RecipientType.USER:
-                const user = await this.prisma.user.findFirst({
-                    where: { id, tenantId },
+                const userTenant = await this.prisma.userTenant.findFirst({
+                    where: {
+                        userId: id,
+                        tenantId,
+                        status: 'ACTIVE',
+                    },
+                    include: {
+                        user: {
+                            select: { email: true, name: true },
+                        },
+                    },
                 });
-                if (!user)
-                    throw new common_1.BadRequestException('User not found');
-                return { email: user.email, phone: null, name: user.name };
+                if (!userTenant || !userTenant.user) {
+                    throw new common_1.BadRequestException('User not found or not active in tenant');
+                }
+                return { email: userTenant.user.email, phone: null, name: userTenant.user.name };
             case client_1.RecipientType.EXTERNAL:
-                return { email: id, phone: id, name: 'External' };
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                const phoneRegex = /^\+?[1-9]\d{6,14}$/;
+                const isEmail = emailRegex.test(id);
+                const isPhone = phoneRegex.test(id);
+                if (!isEmail && !isPhone) {
+                    throw new common_1.BadRequestException('External recipient must be a valid email or phone number');
+                }
+                return { email: isEmail ? id : null, phone: isPhone ? id : null, name: 'External' };
             default:
                 throw new common_1.BadRequestException('Invalid recipient type');
         }

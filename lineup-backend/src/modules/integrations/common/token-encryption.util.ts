@@ -1,11 +1,25 @@
 import * as crypto from 'crypto';
 
 const ALGORITHM = 'aes-256-gcm';
-// Ensure key is 32 bytes. If not provided or invalid length, this will throw or needs careful handling.
-// Use a hash to ensure 32 bytes if the env var isn't exactly that, or assume the user provides a hex string.
-// For safety, let's hash it if it's not the right length, or just assume the user follows the 32 byte hex rule.
-// The prompt says "32 bytes hex in env", so we assume it is valid hex.
-const KEY = Buffer.from(process.env.TOKEN_ENCRYPTION_KEY || '0000000000000000000000000000000000000000000000000000000000000000', 'hex');
+
+// Get and validate encryption key
+function getEncryptionKey(): Buffer {
+    const keyHex = process.env.TOKEN_ENCRYPTION_KEY;
+    if (!keyHex) {
+        if (process.env.NODE_ENV === 'production') {
+            throw new Error('TOKEN_ENCRYPTION_KEY must be set in production (64 hex chars = 32 bytes)');
+        }
+        console.warn('WARNING: TOKEN_ENCRYPTION_KEY not set. Using insecure default for development.');
+        // Random key for dev - will change on restart but that's fine for dev
+        return crypto.randomBytes(32);
+    }
+    if (keyHex.length !== 64) {
+        throw new Error('TOKEN_ENCRYPTION_KEY must be 64 hex characters (32 bytes)');
+    }
+    return Buffer.from(keyHex, 'hex');
+}
+
+const KEY = getEncryptionKey();
 
 export function encryptToken(plain: string) {
     const iv = crypto.randomBytes(12);

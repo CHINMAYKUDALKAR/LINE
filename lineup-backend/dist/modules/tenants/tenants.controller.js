@@ -33,7 +33,10 @@ let TenantsController = class TenantsController {
     findAll() {
         return this.svc.findAll();
     }
-    findOne(id) {
+    findOne(req, id) {
+        if (req.user.role !== 'SUPERADMIN' && req.user.tenantId !== id) {
+            throw new common_1.ForbiddenException('Cannot access tenant you do not belong to');
+        }
         return this.svc.findOne(id);
     }
     update(req, id, dto) {
@@ -52,9 +55,8 @@ let TenantsController = class TenantsController {
         return this.svc.getBranding(id);
     }
     updateBranding(req, id, dto) {
-        const userTenantId = req.tenantId;
-        if (req.user.role !== 'SUPERADMIN' && userTenantId !== id) {
-            throw new Error('Cannot update branding for a different tenant');
+        if (req.user.role !== 'SUPERADMIN' && req.user.tenantId !== id) {
+            throw new common_1.ForbiddenException('Cannot update branding for a different tenant');
         }
         return this.svc.updateBranding(id, req.user.sub, dto);
     }
@@ -82,9 +84,10 @@ __decorate([
     (0, common_1.Get)(':id'),
     (0, common_1.UseGuards)(jwt_guard_1.JwtAuthGuard, rbac_guard_1.RbacGuard),
     (0, roles_decorator_1.Roles)('SUPERADMIN', 'ADMIN'),
-    __param(0, (0, common_1.Param)('id')),
+    __param(0, (0, common_1.Req)()),
+    __param(1, (0, common_1.Param)('id')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String]),
+    __metadata("design:paramtypes", [Object, String]),
     __metadata("design:returntype", void 0)
 ], TenantsController.prototype, "findOne", null);
 __decorate([

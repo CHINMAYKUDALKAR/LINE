@@ -3,9 +3,11 @@ import { BullModule } from '@nestjs/bullmq';
 import { ConfigModule } from '@nestjs/config';
 import { PrismaService } from '../../common/prisma.service';
 import { AuditModule } from '../audit/audit.module';
+import { ZohoModule } from './zoho/zoho.module';
 
 // Controllers
 import { IntegrationsController } from './integrations.controller';
+import { OAuthCallbackController } from './oauth-callback.controller';
 import { WebhookController } from './webhooks/webhook.controller';
 
 // Services
@@ -20,6 +22,7 @@ import { ZohoProvider } from './providers/zoho/zoho.provider';
 import { ZohoOAuthService } from './providers/zoho/zoho.oauth';
 import { ZohoApiService } from './providers/zoho/zoho.api';
 import { ZohoSyncHandler } from './providers/zoho/zoho.sync-handler';
+import { ZohoSyncService } from './zoho/zoho.sync.service';
 
 // Google Calendar Provider
 import { GoogleCalendarProvider } from './providers/google-calendar/google.provider';
@@ -66,11 +69,13 @@ import { DlqProcessor } from './processors/dlq.processor';
         BullModule.registerQueue(
             { name: 'integration-sync' },
             { name: 'integration-dlq' },
+            { name: 'zoho-sync' },
         ),
         AuditModule,
         ConfigModule,
+        ZohoModule,
     ],
-    controllers: [IntegrationsController, WebhookController],
+    controllers: [IntegrationsController, OAuthCallbackController, WebhookController],
     providers: [
         PrismaService,
         IntegrationsService,
@@ -84,6 +89,7 @@ import { DlqProcessor } from './processors/dlq.processor';
         ZohoOAuthService,
         ZohoApiService,
         ZohoSyncHandler,
+        // ZohoSyncService is exported from ZohoModule
 
         // Google Calendar
         GoogleCalendarProvider,

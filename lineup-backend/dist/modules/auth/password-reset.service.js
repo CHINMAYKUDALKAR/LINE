@@ -41,6 +41,7 @@ var __importStar = (this && this.__importStar) || (function () {
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
+var PasswordResetService_1;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.PasswordResetService = void 0;
 const common_1 = require("@nestjs/common");
@@ -48,9 +49,10 @@ const prisma_service_1 = require("../../common/prisma.service");
 const email_service_1 = require("../email/email.service");
 const crypto = __importStar(require("crypto"));
 const bcrypt = __importStar(require("bcrypt"));
-let PasswordResetService = class PasswordResetService {
+let PasswordResetService = PasswordResetService_1 = class PasswordResetService {
     prisma;
     emailService;
+    logger = new common_1.Logger(PasswordResetService_1.name);
     constructor(prisma, emailService) {
         this.prisma = prisma;
         this.emailService = emailService;
@@ -59,7 +61,8 @@ let PasswordResetService = class PasswordResetService {
         return crypto.randomBytes(32).toString('hex');
     }
     async hashToken(token) {
-        return bcrypt.hash(token, 10);
+        const saltRounds = Number(process.env.BCRYPT_SALT_ROUNDS || 12);
+        return bcrypt.hash(token, saltRounds);
     }
     async initiateReset(email) {
         const user = await this.prisma.user.findUnique({
@@ -100,7 +103,7 @@ let PasswordResetService = class PasswordResetService {
             });
         }
         catch (error) {
-            console.error('Failed to send password reset email:', error);
+            this.logger.error('Failed to send password reset email:', error);
         }
         return { success: true, message: 'If an account with that email exists, a reset link has been sent.' };
     }
@@ -210,7 +213,7 @@ let PasswordResetService = class PasswordResetService {
     }
 };
 exports.PasswordResetService = PasswordResetService;
-exports.PasswordResetService = PasswordResetService = __decorate([
+exports.PasswordResetService = PasswordResetService = PasswordResetService_1 = __decorate([
     (0, common_1.Injectable)(),
     __metadata("design:paramtypes", [prisma_service_1.PrismaService,
         email_service_1.EmailService])

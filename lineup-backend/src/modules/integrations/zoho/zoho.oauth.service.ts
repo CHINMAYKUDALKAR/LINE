@@ -1,17 +1,18 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../../common/prisma.service';
 import axios from 'axios';
+import { decryptObject } from '../utils/crypto.util';
 
 @Injectable()
 export class ZohoOAuthService {
     private clientId = process.env.ZOHO_CLIENT_ID;
     private clientSecret = process.env.ZOHO_CLIENT_SECRET;
-    private tokenUrl = 'https://accounts.zoho.com/oauth/v2/token';
+    private tokenUrl = 'https://accounts.zoho.in/oauth/v2/token'; // India region
 
     constructor(private prisma: PrismaService) { }
 
     getAuthUrl(tenantId: string, redirectUri: string) {
-        return `https://accounts.zoho.com/oauth/v2/auth?scope=ZohoCRM.modules.ALL&client_id=${this.clientId}&response_type=code&access_type=offline&redirect_uri=${redirectUri}&state=${tenantId}`;
+        return `https://accounts.zoho.in/oauth/v2/auth?scope=ZohoCRM.modules.ALL&client_id=${this.clientId}&response_type=code&access_type=offline&redirect_uri=${redirectUri}&state=${tenantId}`;
     }
 
     async exchangeCode(tenantId: string, code: string, redirectUri: string) {
@@ -74,9 +75,38 @@ export class ZohoOAuthService {
         const integ = await this.prisma.integration.findFirst({
             where: { tenantId, provider: 'zoho' }
         });
-        const tokens = integ?.tokens as any;
-        if (!integ || !tokens?.access_token) throw new BadRequestException('Zoho integration not configured');
 
-        return tokens.access_token;
+        if (!integ || !integ.tokens) {
+            throw new BadRequestException('Zoho integration not configured');
+        }
+
+        const rawTokens = integ.tokens as any;
+
+        // Handle both encrypted (from legacy provider) and plain JSON tokens
+        let tokens: any;
+
+        // Check if tokens are encrypted (string format) or plain JSON
+        if (typeof rawTokens === 'string') {
+            // Encrypted tokens from legacy provider - need to decrypt
+            try {
+                tokens = decryptObject(rawTokens);
+                // Legacy format uses accessToken, not access_token
+                if (tokens.accessToken) {
+                    return tokens.accessToken;
+                }
+            } catch (e) {
+                throw new BadRequestException('Failed to decrypt Zoho tokens');
+            }
+        } else {
+            tokens = rawTokens;
+        }
+
+        // Support both legacy format (accessToken) and new format (access_token)
+        const accessToken = tokens?.accessToken || tokens?.access_token;
+        if (!accessToken) {
+            throw new BadRequestException('Zoho access token not found');
+        }
+
+        return accessToken;
     }
 }

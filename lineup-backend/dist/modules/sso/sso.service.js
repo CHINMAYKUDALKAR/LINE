@@ -50,6 +50,7 @@ const mock_saml_provider_1 = require("./providers/mock-saml.provider");
 const mock_google_provider_1 = require("./providers/mock-google.provider");
 const mock_microsoft_provider_1 = require("./providers/mock-microsoft.provider");
 const jwt = __importStar(require("jsonwebtoken"));
+const crypto = __importStar(require("crypto"));
 const PLATFORM_ADMIN_ROLES = ['SUPERADMIN', 'SUPPORT'];
 let SSOService = class SSOService {
     prisma;
@@ -173,10 +174,10 @@ let SSOService = class SSOService {
                 user = await this.prisma.user.create({
                     data: {
                         email: claims.email,
-                        password: '',
+                        password: crypto.randomBytes(32).toString('hex'),
                         name,
                         tenantId,
-                        role: 'RECRUITER',
+                        role: process.env.SSO_DEFAULT_ROLE || 'RECRUITER',
                         emailVerified: true
                     }
                 });
@@ -208,8 +209,8 @@ let SSOService = class SSOService {
             email: user.email,
             tenantId,
             role: userTenant?.role || user.role
-        }, process.env.JWT_SECRET, { expiresIn: '1h' });
-        const refreshToken = jwt.sign({ sub: user.id, tenantId, type: 'refresh' }, process.env.JWT_SECRET, { expiresIn: '7d' });
+        }, process.env.JWT_SECRET, { expiresIn: (process.env.JWT_ACCESS_EXPIRY || '1h') });
+        const refreshToken = jwt.sign({ sub: user.id, tenantId, type: 'refresh' }, process.env.JWT_SECRET, { expiresIn: (process.env.JWT_REFRESH_EXPIRY || '7d') });
         await this.prisma.auditLog.create({
             data: {
                 tenantId,

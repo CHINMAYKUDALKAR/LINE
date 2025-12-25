@@ -38,14 +38,14 @@ export declare class StageTransitionService {
             email: string;
         } | null;
         id: string;
+        createdAt: Date;
         tenantId: string;
-        candidateId: string;
-        previousStage: string;
-        newStage: string;
         source: string;
+        candidateId: string;
+        newStage: string;
+        reason: string | null;
+        previousStage: string;
         triggeredBy: string;
         actorId: string | null;
-        reason: string | null;
-        createdAt: Date;
     }[]>;
 }

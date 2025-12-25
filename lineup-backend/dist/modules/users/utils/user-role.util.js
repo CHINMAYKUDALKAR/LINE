@@ -41,6 +41,7 @@ exports.generateInvitationToken = generateInvitationToken;
 exports.hashInvitationToken = hashInvitationToken;
 exports.getInvitationExpiry = getInvitationExpiry;
 exports.isInvitationExpired = isInvitationExpired;
+exports.timingSafeCompare = timingSafeCompare;
 const common_1 = require("@nestjs/common");
 const crypto = __importStar(require("crypto"));
 const ROLE_HIERARCHY = {
@@ -96,5 +97,12 @@ function isInvitationExpired(expiry) {
     if (!expiry)
         return true;
     return new Date() > expiry;
+}
+function timingSafeCompare(a, b) {
+    if (a.length !== b.length) {
+        crypto.timingSafeEqual(Buffer.from(a), Buffer.from(a));
+        return false;
+    }
+    return crypto.timingSafeEqual(Buffer.from(a), Buffer.from(b));
 }
 //# sourceMappingURL=user-role.util.js.map

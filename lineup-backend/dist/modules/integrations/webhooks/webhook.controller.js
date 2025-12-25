@@ -11,17 +11,24 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
+var WebhookController_1;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.WebhookController = void 0;
 const common_1 = require("@nestjs/common");
 const webhook_service_1 = require("./webhook.service");
-let WebhookController = class WebhookController {
+const ALLOWED_PROVIDERS = ['zoho', 'google_calendar', 'outlook_calendar', 'slack', 'greenhouse', 'lever'];
+let WebhookController = WebhookController_1 = class WebhookController {
     webhookService;
+    logger = new common_1.Logger(WebhookController_1.name);
     constructor(webhookService) {
         this.webhookService = webhookService;
     }
     async receiveWebhook(provider, payload) {
-        return this.webhookService.handle(provider, payload);
+        if (!ALLOWED_PROVIDERS.includes(provider.toLowerCase())) {
+            this.logger.warn(`Rejected webhook from unknown provider: ${provider}`);
+            throw new common_1.BadRequestException(`Unknown provider: ${provider}`);
+        }
+        return this.webhookService.handle(provider.toLowerCase(), payload);
     }
 };
 exports.WebhookController = WebhookController;
@@ -34,7 +41,7 @@ __decorate([
     __metadata("design:paramtypes", [String, Object]),
     __metadata("design:returntype", Promise)
 ], WebhookController.prototype, "receiveWebhook", null);
-exports.WebhookController = WebhookController = __decorate([
+exports.WebhookController = WebhookController = WebhookController_1 = __decorate([
     (0, common_1.Controller)('api/v1/integrations/webhooks'),
     __metadata("design:paramtypes", [webhook_service_1.WebhookService])
 ], WebhookController);

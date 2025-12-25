@@ -6,18 +6,19 @@ export const getApiBaseUrl = () => {
     if (typeof window !== 'undefined') {
         // In browser: use same hostname as the page (for network access from phone)
         const hostname = window.location.hostname;
-        return process.env.NEXT_PUBLIC_API_URL || `http://${hostname}:4000`;
+        return process.env.NEXT_PUBLIC_API_URL || `http://${hostname}:3001`;
     }
     // Server-side: use localhost
-    return process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+    return process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 };
 
 const API_BASE_URL = getApiBaseUrl();
 const API_BASE = `${API_BASE_URL}/api/v1`;
 
-if (typeof window !== 'undefined') {
-    console.log('[API Debug] Hostname:', window.location.hostname);
-    console.log('[API Debug] API_BASE_URL:', API_BASE_URL);
+// Debug logging (only in development)
+if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
+    console.debug('[API Debug] Hostname:', window.location.hostname);
+    console.debug('[API Debug] API_BASE_URL:', API_BASE_URL);
 }
 
 // Retry configuration

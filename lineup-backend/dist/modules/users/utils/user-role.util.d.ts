@@ -8,3 +8,4 @@ export declare function generateInvitationToken(): string;
 export declare function hashInvitationToken(token: string): string;
 export declare function getInvitationExpiry(): Date;
 export declare function isInvitationExpired(expiry: Date | null): boolean;
+export declare function timingSafeCompare(a: string, b: string): boolean;

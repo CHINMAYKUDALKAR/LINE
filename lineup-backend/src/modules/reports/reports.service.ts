@@ -50,7 +50,14 @@ export class ReportsService {
 
     // ─── Core Report Methods ─────────────────────────────────────────────────────
 
+    // Whitelist of valid field names to prevent SQL injection
+    private static readonly VALID_DATE_FIELDS = ['"createdAt"', '"updatedAt"', 'inter.date'];
+
     private buildDateFilter(field: string, from?: string, to?: string): Prisma.Sql {
+        // Validate field is in whitelist
+        if (!ReportsService.VALID_DATE_FIELDS.includes(field)) {
+            throw new BadRequestException(`Invalid date filter field: ${field}`);
+        }
         if (from && to) {
             return Prisma.sql`AND ${Prisma.raw(field)} >= ${new Date(from)} AND ${Prisma.raw(field)} <= ${new Date(to)}`;
         }
@@ -68,10 +75,15 @@ export class ReportsService {
     }
 
     async funnel(tenantId: string, filters: GetReportDto = {}, force = false) {
+        this.logger.debug(`funnel called with tenantId=${tenantId}, filters=${JSON.stringify(filters)}, force=${force}`);
+
         const cacheKey = `reports:${tenantId}:funnel:${JSON.stringify(filters)}`;
         if (!force) {
             const cached = await getCached(cacheKey);
-            if (cached) return cached;
+            if (cached) {
+                this.logger.debug(`funnel returning cached data: ${JSON.stringify(cached)}`);
+                return cached;
+            }
         }
 
         const dateFilter = this.buildDateFilter('"createdAt"', filters.from, filters.to);
@@ -91,6 +103,7 @@ export class ReportsService {
             ORDER BY count DESC;
         `;
 
+        this.logger.debug(`funnel query result: ${JSON.stringify(result)}`);
         await setCached(cacheKey, result, 600); // 10 min cache
         return result;
     }
@@ -192,13 +205,62 @@ export class ReportsService {
     }
 
     async overview(tenantId: string, force = false): Promise<any> {
-        // Run parallel aggregations
-        const [funnel, timeToHire, interviewerLoad] = await Promise.all([
+        // Calculate date ranges for "this week" metrics
+        const now = new Date();
+        const startOfWeek = new Date(now);
+        startOfWeek.setDate(now.getDate() - now.getDay()); // Start of current week (Sunday)
+        startOfWeek.setHours(0, 0, 0, 0);
+
+        // Run parallel aggregations including summary metrics
+        const [
+            funnel,
+            timeToHire,
+            interviewerLoad,
+            totalCandidates,
+            activeInterviews,
+            completedThisWeek,
+            pendingFeedback
+        ] = await Promise.all([
             this.funnel(tenantId, {}, force),
             this.timeToHire(tenantId, {}, force),
-            this.interviewerLoad(tenantId, {}, force)
+            this.interviewerLoad(tenantId, {}, force),
+            // Summary metrics
+            this.prisma.candidate.count({
+                where: { tenantId, deletedAt: null }
+            }),
+            this.prisma.interview.count({
+                where: {
+                    tenantId,
+                    deletedAt: null,
+                    status: { in: ['SCHEDULED', 'RESCHEDULED'] }
+                }
+            }),
+            this.prisma.interview.count({
+                where: {
+                    tenantId,
+                    deletedAt: null,
+                    status: 'COMPLETED',
+                    updatedAt: { gte: startOfWeek }
+                }
+            }),
+            this.prisma.interview.count({
+                where: {
+                    tenantId,
+                    deletedAt: null,
+                    status: 'PENDING_FEEDBACK'
+                }
+            })
         ]);
-        return { funnel, timeToHire, interviewerLoad };
+
+        return {
+            funnel,
+            timeToHire,
+            interviewerLoad,
+            totalCandidates,
+            activeInterviews,
+            completedThisWeek,
+            pendingFeedback
+        };
     }
 
 
@@ -347,7 +409,11 @@ export class ReportsService {
 
     private escapeCsvValue(value: any): string {
         if (value === null || value === undefined) return '';
-        const str = String(value);
+        let str = String(value);
+        // Prevent CSV formula injection
+        if (/^[=@+\-]/.test(str)) {
+            str = "'" + str;
+        }
         if (str.includes(',') || str.includes('"') || str.includes('\n')) {
             return `"${str.replace(/"/g, '""')}"`;
         }
@@ -395,6 +461,7 @@ export class ReportsService {
         return this.prisma.scheduledReport.findMany({
             where: { tenantId },
             orderBy: { createdAt: 'desc' },
+            take: 100,
         });
     }
 

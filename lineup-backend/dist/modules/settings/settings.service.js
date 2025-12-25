@@ -41,6 +41,7 @@ var __importStar = (this && this.__importStar) || (function () {
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
+var SettingsService_1;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SettingsService = void 0;
 const common_1 = require("@nestjs/common");
@@ -48,8 +49,9 @@ const prisma_service_1 = require("../../common/prisma.service");
 const encryption_util_1 = require("./utils/encryption.util");
 const api_key_util_1 = require("./utils/api-key.util");
 const nodemailer = __importStar(require("nodemailer"));
-let SettingsService = class SettingsService {
+let SettingsService = SettingsService_1 = class SettingsService {
     prisma;
+    logger = new common_1.Logger(SettingsService_1.name);
     constructor(prisma) {
         this.prisma = prisma;
     }
@@ -117,6 +119,7 @@ let SettingsService = class SettingsService {
                 pass = (0, encryption_util_1.decrypt)(pass);
         }
         catch (e) {
+            this.logger.warn('Failed to decrypt SMTP password - may be stored unencrypted', e);
         }
         const transporter = nodemailer.createTransport({
             host: smtp.host,
@@ -202,7 +205,7 @@ let SettingsService = class SettingsService {
     }
 };
 exports.SettingsService = SettingsService;
-exports.SettingsService = SettingsService = __decorate([
+exports.SettingsService = SettingsService = SettingsService_1 = __decorate([
     (0, common_1.Injectable)(),
     __metadata("design:paramtypes", [prisma_service_1.PrismaService])
 ], SettingsService);

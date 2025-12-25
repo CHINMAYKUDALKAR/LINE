@@ -26,6 +26,11 @@ const BUSY_BLOCKS_TTL = 60; // 1 minute
 // Cache key patterns
 const CACHE_KEY_PREFIX = 'calendar';
 
+// Sanitize IDs for use in cache keys - prevent pattern injection
+const sanitizeCacheKeyPart = (part: string): string => {
+    return part.replace(/[*:?\[\]]/g, '_');
+};
+
 @Injectable()
 export class AvailabilityService {
     private readonly logger = new Logger(AvailabilityService.name);
@@ -48,7 +53,7 @@ export class AvailabilityService {
     ): string {
         const startStr = start.toISOString().split('T')[0];
         const endStr = end.toISOString().split('T')[0];
-        return `${CACHE_KEY_PREFIX}:free:${tenantId}:${userId}:${startStr}:${endStr}`;
+        return `${CACHE_KEY_PREFIX}:free:${sanitizeCacheKeyPart(tenantId)}:${sanitizeCacheKeyPart(userId)}:${startStr}:${endStr}`;
     }
 
     /**
@@ -62,14 +67,14 @@ export class AvailabilityService {
     ): string {
         const startStr = start.toISOString().split('T')[0];
         const endStr = end.toISOString().split('T')[0];
-        return `${CACHE_KEY_PREFIX}:busy:${tenantId}:${userId}:${startStr}:${endStr}`;
+        return `${CACHE_KEY_PREFIX}:busy:${sanitizeCacheKeyPart(tenantId)}:${sanitizeCacheKeyPart(userId)}:${startStr}:${endStr}`;
     }
 
     /**
      * Invalidate cache for a user (called on data changes)
      */
     async invalidateUserCache(tenantId: string, userId: string): Promise<void> {
-        const pattern = `${CACHE_KEY_PREFIX}:*:${tenantId}:${userId}:*`;
+        const pattern = `${CACHE_KEY_PREFIX}:*:${sanitizeCacheKeyPart(tenantId)}:${sanitizeCacheKeyPart(userId)}:*`;
         await invalidateCache(pattern);
         this.logger.debug(`Invalidated cache for user ${userId}`);
     }
@@ -78,7 +83,7 @@ export class AvailabilityService {
      * Invalidate all calendar cache for a tenant
      */
     async invalidateTenantCache(tenantId: string): Promise<void> {
-        const pattern = `${CACHE_KEY_PREFIX}:*:${tenantId}:*`;
+        const pattern = `${CACHE_KEY_PREFIX}:*:${sanitizeCacheKeyPart(tenantId)}:*`;
         await invalidateCache(pattern);
         this.logger.debug(`Invalidated cache for tenant ${tenantId}`);
     }
@@ -184,9 +189,8 @@ export class AvailabilityService {
             return tenantTimezone;
         }
 
-        // Default to Asia/Kolkata (IST) for better India support
-        // Most users are in India, so this is a sensible default
-        return 'Asia/Kolkata';
+        // Fall back to system default (configurable via environment variable)
+        return process.env.DEFAULT_TIMEZONE || 'UTC';
     }
 
     /**

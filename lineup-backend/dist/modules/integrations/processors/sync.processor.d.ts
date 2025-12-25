@@ -4,6 +4,7 @@ import { PrismaService } from '../../../common/prisma.service';
 import { ProviderFactory } from '../provider.factory';
 import { AuditService } from '../../audit/audit.service';
 import { IntegrationEventType, SyncEntityType } from '../types/standard-entities';
+import { ZohoSyncService } from '../zoho/zoho.sync.service';
 interface SyncJobData {
     tenantId: string;
     provider: string;
@@ -24,8 +25,9 @@ export declare class SyncProcessor extends WorkerHost {
     private prisma;
     private providerFactory;
     private auditService;
+    private zohoSyncService;
     private readonly logger;
-    constructor(prisma: PrismaService, providerFactory: ProviderFactory, auditService: AuditService);
+    constructor(prisma: PrismaService, providerFactory: ProviderFactory, auditService: AuditService, zohoSyncService: ZohoSyncService);
     process(job: Job<SyncJobData | EventJobData>): Promise<any>;
     private processEventJob;
     private syncCandidateEvent;

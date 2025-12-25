@@ -13,13 +13,13 @@ export declare class AdminConsoleController {
         status: string;
     }>;
     listTenants(): Promise<{
-        id: string;
         name: string;
+        id: string;
         domain: string | null;
         domainVerified: boolean;
-        settings: import(".prisma/client").Prisma.JsonValue | null;
+        settings: import("@prisma/client/runtime/library").JsonValue | null;
         brandingLogoUrl: string | null;
-        brandingColors: import(".prisma/client").Prisma.JsonValue | null;
+        brandingColors: import("@prisma/client/runtime/library").JsonValue | null;
         trialActive: boolean;
         trialEndsAt: Date | null;
         createdAt: Date;
@@ -41,13 +41,13 @@ export declare class AdminConsoleController {
             candidates: number;
             interviews: number;
         } | undefined;
-        id?: string | undefined;
         name?: string | undefined;
+        id?: string | undefined;
         domain?: string | null | undefined;
         domainVerified?: boolean | undefined;
-        settings?: import(".prisma/client").Prisma.JsonValue | undefined;
+        settings?: import("@prisma/client/runtime/library").JsonValue | undefined;
         brandingLogoUrl?: string | null | undefined;
-        brandingColors?: import(".prisma/client").Prisma.JsonValue | undefined;
+        brandingColors?: import("@prisma/client/runtime/library").JsonValue | undefined;
         trialActive?: boolean | undefined;
         trialEndsAt?: Date | null | undefined;
         createdAt?: Date | undefined;
@@ -57,12 +57,12 @@ export declare class AdminConsoleController {
         tenantId: string;
         logs: {
             id: string;
+            createdAt: Date;
+            metadata: import("@prisma/client/runtime/library").JsonValue | null;
             tenantId: string | null;
             userId: string | null;
             action: string;
-            metadata: import(".prisma/client").Prisma.JsonValue | null;
             ip: string | null;
-            createdAt: Date;
         }[];
     }>;
     updateTenantStatus(req: any, id: string, body: {
@@ -79,7 +79,7 @@ export declare class AdminConsoleController {
     assignUserRole(req: any, tenantId: string, userId: string, role: 'ADMIN' | 'MANAGER' | 'RECRUITER' | 'INTERVIEWER'): Promise<{
         success: boolean;
         userId: string;
-        oldRole: import(".prisma/client").$Enums.Role;
+        oldRole: import("@prisma/client").$Enums.Role;
         newRole: "ADMIN" | "MANAGER" | "RECRUITER" | "INTERVIEWER";
         message: string;
     }>;
@@ -88,8 +88,8 @@ export declare class AdminConsoleController {
         id: string;
         email: string;
         createdAt: Date;
-        role: import(".prisma/client").$Enums.Role;
-        status: import(".prisma/client").$Enums.UserStatus;
+        role: import("@prisma/client").$Enums.Role;
+        status: import("@prisma/client").$Enums.UserStatus;
         lastLogin: Date | null;
     }[]>;
     updateUserStatus(req: any, id: string, body: {
@@ -106,15 +106,15 @@ export declare class AdminConsoleController {
         };
     } & {
         id: string;
-        tenantId: string;
-        provider: string;
-        tokens: import(".prisma/client").Prisma.JsonValue | null;
-        settings: import(".prisma/client").Prisma.JsonValue | null;
-        status: string | null;
-        lastSyncedAt: Date | null;
-        lastError: string | null;
+        settings: import("@prisma/client/runtime/library").JsonValue | null;
         createdAt: Date;
         updatedAt: Date;
+        tenantId: string;
+        status: string | null;
+        provider: string;
+        tokens: import("@prisma/client/runtime/library").JsonValue | null;
+        lastSyncedAt: Date | null;
+        lastError: string | null;
     })[]>;
     getIntegrationSummary(): Promise<Record<string, {
         connected: number;

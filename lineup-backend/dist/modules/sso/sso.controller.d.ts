@@ -5,12 +5,12 @@ export declare class SSOController {
     private readonly ssoService;
     constructor(ssoService: SSOService);
     getProviders(tenantId: string): Promise<{
-        type: import(".prisma/client").$Enums.SSOProviderType;
+        type: import("@prisma/client").$Enums.SSOProviderType;
         domainRestriction: string | null;
     }[]>;
     initiate(tenantId: string, dto: InitiateSSODto): Promise<{
         redirectUrl: string;
-        provider: import(".prisma/client").$Enums.SSOProviderType;
+        provider: import("@prisma/client").$Enums.SSOProviderType;
         tenant: string;
         mock: boolean;
     }>;
@@ -21,7 +21,7 @@ export declare class SSOController {
             id: string;
             email: string;
             name: string | null;
-            role: import(".prisma/client").$Enums.Role;
+            role: import("@prisma/client").$Enums.Role;
         };
         tenant: {
             id: string;

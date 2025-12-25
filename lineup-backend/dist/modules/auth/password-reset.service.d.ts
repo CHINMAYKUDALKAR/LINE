@@ -3,6 +3,7 @@ import { EmailService } from '../email/email.service';
 export declare class PasswordResetService {
     private prisma;
     private emailService;
+    private readonly logger;
     constructor(prisma: PrismaService, emailService: EmailService);
     private generateToken;
     private hashToken;

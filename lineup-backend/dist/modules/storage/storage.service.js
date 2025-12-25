@@ -126,7 +126,7 @@ let StorageService = class StorageService {
     }
     async listFiles(tenantId, dto) {
         const page = Number(dto.page) || 1;
-        const perPage = Number(dto.perPage) || 20;
+        const perPage = Math.min(Number(dto.perPage) || 20, 100);
         const where = { tenantId };
         if (dto.linkedType)
             where.linkedType = dto.linkedType;
@@ -237,28 +237,37 @@ let StorageService = class StorageService {
                 filename: file.filename,
             },
             orderBy: { version: 'desc' },
+            take: 50,
         });
     }
-    async getRecycleBin(tenantId) {
+    async getRecycleBin(tenantId, limit = 100) {
         return this.prisma.fileObject.findMany({
             where: {
                 tenantId,
                 status: 'deleted',
             },
             orderBy: { deletedAt: 'desc' },
+            take: Math.min(limit, 200),
         });
     }
+    sanitizeFilename(filename) {
+        return filename
+            .replace(/[\/\\]/g, '_')
+            .replace(/\.\.+/g, '_')
+            .replace(/[<>:"'|?*]/g, '_');
+    }
     generateS3Key(tenantId, linkedType, linkedId, fileId, filename) {
+        const safeFilename = filename ? this.sanitizeFilename(filename) : 'unnamed';
         if (linkedType && linkedId) {
-            return `${tenantId}/${linkedType}/${linkedId}/files/${fileId}/${filename}`;
+            return `${tenantId}/${linkedType}/${linkedId}/files/${fileId}/${safeFilename}`;
         }
-        return `${tenantId}/files/${fileId}/${filename}`;
+        return `${tenantId}/files/${fileId}/${safeFilename}`;
     }
     canAccessFile(user, file) {
         if (file.tenantId !== user.tenantId) {
             return false;
         }
-        if (user.role === 'ADMIN')
+        if (['ADMIN', 'SUPERADMIN'].includes(user.role))
             return true;
         if (file.linkedType === 'candidate') {
             return ['MANAGER', 'RECRUITER'].includes(user.role);

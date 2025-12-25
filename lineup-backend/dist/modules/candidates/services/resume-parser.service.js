@@ -8,6 +8,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
+var ResumeParserService_1;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ResumeParserService = void 0;
 const common_1 = require("@nestjs/common");
@@ -24,9 +25,10 @@ const COMMON_SKILLS = [
     'machine learning', 'data science', 'pandas', 'numpy', 'tensorflow', 'pytorch', 'spark', 'hadoop',
     'agile', 'scrum', 'rest', 'graphql', 'microservices', 'api', 'testing', 'debugging', 'problem solving',
 ];
-let ResumeParserService = class ResumeParserService {
+let ResumeParserService = ResumeParserService_1 = class ResumeParserService {
     prisma;
     s3;
+    logger = new common_1.Logger(ResumeParserService_1.name);
     constructor(prisma, s3) {
         this.prisma = prisma;
         this.s3 = s3;
@@ -52,7 +54,7 @@ let ResumeParserService = class ResumeParserService {
             buffer = await this.streamToBuffer(stream);
         }
         catch (error) {
-            console.error('Failed to download file from S3:', error);
+            this.logger.error('Failed to download file from S3:', error);
             return {
                 status: 'UNPARSABLE',
                 fields: { skills: [] },
@@ -107,8 +109,10 @@ let ResumeParserService = class ResumeParserService {
         };
     }
     async parseResumes(tenantId, fileIds) {
+        const MAX_BATCH_SIZE = 50;
+        const limitedFileIds = fileIds.slice(0, MAX_BATCH_SIZE);
         const results = [];
-        for (const fileId of fileIds) {
+        for (const fileId of limitedFileIds) {
             try {
                 const result = await this.parseResume(tenantId, fileId);
                 results.push(result);
@@ -245,7 +249,7 @@ let ResumeParserService = class ResumeParserService {
     }
 };
 exports.ResumeParserService = ResumeParserService;
-exports.ResumeParserService = ResumeParserService = __decorate([
+exports.ResumeParserService = ResumeParserService = ResumeParserService_1 = __decorate([
     (0, common_1.Injectable)(),
     __metadata("design:paramtypes", [prisma_service_1.PrismaService,
         s3_service_1.S3Service])

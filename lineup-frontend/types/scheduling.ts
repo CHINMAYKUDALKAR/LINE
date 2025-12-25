@@ -22,12 +22,18 @@ export interface Interviewer {
   department: string;
   avatarUrl?: string;
   availability: 'available' | 'busy' | 'partial';
+  /** Whether external calendar is connected */
+  calendarConnected?: boolean;
 }
 
 export interface TimeSlot {
   time: string;
   available: boolean;
   recommended?: boolean;
+  /** Reason why slot is busy (for tooltip) */
+  busyReason?: string;
+  /** Source of busy status: internal (Lineup), google, microsoft */
+  busySource?: 'internal' | 'google' | 'microsoft';
 }
 
 export interface ScheduleInterviewPayload {

@@ -6,8 +6,9 @@ import { CreateApiKeyDto } from './dto/create-apikey.dto';
 import { TestSmtpDto } from './dto/test-smtp.dto';
 export declare class SettingsService {
     private prisma;
+    private readonly logger;
     constructor(prisma: PrismaService);
-    getSettings(tenantId: string): Promise<string | number | true | import(".prisma/client").Prisma.JsonObject | import(".prisma/client").Prisma.JsonArray>;
+    getSettings(tenantId: string): Promise<string | number | true | import("@prisma/client/runtime/library").JsonObject | import("@prisma/client/runtime/library").JsonArray>;
     updateBranding(tenantId: string, userId: string, dto: UpdateBrandingDto): Promise<any>;
     updateSso(tenantId: string, userId: string, dto: UpdateSsoDto): Promise<any>;
     updateSmtp(tenantId: string, userId: string, dto: UpdateSmtpDto): Promise<{
@@ -34,6 +35,8 @@ export declare class SettingsService {
     }>;
     getSecurityPolicy(tenantId: string): Promise<{
         id: string;
+        createdAt: Date;
+        updatedAt: Date;
         tenantId: string;
         ipAllowlistEnabled: boolean;
         allowedIPs: string[];
@@ -47,11 +50,11 @@ export declare class SettingsService {
         sessionTimeoutMinutes: number | null;
         enforce2FA: boolean;
         enforce2FAForAdmins: boolean;
-        createdAt: Date;
-        updatedAt: Date;
     } | null>;
     updateSecurityPolicy(tenantId: string, userId: string, dto: any): Promise<{
         id: string;
+        createdAt: Date;
+        updatedAt: Date;
         tenantId: string;
         ipAllowlistEnabled: boolean;
         allowedIPs: string[];
@@ -65,7 +68,5 @@ export declare class SettingsService {
         sessionTimeoutMinutes: number | null;
         enforce2FA: boolean;
         enforce2FAForAdmins: boolean;
-        createdAt: Date;
-        updatedAt: Date;
     }>;
 }

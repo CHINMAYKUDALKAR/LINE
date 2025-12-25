@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, forwardRef, Inject } from '@nestjs/common';
+import { Injectable, NotFoundException, forwardRef, Inject, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../../../common/prisma.service';
 import { SetWorkingHoursDto, WeeklyPatternDto } from '../dto';
 import { AvailabilityService } from './availability.service';
@@ -36,9 +36,15 @@ export class WorkingHoursService {
     async setWorkingHours(
         tenantId: string,
         currentUserId: string,
+        currentUserRole: string,
         dto: SetWorkingHoursDto,
     ) {
         const userId = dto.userId || currentUserId;
+
+        // Authorization check: users can only set their own working hours unless they're ADMIN
+        if (userId !== currentUserId && !['ADMIN', 'SUPERADMIN', 'MANAGER'].includes(currentUserRole)) {
+            throw new ForbiddenException('You can only modify your own working hours');
+        }
 
         // Validate weekly pattern
         this.validateWeeklyPattern(dto.weekly);
@@ -92,22 +98,24 @@ export class WorkingHoursService {
     }
 
     /**
-     * Get default working hours pattern (Mon-Fri 9am-5pm)
+     * Get default working hours pattern (Mon-Sun 8am-8pm for flexibility)
      */
     getDefaultPattern(timezone: string = 'UTC'): WeeklyPatternDto[] {
         return [
-            { dow: 1, start: '09:00', end: '17:00' }, // Monday
-            { dow: 2, start: '09:00', end: '17:00' }, // Tuesday
-            { dow: 3, start: '09:00', end: '17:00' }, // Wednesday
-            { dow: 4, start: '09:00', end: '17:00' }, // Thursday
-            { dow: 5, start: '09:00', end: '17:00' }, // Friday
+            { dow: 0, start: '08:00', end: '20:00' }, // Sunday
+            { dow: 1, start: '08:00', end: '20:00' }, // Monday
+            { dow: 2, start: '08:00', end: '20:00' }, // Tuesday
+            { dow: 3, start: '08:00', end: '20:00' }, // Wednesday
+            { dow: 4, start: '08:00', end: '20:00' }, // Thursday
+            { dow: 5, start: '08:00', end: '20:00' }, // Friday
+            { dow: 6, start: '08:00', end: '20:00' }, // Saturday
         ];
     }
 
     private validateWeeklyPattern(weekly: WeeklyPatternDto[]) {
         for (const pattern of weekly) {
             if (pattern.dow < 0 || pattern.dow > 6) {
-                throw new Error(`Invalid day of week: ${pattern.dow}`);
+                throw new BadRequestException(`Invalid day of week: ${pattern.dow}`);
             }
 
             const startParts = pattern.start.split(':').map(Number);
@@ -121,14 +129,14 @@ export class WorkingHoursService {
                 isNaN(endParts[0]) ||
                 isNaN(endParts[1])
             ) {
-                throw new Error('Invalid time format. Use HH:mm');
+                throw new BadRequestException('Invalid time format. Use HH:mm');
             }
 
             const startMins = startParts[0] * 60 + startParts[1];
             const endMins = endParts[0] * 60 + endParts[1];
 
             if (endMins <= startMins) {
-                throw new Error('End time must be after start time');
+                throw new BadRequestException('End time must be after start time');
             }
         }
     }

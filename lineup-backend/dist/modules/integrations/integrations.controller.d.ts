@@ -5,6 +5,7 @@ import { TriggerSyncDto } from './dto/sync.dto';
 export declare class IntegrationsController {
     private integrationsService;
     constructor(integrationsService: IntegrationsService);
+    oauthCallback(code: string, state: string, res: any): Promise<any>;
     listIntegrations(req: any): Promise<{
         id: string;
         createdAt: Date;
@@ -16,7 +17,7 @@ export declare class IntegrationsController {
     }[]>;
     getIntegration(req: any, provider: string): Promise<{
         id: string;
-        settings: import(".prisma/client").Prisma.JsonValue;
+        settings: import("@prisma/client/runtime/library").JsonValue;
         createdAt: Date;
         updatedAt: Date;
         status: string | null;
@@ -26,10 +27,6 @@ export declare class IntegrationsController {
     }>;
     connect(req: any, connectDto: ConnectDto): Promise<{
         authUrl: string;
-        provider: string;
-    }>;
-    callback(provider: string, code: string, state: string, req: any): Promise<{
-        success: boolean;
         provider: string;
     }>;
     updateMapping(req: any, mappingDto: UpdateMappingDto): Promise<{
@@ -108,12 +105,12 @@ export declare class IntegrationsController {
     getSyncLogs(req: any, provider: string, limit?: string, status?: string): Promise<{
         id: string;
         createdAt: Date;
-        status: import(".prisma/client").$Enums.SyncLogStatus;
+        status: import("@prisma/client").$Enums.SyncLogStatus;
+        externalId: string | null;
         eventType: string;
-        direction: import(".prisma/client").$Enums.SyncDirection;
+        direction: import("@prisma/client").$Enums.SyncDirection;
         entityType: string;
         entityId: string | null;
-        externalId: string | null;
         errorMessage: string | null;
         retryCount: number;
         completedAt: Date | null;
@@ -125,5 +122,41 @@ export declare class IntegrationsController {
             message: string;
         }[];
         totalFailures24h: number;
+    }>;
+    testZohoConnection(req: any): Promise<{
+        success: boolean;
+        message: any;
+    }>;
+    getZohoContacts(req: any, page?: string, perPage?: string): Promise<{
+        success: boolean;
+        data: any[];
+        pagination: {
+            page: number;
+            perPage: number;
+            total: number;
+        };
+        error?: undefined;
+    } | {
+        success: boolean;
+        error: any;
+        data: never[];
+        pagination?: undefined;
+    }>;
+    getZohoLeads(req: any, page?: string, perPage?: string): Promise<{
+        success: boolean;
+        message: string;
+        data: never[];
+        pagination: {
+            page: number;
+            perPage: number;
+            total: number;
+        };
+        error?: undefined;
+    } | {
+        success: boolean;
+        error: any;
+        data: never[];
+        message?: undefined;
+        pagination?: undefined;
     }>;
 }

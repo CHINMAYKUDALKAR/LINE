@@ -37,7 +37,21 @@ exports.encryptToken = encryptToken;
 exports.decryptToken = decryptToken;
 const crypto = __importStar(require("crypto"));
 const ALGORITHM = 'aes-256-gcm';
-const KEY = Buffer.from(process.env.TOKEN_ENCRYPTION_KEY || '0000000000000000000000000000000000000000000000000000000000000000', 'hex');
+function getEncryptionKey() {
+    const keyHex = process.env.TOKEN_ENCRYPTION_KEY;
+    if (!keyHex) {
+        if (process.env.NODE_ENV === 'production') {
+            throw new Error('TOKEN_ENCRYPTION_KEY must be set in production (64 hex chars = 32 bytes)');
+        }
+        console.warn('WARNING: TOKEN_ENCRYPTION_KEY not set. Using insecure default for development.');
+        return crypto.randomBytes(32);
+    }
+    if (keyHex.length !== 64) {
+        throw new Error('TOKEN_ENCRYPTION_KEY must be 64 hex characters (32 bytes)');
+    }
+    return Buffer.from(keyHex, 'hex');
+}
+const KEY = getEncryptionKey();
 function encryptToken(plain) {
     const iv = crypto.randomBytes(12);
     const cipher = crypto.createCipheriv(ALGORITHM, KEY, iv);

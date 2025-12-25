@@ -50,6 +50,16 @@ let IdentityProviderService = class IdentityProviderService {
             where.providerType = providerType;
         return this.prisma.identityProvider.findFirst({ where });
     }
+    sanitizeProvider(provider) {
+        if (!provider)
+            return provider;
+        const { clientSecret, samlCertificate, ...safe } = provider;
+        return {
+            ...safe,
+            hasSecret: !!clientSecret,
+            hasCertificate: !!samlCertificate,
+        };
+    }
     async create(tenantId, userId, userRole, dto) {
         if (!ADMIN_ROLES.includes(userRole)) {
             throw new common_1.ForbiddenException('Only administrators can configure SSO');
@@ -58,7 +68,7 @@ let IdentityProviderService = class IdentityProviderService {
         if (existing) {
             throw new common_1.ForbiddenException(`Provider ${dto.providerType} already configured for this tenant`);
         }
-        return this.prisma.identityProvider.create({
+        const provider = await this.prisma.identityProvider.create({
             data: {
                 tenantId,
                 providerType: dto.providerType,
@@ -77,19 +87,21 @@ let IdentityProviderService = class IdentityProviderService {
                 createdById: userId
             }
         });
+        return this.sanitizeProvider(provider);
     }
     async update(tenantId, userId, userRole, id, dto) {
         if (!ADMIN_ROLES.includes(userRole)) {
             throw new common_1.ForbiddenException('Only administrators can modify SSO configuration');
         }
         await this.findOne(tenantId, id);
-        return this.prisma.identityProvider.update({
+        const provider = await this.prisma.identityProvider.update({
             where: { id },
             data: {
                 ...dto,
                 updatedById: userId
             }
         });
+        return this.sanitizeProvider(provider);
     }
     async delete(tenantId, userRole, id) {
         if (!ADMIN_ROLES.includes(userRole)) {

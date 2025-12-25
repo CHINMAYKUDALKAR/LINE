@@ -16,7 +16,8 @@ const prisma_service_1 = require("../../common/prisma.service");
 const client_1 = require("@prisma/client");
 const cache_util_1 = require("../../common/cache.util");
 const scheduled_report_dto_1 = require("./dto/scheduled-report.dto");
-let ReportsService = ReportsService_1 = class ReportsService {
+let ReportsService = class ReportsService {
+    static { ReportsService_1 = this; }
     prisma;
     logger = new common_1.Logger(ReportsService_1.name);
     constructor(prisma) {
@@ -48,7 +49,11 @@ let ReportsService = ReportsService_1 = class ReportsService {
             hires
         };
     }
+    static VALID_DATE_FIELDS = ['"createdAt"', '"updatedAt"', 'inter.date'];
     buildDateFilter(field, from, to) {
+        if (!ReportsService_1.VALID_DATE_FIELDS.includes(field)) {
+            throw new common_1.BadRequestException(`Invalid date filter field: ${field}`);
+        }
         if (from && to) {
             return client_1.Prisma.sql `AND ${client_1.Prisma.raw(field)} >= ${new Date(from)} AND ${client_1.Prisma.raw(field)} <= ${new Date(to)}`;
         }
@@ -64,11 +69,14 @@ let ReportsService = ReportsService_1 = class ReportsService {
         return role ? client_1.Prisma.sql `AND "roleTitle" = ${role}` : client_1.Prisma.empty;
     }
     async funnel(tenantId, filters = {}, force = false) {
+        this.logger.debug(`funnel called with tenantId=${tenantId}, filters=${JSON.stringify(filters)}, force=${force}`);
         const cacheKey = `reports:${tenantId}:funnel:${JSON.stringify(filters)}`;
         if (!force) {
             const cached = await (0, cache_util_1.getCached)(cacheKey);
-            if (cached)
+            if (cached) {
+                this.logger.debug(`funnel returning cached data: ${JSON.stringify(cached)}`);
                 return cached;
+            }
         }
         const dateFilter = this.buildDateFilter('"createdAt"', filters.from, filters.to);
         const roleFilter = this.buildRoleFilter(filters.role);
@@ -85,6 +93,7 @@ let ReportsService = ReportsService_1 = class ReportsService {
             GROUP BY stage
             ORDER BY count DESC;
         `;
+        this.logger.debug(`funnel query result: ${JSON.stringify(result)}`);
         await (0, cache_util_1.setCached)(cacheKey, result, 600);
         return result;
     }
@@ -173,12 +182,49 @@ let ReportsService = ReportsService_1 = class ReportsService {
         return this.funnel(tenantId, filters, force);
     }
     async overview(tenantId, force = false) {
-        const [funnel, timeToHire, interviewerLoad] = await Promise.all([
+        const now = new Date();
+        const startOfWeek = new Date(now);
+        startOfWeek.setDate(now.getDate() - now.getDay());
+        startOfWeek.setHours(0, 0, 0, 0);
+        const [funnel, timeToHire, interviewerLoad, totalCandidates, activeInterviews, completedThisWeek, pendingFeedback] = await Promise.all([
             this.funnel(tenantId, {}, force),
             this.timeToHire(tenantId, {}, force),
-            this.interviewerLoad(tenantId, {}, force)
+            this.interviewerLoad(tenantId, {}, force),
+            this.prisma.candidate.count({
+                where: { tenantId, deletedAt: null }
+            }),
+            this.prisma.interview.count({
+                where: {
+                    tenantId,
+                    deletedAt: null,
+                    status: { in: ['SCHEDULED', 'RESCHEDULED'] }
+                }
+            }),
+            this.prisma.interview.count({
+                where: {
+                    tenantId,
+                    deletedAt: null,
+                    status: 'COMPLETED',
+                    updatedAt: { gte: startOfWeek }
+                }
+            }),
+            this.prisma.interview.count({
+                where: {
+                    tenantId,
+                    deletedAt: null,
+                    status: 'PENDING_FEEDBACK'
+                }
+            })
         ]);
-        return { funnel, timeToHire, interviewerLoad };
+        return {
+            funnel,
+            timeToHire,
+            interviewerLoad,
+            totalCandidates,
+            activeInterviews,
+            completedThisWeek,
+            pendingFeedback
+        };
     }
     async getReportData(tenantId, reportType, filters = {}, force = true) {
         switch (reportType) {
@@ -302,7 +348,10 @@ let ReportsService = ReportsService_1 = class ReportsService {
     escapeCsvValue(value) {
         if (value === null || value === undefined)
             return '';
-        const str = String(value);
+        let str = String(value);
+        if (/^[=@+\-]/.test(str)) {
+            str = "'" + str;
+        }
         if (str.includes(',') || str.includes('"') || str.includes('\n')) {
             return `"${str.replace(/"/g, '""')}"`;
         }
@@ -342,6 +391,7 @@ let ReportsService = ReportsService_1 = class ReportsService {
         return this.prisma.scheduledReport.findMany({
             where: { tenantId },
             orderBy: { createdAt: 'desc' },
+            take: 100,
         });
     }
     async getScheduledReport(tenantId, id) {

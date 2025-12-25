@@ -27,7 +27,7 @@ let HiringStagesService = class HiringStagesService {
     constructor(prisma) {
         this.prisma = prisma;
     }
-    async list(tenantId, includeInactive = false) {
+    async list(tenantId, includeInactive = false, limit = 100) {
         const where = { tenantId };
         if (!includeInactive) {
             where.isActive = true;
@@ -35,6 +35,7 @@ let HiringStagesService = class HiringStagesService {
         return this.prisma.hiringStage.findMany({
             where,
             orderBy: { order: 'asc' },
+            take: Math.min(limit, 200),
         });
     }
     async get(tenantId, id) {

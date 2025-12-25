@@ -28,12 +28,10 @@ let FeedbackService = class FeedbackService {
         });
         if (!interview)
             throw new common_1.NotFoundException('Interview not found');
-        try {
-            (0, feedback_permission_util_1.ensureInterviewerCanSubmit)(interview, userId);
+        if (dto.rating < 1 || dto.rating > 5) {
+            throw new common_1.BadRequestException('Rating must be between 1 and 5');
         }
-        catch (e) {
-            throw new common_1.ForbiddenException(e.message);
-        }
+        (0, feedback_permission_util_1.ensureInterviewerCanSubmit)(interview, userId);
         const feedback = await this.prisma.feedback.upsert({
             where: {
                 interviewerId_interviewId: { interviewerId: userId, interviewId: dto.interviewId }
@@ -90,13 +88,13 @@ let FeedbackService = class FeedbackService {
         });
         return feedback;
     }
-    async getInterviewFeedback(tenantId, interviewId) {
+    async getInterviewFeedback(tenantId, interviewId, limit = 50) {
         const feedback = await this.prisma.feedback.findMany({
-            where: { tenantId, interviewId }
+            where: { tenantId, interviewId },
+            take: Math.min(limit, 100),
+            orderBy: { createdAt: 'desc' },
         });
-        if (!feedback)
-            return [];
-        return feedback;
+        return feedback || [];
     }
 };
 exports.FeedbackService = FeedbackService;

@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../common/prisma.service';
 import { SubmitFeedbackDto } from './dto/submit-feedback.dto';
 import { ensureInterviewerCanSubmit } from './validators/feedback-permission.util';
@@ -20,12 +20,13 @@ export class FeedbackService {
         });
         if (!interview) throw new NotFoundException('Interview not found');
 
-        // 2. Validate Permission
-        try {
-            ensureInterviewerCanSubmit(interview, userId);
-        } catch (e) {
-            throw new ForbiddenException(e.message);
+        // Validate rating range (1-5)
+        if (dto.rating < 1 || dto.rating > 5) {
+            throw new BadRequestException('Rating must be between 1 and 5');
         }
+
+        // 2. Validate Permission (throws ForbiddenException directly)
+        ensureInterviewerCanSubmit(interview, userId);
 
         // 3. Upsert Feedback
         const feedback = await this.prisma.feedback.upsert({
@@ -99,12 +100,12 @@ export class FeedbackService {
         return feedback;
     }
 
-    async getInterviewFeedback(tenantId: string, interviewId: string) {
+    async getInterviewFeedback(tenantId: string, interviewId: string, limit = 50) {
         const feedback = await this.prisma.feedback.findMany({
-            where: { tenantId, interviewId }
+            where: { tenantId, interviewId },
+            take: Math.min(limit, 100),
+            orderBy: { createdAt: 'desc' },
         });
-        if (!feedback) return [];
-        // Allow empty
-        return feedback;
+        return feedback || [];
     }
 }

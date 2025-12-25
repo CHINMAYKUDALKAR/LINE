@@ -4,6 +4,26 @@
  */
 import DOMPurify from 'dompurify';
 
+// Configure DOMPurify hooks to validate URLs
+if (typeof window !== 'undefined') {
+    // Remove any javascript: or data: URLs from href and src attributes
+    DOMPurify.addHook('afterSanitizeAttributes', (node) => {
+        if (node.hasAttribute('href')) {
+            const href = node.getAttribute('href') || '';
+            if (href.startsWith('javascript:') || href.startsWith('data:')) {
+                node.removeAttribute('href');
+            }
+        }
+        if (node.hasAttribute('src')) {
+            const src = node.getAttribute('src') || '';
+            // Only allow https:// or relative URLs for images
+            if (!src.startsWith('https://') && !src.startsWith('/') && !src.startsWith('./')) {
+                node.removeAttribute('src');
+            }
+        }
+    });
+}
+
 /**
  * Sanitize HTML content to prevent XSS attacks
  * @param html - Raw HTML string that may contain malicious content
@@ -24,8 +44,10 @@ export function sanitizeHtml(html: string): string {
             'blockquote', 'pre', 'code',
             'img',
         ],
-        ALLOWED_ATTR: ['href', 'target', 'rel', 'src', 'alt', 'class', 'style'],
+        ALLOWED_ATTR: ['href', 'target', 'rel', 'src', 'alt', 'class'],
         ALLOW_DATA_ATTR: false,
+        // Require rel="noopener noreferrer" for links with target="_blank"
+        ADD_ATTR: ['target'],
     });
 }
 

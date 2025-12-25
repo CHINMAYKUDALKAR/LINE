@@ -11,6 +11,7 @@ import {
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsTimezone } from '../../../common/validators/timezone.validator';
 
 // Slot participant structure
 export class SlotParticipantDto {
@@ -58,7 +59,7 @@ export class CreateSlotDto {
     endAt: string;
 
     @ApiProperty({ description: 'Timezone', example: 'Asia/Kolkata' })
-    @IsString()
+    @IsTimezone()
     timezone: string;
 
     @ApiPropertyOptional({ description: 'Additional metadata', example: { roomId: 'conf-a' } })
@@ -97,8 +98,14 @@ export class GenerateSlotsDto {
     ruleId?: string;
 
     @ApiProperty({ description: 'Timezone for slot generation', example: 'Asia/Kolkata' })
-    @IsString()
+    @IsTimezone()
     timezone: string;
+
+    @ApiPropertyOptional({ description: 'Maximum number of slots to generate (default: 50, max: 100)', example: 50, minimum: 1 })
+    @IsOptional()
+    @IsInt()
+    @Min(1)
+    maxSlots?: number;
 }
 
 // Book an existing slot
@@ -122,6 +129,14 @@ export class BookSlotDto {
     @IsOptional()
     @IsObject()
     metadata?: Record<string, any>;
+
+    @ApiPropertyOptional({
+        description: 'Force booking even if slot overlaps with busy time (Admin only). Returns warning in response.',
+        example: false,
+        default: false
+    })
+    @IsOptional()
+    forceBook?: boolean;
 }
 
 // Reschedule a booked slot

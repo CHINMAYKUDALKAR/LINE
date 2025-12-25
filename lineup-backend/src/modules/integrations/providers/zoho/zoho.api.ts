@@ -23,7 +23,7 @@ interface ZohoApiError {
 @Injectable()
 export class ZohoApiService {
     private readonly logger = new Logger(ZohoApiService.name);
-    private readonly baseUrl = 'https://www.zohoapis.com/crm/v2';
+    private readonly baseUrl = 'https://www.zohoapis.in/crm/v2'; // India region
     private readonly maxRetries = 3;
     private readonly retryDelay = 1000; // Base delay in ms
 
@@ -189,6 +189,104 @@ export class ZohoApiService {
         return this.executeWithRetry(tenantId, async (client) => {
             const response = await client.get(`/${module}/${recordId}`);
             return response.data?.data?.[0] || null;
+        });
+    }
+
+    // ============================================
+    // Settings & Metadata Operations
+    // ============================================
+
+    /**
+     * Get all active users from Zoho CRM
+     * These are recruiters/interviewers for Lineup
+     */
+    async getUsers(tenantId: string): Promise<any[]> {
+        return this.executeWithRetry(tenantId, async (client) => {
+            const response = await client.get('/users', {
+                params: { type: 'AllUsers' },
+            });
+            return response.data?.users || [];
+        });
+    }
+
+    /**
+     * Get current user info
+     */
+    async getCurrentUser(tenantId: string): Promise<any> {
+        return this.executeWithRetry(tenantId, async (client) => {
+            const response = await client.get('/users', {
+                params: { type: 'CurrentUser' },
+            });
+            return response.data?.users?.[0] || null;
+        });
+    }
+
+    /**
+     * Get Lead stages/statuses from Zoho CRM settings
+     * These map to pipeline stages in Lineup
+     */
+    async getLeadStages(tenantId: string): Promise<any[]> {
+        return this.executeWithRetry(tenantId, async (client) => {
+            // Get Lead_Status field picklist values
+            const response = await client.get('/settings/fields', {
+                params: { module: 'Leads' },
+            });
+
+            const fields = response.data?.fields || [];
+            const statusField = fields.find((f: any) =>
+                f.api_name === 'Lead_Status' || f.field_label === 'Lead Status'
+            );
+
+            if (statusField?.pick_list_values) {
+                return statusField.pick_list_values.map((v: any, index: number) => ({
+                    id: v.id || `stage_${index}`,
+                    name: v.display_value || v.actual_value,
+                    order: index,
+                }));
+            }
+
+            return [];
+        });
+    }
+
+    /**
+     * Get Contact stages/statuses from Zoho CRM settings
+     */
+    async getContactStages(tenantId: string): Promise<any[]> {
+        return this.executeWithRetry(tenantId, async (client) => {
+            const response = await client.get('/settings/fields', {
+                params: { module: 'Contacts' },
+            });
+
+            const fields = response.data?.fields || [];
+            // Contact Status or similar field
+            const statusField = fields.find((f: any) =>
+                f.api_name === 'Contact_Status' ||
+                f.field_label === 'Status' ||
+                f.api_name === 'Lead_Source' // Fallback
+            );
+
+            if (statusField?.pick_list_values) {
+                return statusField.pick_list_values.map((v: any, index: number) => ({
+                    id: v.id || `stage_${index}`,
+                    name: v.display_value || v.actual_value,
+                    order: index,
+                }));
+            }
+
+            return [];
+        });
+    }
+
+    /**
+     * Get Leads from Zoho CRM
+     */
+    async getLeads(tenantId: string, page = 1, perPage = 200): Promise<any[]> {
+        return this.executeWithRetry(tenantId, async (client) => {
+            const response = await client.get('/Leads', {
+                params: { page, per_page: perPage },
+            });
+            return response.data?.data || [];
         });
     }
 

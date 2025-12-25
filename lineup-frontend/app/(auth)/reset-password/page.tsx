@@ -46,8 +46,8 @@ function ResetPasswordContent() {
         setIsLoading(true);
         try {
             const baseUrl = typeof window !== 'undefined'
-                ? (process.env.NEXT_PUBLIC_API_URL || `http://${window.location.hostname}:4000`)
-                : (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000');
+                ? (process.env.NEXT_PUBLIC_API_URL || `http://${window.location.hostname}:3001`)
+                : (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001');
 
             const response = await fetch(`${baseUrl}/api/v1/auth/reset-password`, {
                 method: "POST",

@@ -1,4 +1,5 @@
 import { IsString, IsOptional, IsArray, IsDateString, IsInt, Min } from 'class-validator';
+import { IsTimezone } from '../../../common/validators/timezone.validator';
 
 export class AvailabilityQueryDto {
     @IsArray()
@@ -17,6 +18,6 @@ export class AvailabilityQueryDto {
     durationMins?: number;
 
     @IsOptional()
-    @IsString()
+    @IsTimezone()
     timezone?: string;
 }

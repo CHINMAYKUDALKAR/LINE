@@ -7,6 +7,7 @@ import {
     Param,
     UseGuards,
     Req,
+    Res,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam, ApiBody, ApiQuery } from '@nestjs/swagger';
 import { IntegrationsService } from './integrations.service';
@@ -16,6 +17,7 @@ import { TriggerSyncDto } from './dto/sync.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt.guard';
 import { RbacGuard } from '../auth/guards/rbac.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { Public } from '../auth/decorators/public.decorator';
 import { Role } from '@prisma/client';
 
 @ApiTags('integrations')
@@ -24,6 +26,42 @@ import { Role } from '@prisma/client';
 @UseGuards(JwtAuthGuard, RbacGuard)
 export class IntegrationsController {
     constructor(private integrationsService: IntegrationsService) { }
+
+    /**
+     * OAuth callback endpoint - PUBLIC (no auth required)
+     * OAuth providers redirect here after user authentication
+     */
+    @Get('callback')
+    @Public()
+    @ApiOperation({ summary: 'Handle OAuth callback from provider (public endpoint)' })
+    @ApiQuery({ name: 'code', description: 'Authorization code from provider' })
+    @ApiQuery({ name: 'state', description: 'State parameter containing tenant info' })
+    @ApiResponse({ status: 302, description: 'Redirects to frontend after success' })
+    async oauthCallback(
+        @Query('code') code: string,
+        @Query('state') state: string,
+        @Res() res: any,
+    ) {
+        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+
+        try {
+            // Extract provider from state or default to zoho
+            let provider = 'zoho';
+            try {
+                const stateData = JSON.parse(Buffer.from(state, 'base64').toString());
+                provider = stateData.provider || 'zoho';
+            } catch {
+                // State parsing failed, use default
+            }
+
+            const result = await this.integrationsService.callback(provider, code, state, 'oauth-callback');
+            return res.redirect(`${frontendUrl}/integrations?status=success&provider=${result.provider}`);
+        } catch (error: any) {
+            console.error('OAuth callback failed:', error.message);
+            return res.redirect(`${frontendUrl}/integrations?status=error&message=${encodeURIComponent(error.message)}`);
+        }
+    }
+
 
     @Get()
     @Roles(Role.ADMIN, Role.MANAGER)
@@ -59,23 +97,6 @@ export class IntegrationsController {
             connectDto.provider,
             userId,
         );
-    }
-
-    @Get('callback')
-    @ApiOperation({ summary: 'Handle OAuth callback from provider' })
-    @ApiQuery({ name: 'provider', description: 'Integration provider' })
-    @ApiQuery({ name: 'code', description: 'Authorization code from provider' })
-    @ApiQuery({ name: 'state', description: 'State parameter for CSRF protection' })
-    @ApiResponse({ status: 200, description: 'Integration connected successfully' })
-    @ApiResponse({ status: 400, description: 'Invalid code or state' })
-    async callback(
-        @Query('provider') provider: string,
-        @Query('code') code: string,
-        @Query('state') state: string,
-        @Req() req: any,
-    ) {
-        const userId = req.user?.id || 'system';
-        return this.integrationsService.callback(provider, code, state, userId);
     }
 
     @Post('mapping')
@@ -208,5 +229,55 @@ export class IntegrationsController {
         const tenantId = req.user.tenantId;
         return this.integrationsService.getFailureSummary(tenantId, provider);
     }
-}
 
+    // ============================================
+    // Zoho Test Endpoints
+    // ============================================
+
+    @Get('zoho/test')
+    @Roles(Role.ADMIN)
+    @ApiOperation({ summary: 'Test Zoho CRM connection' })
+    @ApiResponse({ status: 200, description: 'Connection test result' })
+    async testZohoConnection(@Req() req: any) {
+        const tenantId = req.user.tenantId;
+        return this.integrationsService.testZohoConnection(tenantId);
+    }
+
+    @Get('zoho/contacts')
+    @Roles(Role.ADMIN, Role.MANAGER)
+    @ApiOperation({ summary: 'Fetch contacts from Zoho CRM' })
+    @ApiQuery({ name: 'page', required: false, description: 'Page number (default: 1)' })
+    @ApiQuery({ name: 'perPage', required: false, description: 'Items per page (default: 20)' })
+    @ApiResponse({ status: 200, description: 'List of contacts from Zoho CRM' })
+    async getZohoContacts(
+        @Req() req: any,
+        @Query('page') page?: string,
+        @Query('perPage') perPage?: string,
+    ) {
+        const tenantId = req.user.tenantId;
+        return this.integrationsService.getZohoContacts(
+            tenantId,
+            parseInt(page || '1'),
+            parseInt(perPage || '20'),
+        );
+    }
+
+    @Get('zoho/leads')
+    @Roles(Role.ADMIN, Role.MANAGER)
+    @ApiOperation({ summary: 'Fetch leads from Zoho CRM' })
+    @ApiQuery({ name: 'page', required: false, description: 'Page number (default: 1)' })
+    @ApiQuery({ name: 'perPage', required: false, description: 'Items per page (default: 20)' })
+    @ApiResponse({ status: 200, description: 'List of leads from Zoho CRM' })
+    async getZohoLeads(
+        @Req() req: any,
+        @Query('page') page?: string,
+        @Query('perPage') perPage?: string,
+    ) {
+        const tenantId = req.user.tenantId;
+        return this.integrationsService.getZohoLeads(
+            tenantId,
+            parseInt(page || '1'),
+            parseInt(perPage || '20'),
+        );
+    }
+}

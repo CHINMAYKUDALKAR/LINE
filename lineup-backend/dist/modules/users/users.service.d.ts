@@ -24,8 +24,8 @@ export declare class UsersService {
             email: string;
             createdAt: Date;
             updatedAt: Date;
-            role: import(".prisma/client").$Enums.Role;
-            status: import(".prisma/client").$Enums.UserStatus;
+            role: import("@prisma/client").$Enums.Role;
+            status: import("@prisma/client").$Enums.UserStatus;
             lastLogin: Date | null;
         }[];
         meta: {
@@ -41,19 +41,21 @@ export declare class UsersService {
         email: string;
         createdAt: Date;
         updatedAt: Date;
-        role: import(".prisma/client").$Enums.Role;
-        status: import(".prisma/client").$Enums.UserStatus;
+        role: import("@prisma/client").$Enums.Role;
+        status: import("@prisma/client").$Enums.UserStatus;
         teamIds: string[];
         lastLogin: Date | null;
     }>;
     updateUser(tenantId: string, adminId: string, userId: string, dto: UpdateUserDto): Promise<{
-        id: string;
-        tenantId: string | null;
-        email: string;
-        password: string;
         name: string | null;
-        role: import(".prisma/client").$Enums.Role;
-        status: import(".prisma/client").$Enums.UserStatus;
+        id: string;
+        email: string;
+        createdAt: Date;
+        updatedAt: Date;
+        tenantId: string | null;
+        role: import("@prisma/client").$Enums.Role;
+        status: import("@prisma/client").$Enums.UserStatus;
+        password: string;
         emailVerified: boolean;
         verificationToken: string | null;
         verificationExpiry: Date | null;
@@ -65,8 +67,6 @@ export declare class UsersService {
         recoveryCodes: string[];
         timezone: string | null;
         lastLogin: Date | null;
-        createdAt: Date;
-        updatedAt: Date;
     }>;
     activateUser(tenantId: string, adminId: string, userId: string): Promise<{
         success: boolean;

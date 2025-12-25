@@ -52,6 +52,68 @@ let CalendarController = class CalendarController {
         const durationMins = query.durationMins || 60;
         return this.availabilityService.getMultiUserAvailability(tenantId, userIds, start, end, durationMins);
     }
+    async getInterviewerAvailability(req, userId, start, end, durationMins) {
+        const tenantId = req.tenantId;
+        const startDate = new Date(start);
+        const endDate = new Date(end);
+        const duration = durationMins ? parseInt(durationMins, 10) : 60;
+        const freeSlots = await this.availabilityService.getFreeIntervals(tenantId, userId, startDate, endDate);
+        const internalBusy = await this.busyBlockService.getBusyBlocks(tenantId, {
+            userId,
+            start: startDate.toISOString(),
+            end: endDate.toISOString(),
+        });
+        const accounts = await this.calendarSyncService.getConnectedAccounts(tenantId, userId);
+        const externalBusySlots = [];
+        let calendarSyncError;
+        for (const account of accounts) {
+            if (!account.syncEnabled)
+                continue;
+            if (account.provider === 'google') {
+                const result = await this.googleOAuth.getBusySlots(account.id, startDate, endDate);
+                if (result.success) {
+                    externalBusySlots.push(...result.busySlots);
+                }
+                else {
+                    calendarSyncError = result.error;
+                }
+            }
+            else if (account.provider === 'microsoft') {
+                const result = await this.microsoftOAuth.getBusySlots(account.id, startDate, endDate);
+                if (result.success) {
+                    externalBusySlots.push(...result.busySlots);
+                }
+                else {
+                    calendarSyncError = result.error;
+                }
+            }
+        }
+        const busySlots = [
+            ...internalBusy.map((b) => ({
+                start: b.startAt,
+                end: b.endAt,
+                source: b.source === 'interview' ? 'internal' : b.source,
+                reason: b.reason || (b.source === 'interview' ? 'Interview scheduled' : 'Busy'),
+            })),
+            ...externalBusySlots,
+        ];
+        return {
+            userId,
+            freeSlots: freeSlots.map(s => ({
+                start: s.start,
+                end: s.end,
+                durationMins: Math.round((s.end.getTime() - s.start.getTime()) / 60000),
+            })),
+            busySlots,
+            calendarConnected: accounts.some(a => a.syncEnabled),
+            connectedCalendars: accounts.map(a => ({
+                provider: a.provider,
+                syncEnabled: a.syncEnabled,
+                lastSyncAt: a.lastSyncAt,
+            })),
+            ...(calendarSyncError && { calendarSyncError }),
+        };
+    }
     async getSuggestions(req, dto) {
         return this.suggestionService.getSuggestions(req.tenantId, dto);
     }
@@ -84,7 +146,7 @@ let CalendarController = class CalendarController {
         return this.workingHoursService.getWorkingHours(req.tenantId, targetUserId);
     }
     async setWorkingHours(req, dto) {
-        return this.workingHoursService.setWorkingHours(req.tenantId, req.user.sub, dto);
+        return this.workingHoursService.setWorkingHours(req.tenantId, req.user.sub, req.user.role, dto);
     }
     async getBusyBlocks(req, query) {
         return this.busyBlockService.getBusyBlocks(req.tenantId, query);
@@ -158,6 +220,27 @@ __decorate([
     __metadata("design:paramtypes", [Object, dto_1.AvailabilityQueryDto]),
     __metadata("design:returntype", Promise)
 ], CalendarController.prototype, "getAvailability", null);
+__decorate([
+    (0, common_1.Get)('interviewers/:id/availability'),
+    (0, rate_limit_1.RateLimited)(rate_limit_1.RateLimitProfile.CALENDAR),
+    (0, swagger_1.ApiOperation)({ summary: 'Get detailed availability for a specific interviewer including external calendar busy slots' }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: 'Interviewer user ID' }),
+    (0, swagger_1.ApiQuery)({ name: 'start', description: 'Start date (ISO 8601)', example: '2024-01-15T09:00:00Z' }),
+    (0, swagger_1.ApiQuery)({ name: 'end', description: 'End date (ISO 8601)', example: '2024-01-15T18:00:00Z' }),
+    (0, swagger_1.ApiQuery)({ name: 'durationMins', required: false, description: 'Slot duration in minutes', example: 60 }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Interviewer availability with free slots, busy slots (with source), and calendar connection status',
+    }),
+    __param(0, (0, common_1.Req)()),
+    __param(1, (0, common_1.Param)('id')),
+    __param(2, (0, common_1.Query)('start')),
+    __param(3, (0, common_1.Query)('end')),
+    __param(4, (0, common_1.Query)('durationMins')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String, String, String, String]),
+    __metadata("design:returntype", Promise)
+], CalendarController.prototype, "getInterviewerAvailability", null);
 __decorate([
     (0, common_1.Post)('suggestions'),
     (0, rate_limit_1.RateLimited)(rate_limit_1.RateLimitProfile.CALENDAR),

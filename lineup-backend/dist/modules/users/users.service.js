@@ -131,7 +131,7 @@ let UsersService = class UsersService {
     }
     async listUsers(tenantId, dto) {
         const page = dto.page || 1;
-        const perPage = dto.perPage || 20;
+        const perPage = Math.min(dto.perPage || 20, 100);
         const where = { tenantId };
         if (dto.q) {
             where.OR = [

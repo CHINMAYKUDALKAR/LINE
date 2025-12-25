@@ -21,7 +21,7 @@ export class HiringStagesService {
     /**
      * List all hiring stages for a tenant (ordered)
      */
-    async list(tenantId: string, includeInactive = false) {
+    async list(tenantId: string, includeInactive = false, limit = 100) {
         const where: any = { tenantId };
         if (!includeInactive) {
             where.isActive = true;
@@ -30,6 +30,7 @@ export class HiringStagesService {
         return this.prisma.hiringStage.findMany({
             where,
             orderBy: { order: 'asc' },
+            take: Math.min(limit, 200),
         });
     }
 

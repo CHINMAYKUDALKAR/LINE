@@ -31,13 +31,15 @@ export class AuditController {
         @Query('page') page?: string,
         @Query('perPage') perPage?: string,
     ) {
+        const pageNum = parseInt(page || '1', 10) || 1;
+        const perPageNum = parseInt(perPage || '50', 10) || 50;
         return this.svc.findAll(req.user.tenantId, {
             user,
             action,
             dateFrom,
             dateTo,
-            page: page ? parseInt(page, 10) : undefined,
-            perPage: perPage ? parseInt(perPage, 10) : undefined,
+            page: pageNum,
+            perPage: perPageNum,
         });
     }
 

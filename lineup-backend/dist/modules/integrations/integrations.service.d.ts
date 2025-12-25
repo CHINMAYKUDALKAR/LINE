@@ -3,12 +3,17 @@ import { Queue } from 'bullmq';
 import { ProviderFactory } from './provider.factory';
 import { MappingConfig } from './types/mapping.interface';
 import { AuditService } from '../audit/audit.service';
+import { UpdateMappingDto } from './dto/mapping.dto';
+import { ZohoApiService } from './providers/zoho/zoho.api';
 export declare class IntegrationsService {
     private prisma;
     private providerFactory;
     private auditService;
+    private zohoApi;
     private syncQueue;
-    constructor(prisma: PrismaService, providerFactory: ProviderFactory, auditService: AuditService, syncQueue: Queue);
+    private readonly logger;
+    private syncRateLimiter;
+    constructor(prisma: PrismaService, providerFactory: ProviderFactory, auditService: AuditService, zohoApi: ZohoApiService, syncQueue: Queue);
     listIntegrations(tenantId: string): Promise<{
         id: string;
         createdAt: Date;
@@ -20,7 +25,7 @@ export declare class IntegrationsService {
     }[]>;
     getIntegration(tenantId: string, provider: string): Promise<{
         id: string;
-        settings: import(".prisma/client").Prisma.JsonValue;
+        settings: import("@prisma/client/runtime/library").JsonValue;
         createdAt: Date;
         updatedAt: Date;
         status: string | null;
@@ -36,7 +41,7 @@ export declare class IntegrationsService {
         success: boolean;
         provider: string;
     }>;
-    updateMapping(tenantId: string, provider: string, mappingDto: any, userId: string): Promise<{
+    updateMapping(tenantId: string, provider: string, mappingDto: UpdateMappingDto, userId: string): Promise<{
         success: boolean;
         mapping: MappingConfig;
     }>;
@@ -114,12 +119,12 @@ export declare class IntegrationsService {
     getSyncLogs(tenantId: string, provider: string, limit?: number, status?: string): Promise<{
         id: string;
         createdAt: Date;
-        status: import(".prisma/client").$Enums.SyncLogStatus;
+        status: import("@prisma/client").$Enums.SyncLogStatus;
+        externalId: string | null;
         eventType: string;
-        direction: import(".prisma/client").$Enums.SyncDirection;
+        direction: import("@prisma/client").$Enums.SyncDirection;
         entityType: string;
         entityId: string | null;
-        externalId: string | null;
         errorMessage: string | null;
         retryCount: number;
         completedAt: Date | null;
@@ -131,5 +136,41 @@ export declare class IntegrationsService {
             message: string;
         }[];
         totalFailures24h: number;
+    }>;
+    testZohoConnection(tenantId: string): Promise<{
+        success: boolean;
+        message: any;
+    }>;
+    getZohoContacts(tenantId: string, page?: number, perPage?: number): Promise<{
+        success: boolean;
+        data: any[];
+        pagination: {
+            page: number;
+            perPage: number;
+            total: number;
+        };
+        error?: undefined;
+    } | {
+        success: boolean;
+        error: any;
+        data: never[];
+        pagination?: undefined;
+    }>;
+    getZohoLeads(tenantId: string, page?: number, perPage?: number): Promise<{
+        success: boolean;
+        message: string;
+        data: never[];
+        pagination: {
+            page: number;
+            perPage: number;
+            total: number;
+        };
+        error?: undefined;
+    } | {
+        success: boolean;
+        error: any;
+        data: never[];
+        message?: undefined;
+        pagination?: undefined;
     }>;
 }

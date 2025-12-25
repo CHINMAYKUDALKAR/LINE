@@ -100,12 +100,13 @@ export async function getInterviewerLoad(refresh = false): Promise<InterviewerLo
 const getApiBaseUrl = () => {
     if (typeof window !== 'undefined') {
         const hostname = window.location.hostname;
-        return process.env.NEXT_PUBLIC_API_URL || `http://${hostname}:4000`;
+        return process.env.NEXT_PUBLIC_API_URL || `http://${hostname}:3001`;
     }
-    return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+    return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 };
 
 import { getAuthToken } from "@/lib/auth";
+import DOMPurify from 'dompurify';
 
 export async function exportReportCsv(reportType: ReportType): Promise<void> {
     const apiUrl = getApiBaseUrl();
@@ -121,8 +122,7 @@ export async function exportReportCsv(reportType: ReportType): Promise<void> {
 
     if (!response.ok) {
         const errorText = await response.text().catch(() => 'Unknown error');
-        console.error(`Export failed: ${response.status} ${response.statusText}`, errorText);
-        throw new Error(`Failed to export CSV: ${response.statusText} (${response.status})`);
+        throw new Error(`Failed to export CSV: ${response.statusText} (${response.status}) - ${errorText}`);
     }
 
     const blob = await response.blob();
@@ -150,15 +150,19 @@ export async function exportReportPdf(reportType: ReportType): Promise<void> {
 
     if (!response.ok) {
         const errorText = await response.text().catch(() => 'Unknown error');
-        console.error(`Export failed: ${response.status} ${response.statusText}`, errorText);
-        throw new Error(`Failed to export PDF: ${response.statusText} (${response.status})`);
+        throw new Error(`Failed to export PDF: ${response.statusText} (${response.status}) - ${errorText}`);
     }
 
     const html = await response.text();
 
+    // Sanitize HTML to prevent XSS attacks
+    const sanitizedHtml = typeof window !== 'undefined'
+        ? DOMPurify.sanitize(html, { WHOLE_DOCUMENT: true })
+        : html;
+
     const printWindow = window.open('', '_blank');
     if (printWindow) {
-        printWindow.document.write(html);
+        printWindow.document.write(sanitizedHtml);
         printWindow.document.close();
         printWindow.onload = () => {
             printWindow.print();

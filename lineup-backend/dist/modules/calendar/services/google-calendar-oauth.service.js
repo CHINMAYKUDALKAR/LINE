@@ -153,6 +153,54 @@ let GoogleCalendarOAuthService = GoogleCalendarOAuthService_1 = class GoogleCale
         });
         this.logger.log(`Disconnected Google Calendar for user ${userId} in tenant ${tenantId}`);
     }
+    async getBusySlots(accountId, from, to) {
+        try {
+            const accessToken = await this.getValidAccessToken(accountId);
+            const response = await axios_1.default.post('https://www.googleapis.com/calendar/v3/freeBusy', {
+                timeMin: from.toISOString(),
+                timeMax: to.toISOString(),
+                items: [{ id: 'primary' }],
+            }, {
+                headers: { Authorization: `Bearer ${accessToken}` },
+            });
+            const busySlots = [];
+            const calendars = response.data.calendars || {};
+            const primaryBusy = calendars.primary?.busy || [];
+            for (const period of primaryBusy) {
+                busySlots.push({
+                    start: new Date(period.start),
+                    end: new Date(period.end),
+                    source: 'google',
+                    reason: 'Google Calendar: Busy',
+                });
+            }
+            this.logger.debug(`Fetched ${busySlots.length} busy slots from Google Calendar for account ${accountId}`);
+            return { busySlots, success: true };
+        }
+        catch (error) {
+            this.logger.warn(`Failed to fetch Google Calendar busy slots for account ${accountId}: ${error.message}`);
+            return {
+                busySlots: [],
+                success: false,
+                error: error.message || 'Failed to fetch Google Calendar availability',
+            };
+        }
+    }
+    async isTokenExpired(accountId) {
+        try {
+            const account = await this.prisma.calendarSyncAccount.findUnique({
+                where: { id: accountId },
+            });
+            if (!account)
+                return true;
+            const tokens = account.credentials;
+            const expiresAt = tokens?.expires_at || 0;
+            return expiresAt - Date.now() < 5 * 60 * 1000;
+        }
+        catch {
+            return true;
+        }
+    }
 };
 exports.GoogleCalendarOAuthService = GoogleCalendarOAuthService;
 exports.GoogleCalendarOAuthService = GoogleCalendarOAuthService = GoogleCalendarOAuthService_1 = __decorate([

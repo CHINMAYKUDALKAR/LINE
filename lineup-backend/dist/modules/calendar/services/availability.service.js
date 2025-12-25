@@ -21,6 +21,9 @@ const cache_util_1 = require("../../../common/cache.util");
 const FREE_INTERVALS_TTL = 300;
 const BUSY_BLOCKS_TTL = 60;
 const CACHE_KEY_PREFIX = 'calendar';
+const sanitizeCacheKeyPart = (part) => {
+    return part.replace(/[*:?\[\]]/g, '_');
+};
 let AvailabilityService = AvailabilityService_1 = class AvailabilityService {
     prisma;
     workingHoursService;
@@ -36,20 +39,20 @@ let AvailabilityService = AvailabilityService_1 = class AvailabilityService {
     getFreeIntervalsCacheKey(tenantId, userId, start, end) {
         const startStr = start.toISOString().split('T')[0];
         const endStr = end.toISOString().split('T')[0];
-        return `${CACHE_KEY_PREFIX}:free:${tenantId}:${userId}:${startStr}:${endStr}`;
+        return `${CACHE_KEY_PREFIX}:free:${sanitizeCacheKeyPart(tenantId)}:${sanitizeCacheKeyPart(userId)}:${startStr}:${endStr}`;
     }
     getBusyBlocksCacheKey(tenantId, userId, start, end) {
         const startStr = start.toISOString().split('T')[0];
         const endStr = end.toISOString().split('T')[0];
-        return `${CACHE_KEY_PREFIX}:busy:${tenantId}:${userId}:${startStr}:${endStr}`;
+        return `${CACHE_KEY_PREFIX}:busy:${sanitizeCacheKeyPart(tenantId)}:${sanitizeCacheKeyPart(userId)}:${startStr}:${endStr}`;
     }
     async invalidateUserCache(tenantId, userId) {
-        const pattern = `${CACHE_KEY_PREFIX}:*:${tenantId}:${userId}:*`;
+        const pattern = `${CACHE_KEY_PREFIX}:*:${sanitizeCacheKeyPart(tenantId)}:${sanitizeCacheKeyPart(userId)}:*`;
         await (0, cache_util_1.invalidateCache)(pattern);
         this.logger.debug(`Invalidated cache for user ${userId}`);
     }
     async invalidateTenantCache(tenantId) {
-        const pattern = `${CACHE_KEY_PREFIX}:*:${tenantId}:*`;
+        const pattern = `${CACHE_KEY_PREFIX}:*:${sanitizeCacheKeyPart(tenantId)}:*`;
         await (0, cache_util_1.invalidateCache)(pattern);
         this.logger.debug(`Invalidated cache for tenant ${tenantId}`);
     }
@@ -101,7 +104,7 @@ let AvailabilityService = AvailabilityService_1 = class AvailabilityService {
         if (tenantTimezone) {
             return tenantTimezone;
         }
-        return 'Asia/Kolkata';
+        return process.env.DEFAULT_TIMEZONE || 'UTC';
     }
     async getCachedBusyBlocks(tenantId, userId, start, end) {
         const cacheKey = this.getBusyBlocksCacheKey(tenantId, userId, start, end);

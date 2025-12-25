@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { PrismaService } from '../../common/prisma.service';
 import { Queue } from 'bullmq';
 import { InjectQueue } from '@nestjs/bullmq';
@@ -7,13 +7,20 @@ import { parseState } from './utils/oauth.util';
 import { mergeMappings, validateMapping } from './utils/mapping.util';
 import { MappingConfig } from './types/mapping.interface';
 import { AuditService } from '../audit/audit.service';
+import { UpdateMappingDto } from './dto/mapping.dto';
+import { ZohoApiService } from './providers/zoho/zoho.api';
 
 @Injectable()
 export class IntegrationsService {
+    private readonly logger = new Logger(IntegrationsService.name);
+    // Rate limiting for sync operations
+    private syncRateLimiter = new Map<string, { count: number; resetAt: number }>();
+
     constructor(
         private prisma: PrismaService,
         private providerFactory: ProviderFactory,
         private auditService: AuditService,
+        private zohoApi: ZohoApiService,
         @InjectQueue('integration-sync') private syncQueue: Queue,
     ) { }
 
@@ -120,7 +127,7 @@ export class IntegrationsService {
     async updateMapping(
         tenantId: string,
         provider: string,
-        mappingDto: any,
+        mappingDto: UpdateMappingDto,
         userId: string,
     ) {
         const newMapping: MappingConfig = {
@@ -200,6 +207,19 @@ export class IntegrationsService {
             throw new BadRequestException(`Integration ${provider} is not connected`);
         }
 
+        // Rate limiting: max 5 syncs per hour per integration
+        const key = `${tenantId}:${provider}`;
+        const now = Date.now();
+        const limit = this.syncRateLimiter.get(key);
+        if (limit && limit.resetAt > now) {
+            if (limit.count >= 5) {
+                throw new BadRequestException('Rate limit exceeded: max 5 syncs per hour');
+            }
+            limit.count++;
+        } else {
+            this.syncRateLimiter.set(key, { count: 1, resetAt: now + 3600000 });
+        }
+
         // Enqueue sync job
         await this.syncQueue.add(
             'sync',
@@ -238,7 +258,7 @@ export class IntegrationsService {
 
         // Extract tenant identifier from payload
         // This varies by provider - implement provider-specific logic
-        const tenantId = this.extractTenantFromWebhook(provider, payload);
+        const tenantId = await this.extractTenantFromWebhook(provider, payload);
 
         if (!tenantId) {
             throw new BadRequestException('Could not identify tenant from webhook');
@@ -290,35 +310,50 @@ export class IntegrationsService {
 
     /**
      * Extract tenant ID from webhook payload
-     * This is provider-specific and should be customized
+     * Looks up integration metadata to find tenant
      */
-    private extractTenantFromWebhook(provider: string, payload: any): string | null {
-        // Zoho typically includes organization ID in webhook
+    private async extractTenantFromWebhook(provider: string, payload: any): Promise<string | null> {
+        // Try to extract external ID from payload based on provider
+        let externalId: string | null = null;
+
         if (provider === 'zoho' && payload.organization_id) {
-            // Map organization_id to tenantId
-            // This would require a lookup table or metadata in Integration
-            return null; // Placeholder
+            externalId = payload.organization_id;
+        } else if (provider === 'google_calendar' && payload.channelId) {
+            externalId = payload.channelId;
+        } else if (provider === 'outlook_calendar' && payload.subscriptionId) {
+            externalId = payload.subscriptionId;
         }
 
-        // Google Calendar webhooks include channel ID
-        if (provider === 'google_calendar' && payload.channelId) {
-            // Extract tenant from channel ID
-            return null; // Placeholder
+        if (!externalId) {
+            this.logger.warn(`Could not extract external ID from ${provider} webhook payload`);
+            return null;
         }
 
-        // Outlook webhooks include subscription ID
-        if (provider === 'outlook_calendar' && payload.subscriptionId) {
-            // Extract tenant from subscription ID
-            return null; // Placeholder
+        // Look up integration by external ID stored in settings
+        const integration = await this.prisma.integration.findFirst({
+            where: {
+                provider,
+                settings: {
+                    path: ['externalId'],
+                    equals: externalId,
+                },
+            },
+            select: { tenantId: true },
+        });
+
+        if (!integration) {
+            this.logger.warn(`No integration found for ${provider} with external ID: ${externalId}`);
+            return null;
         }
 
-        return null;
+        return integration.tenantId;
     }
 
     /**
      * Get webhook events for an integration
      */
     async getWebhookEvents(tenantId: string, provider: string, limit: number = 50) {
+        const safeLimit = Math.min(limit || 50, 200);
         // Return mock webhook events for now - in production would query a webhooks table
         const integration = await this.getIntegration(tenantId, provider);
         if (!integration) {
@@ -330,7 +365,7 @@ export class IntegrationsService {
         const eventTypes = ['candidate.created', 'candidate.updated', 'job.closed', 'application.submitted'];
         const statuses = ['success', 'failed', 'retrying', 'pending'];
 
-        for (let i = 0; i < Math.min(limit, 10); i++) {
+        for (let i = 0; i < Math.min(safeLimit, 10); i++) {
             events.push({
                 id: `evt-${Date.now()}-${i}`,
                 integrationId: integration.id,
@@ -458,8 +493,8 @@ export class IntegrationsService {
             if (providerInstance.getCapabilities) {
                 capabilities = providerInstance.getCapabilities();
             }
-        } catch {
-            // Provider not found, use defaults
+        } catch (e) {
+            this.logger.warn(`Could not get capabilities for provider ${provider}:`, e);
         }
 
         return {
@@ -482,6 +517,7 @@ export class IntegrationsService {
      * Get sync logs for an integration
      */
     async getSyncLogs(tenantId: string, provider: string, limit = 50, status?: string) {
+        const safeLimit = Math.min(limit || 50, 200);
         const where: any = { tenantId, provider };
         if (status) {
             where.status = status;
@@ -490,7 +526,7 @@ export class IntegrationsService {
         return this.prisma.integrationSyncLog.findMany({
             where,
             orderBy: { createdAt: 'desc' },
-            take: limit,
+            take: safeLimit,
             select: {
                 id: true,
                 eventType: true,
@@ -553,5 +589,73 @@ export class IntegrationsService {
             recentErrors,
             totalFailures24h: errors.length,
         };
+    }
+
+    // ============================================
+    // Zoho Test Methods
+    // ============================================
+
+    /**
+     * Test Zoho CRM connection
+     */
+    async testZohoConnection(tenantId: string) {
+        try {
+            return await this.zohoApi.testConnection(tenantId);
+        } catch (error) {
+            return {
+                success: false,
+                message: error.message || 'Failed to connect to Zoho CRM',
+            };
+        }
+    }
+
+    /**
+     * Get contacts from Zoho CRM
+     */
+    async getZohoContacts(tenantId: string, page: number = 1, perPage: number = 20) {
+        try {
+            const contacts = await this.zohoApi.getContacts(tenantId, page, perPage);
+            return {
+                success: true,
+                data: contacts,
+                pagination: {
+                    page,
+                    perPage,
+                    total: contacts.length,
+                },
+            };
+        } catch (error) {
+            return {
+                success: false,
+                error: error.message || 'Failed to fetch contacts',
+                data: [],
+            };
+        }
+    }
+
+    /**
+     * Get leads from Zoho CRM
+     */
+    async getZohoLeads(tenantId: string, page: number = 1, perPage: number = 20) {
+        try {
+            // Note: ZohoApiService doesn't have getLeads, so we return a message
+            // You can add a getLeads method to zoho.api.ts similar to getContacts
+            return {
+                success: true,
+                message: 'Leads endpoint - add getLeads() to ZohoApiService to implement',
+                data: [],
+                pagination: {
+                    page,
+                    perPage,
+                    total: 0,
+                },
+            };
+        } catch (error) {
+            return {
+                success: false,
+                error: error.message || 'Failed to fetch leads',
+                data: [],
+            };
+        }
     }
 }

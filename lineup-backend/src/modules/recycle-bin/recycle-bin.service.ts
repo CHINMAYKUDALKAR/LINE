@@ -4,9 +4,30 @@ import { PrismaService } from '../../common/prisma.service';
 // Admin roles that can see all items and purge
 const ADMIN_ROLES = ['ADMIN', 'SUPERADMIN', 'SUPPORT'];
 
+// Default retention in days - can be overridden by tenant settings or env var
+const DEFAULT_RETENTION_DAYS = Number(process.env.RECYCLE_BIN_RETENTION_DAYS) || 30;
+
 @Injectable()
 export class RecycleBinService {
     constructor(private prisma: PrismaService) { }
+
+    /**
+     * Get retention period in days for a tenant
+     * Checks tenant settings first, then falls back to env/default
+     */
+    private async getRetentionDays(tenantId: string): Promise<number> {
+        const tenant = await this.prisma.tenant.findUnique({
+            where: { id: tenantId },
+            select: { settings: true },
+        });
+
+        const tenantRetention = (tenant?.settings as any)?.recycleBinRetentionDays;
+        if (typeof tenantRetention === 'number' && tenantRetention > 0) {
+            return tenantRetention;
+        }
+
+        return DEFAULT_RETENTION_DAYS;
+    }
 
     /**
      * Soft delete an item - creates a recycle bin entry with full snapshot
@@ -18,6 +39,9 @@ export class RecycleBinService {
         itemId: string,
         itemSnapshot: any
     ) {
+        // Get configurable retention period for this tenant
+        const retentionDays = await this.getRetentionDays(tenantId);
+
         return this.prisma.$transaction(async (tx) => {
             // Set deletedAt on the original entity based on module type
             if (module === 'candidate') {
@@ -41,7 +65,7 @@ export class RecycleBinService {
                     itemId,
                     itemSnapshot,
                     deletedBy: userId,
-                    expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 days
+                    expiresAt: new Date(Date.now() + retentionDays * 24 * 60 * 60 * 1000)
                 }
             });
         });
@@ -64,7 +88,7 @@ export class RecycleBinService {
         }
     ) {
         const page = filters?.page || 1;
-        const perPage = filters?.perPage || 20;
+        const perPage = Math.min(filters?.perPage || 20, 100);
 
         // Build where clause based on role
         const where: any = {

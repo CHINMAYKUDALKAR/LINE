@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { Interview, InterviewStage, InterviewStatus } from '@/types/interview';
 import { cn } from '@/lib/utils';
@@ -67,10 +67,6 @@ const stageLabels: Record<InterviewStage, string> = {
   'offer': 'Offer',
 };
 
-// Mock data for filters
-const interviewers = ['David Kim', 'Emily Brown', 'Michael Johnson', 'Lisa Wang', 'Robert Taylor'];
-const requisitions = ['REQ-001: Sr. Frontend Engineer', 'REQ-002: Product Manager', 'REQ-003: UX Designer', 'REQ-004: Backend Developer'];
-
 interface InterviewTableProps {
   interviews: Interview[];
   isLoading?: boolean;
@@ -87,13 +83,30 @@ export function InterviewTable({ interviews, isLoading, hasError, onRetry, onAct
   const [stageFilter, setStageFilter] = useState<string>(initialStageFilter || 'all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [interviewerFilter, setInterviewerFilter] = useState<string>('all');
-  const [requisitionFilter, setRequisitionFilter] = useState<string>('all');
+  const [roleFilter, setRoleFilter] = useState<string>('all');
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [page, setPage] = useState(1);
   const [isCompact, setIsCompact] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const pageSize = 10;
+
+  // Dynamically extract unique interviewers and roles from interviews
+  const uniqueInterviewers = useMemo(() => {
+    const names = new Set<string>();
+    interviews.forEach(i => {
+      if (i.interviewerName) names.add(i.interviewerName);
+    });
+    return Array.from(names).sort();
+  }, [interviews]);
+
+  const uniqueRoles = useMemo(() => {
+    const roles = new Set<string>();
+    interviews.forEach(i => {
+      if (i.role) roles.add(i.role);
+    });
+    return Array.from(roles).sort();
+  }, [interviews]);
 
   // Update filters when external props change
   useEffect(() => {
@@ -126,7 +139,7 @@ export function InterviewTable({ interviews, isLoading, hasError, onRetry, onAct
     const matchesStage = stageFilter === 'all' || i.stage === stageFilter;
     const matchesStatus = statusFilter === 'all' || i.status === statusFilter;
     const matchesInterviewer = interviewerFilter === 'all' || i.interviewerName === interviewerFilter;
-    const matchesRequisition = requisitionFilter === 'all' || i.role.includes(requisitionFilter.split(':')[1]?.trim() || '');
+    const matchesRole = roleFilter === 'all' || i.role === roleFilter;
 
     // Apply KPI filter from dashboard cards
     let matchesKPI = true;
@@ -161,7 +174,7 @@ export function InterviewTable({ interviews, isLoading, hasError, onRetry, onAct
       }
     }
 
-    return matchesSearch && matchesStage && matchesStatus && matchesInterviewer && matchesRequisition && matchesDate && matchesKPI;
+    return matchesSearch && matchesStage && matchesStatus && matchesInterviewer && matchesRole && matchesDate && matchesKPI;
   });
 
   const totalPages = Math.ceil(filtered.length / pageSize);
@@ -187,12 +200,12 @@ export function InterviewTable({ interviews, isLoading, hasError, onRetry, onAct
     setStageFilter('all');
     setStatusFilter('all');
     setInterviewerFilter('all');
-    setRequisitionFilter('all');
+    setRoleFilter('all');
     setDateRange(undefined);
   };
 
   const hasActiveFilters = search || stageFilter !== 'all' || statusFilter !== 'all' ||
-    interviewerFilter !== 'all' || requisitionFilter !== 'all' || dateRange;
+    interviewerFilter !== 'all' || roleFilter !== 'all' || dateRange;
 
   if (hasError) {
     return (
@@ -304,20 +317,20 @@ export function InterviewTable({ interviews, isLoading, hasError, onRetry, onAct
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Interviewers</SelectItem>
-                {interviewers.map((name) => (
+                {uniqueInterviewers.map((name) => (
                   <SelectItem key={name} value={name}>{name}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
 
-            <Select value={requisitionFilter} onValueChange={setRequisitionFilter}>
-              <SelectTrigger className="w-[200px]">
-                <SelectValue placeholder="Requisition" />
+            <Select value={roleFilter} onValueChange={setRoleFilter}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Role" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Requisitions</SelectItem>
-                {requisitions.map((req) => (
-                  <SelectItem key={req} value={req}>{req}</SelectItem>
+                <SelectItem value="all">All Roles</SelectItem>
+                {uniqueRoles.map((role) => (
+                  <SelectItem key={role} value={role}>{role}</SelectItem>
                 ))}
               </SelectContent>
             </Select>

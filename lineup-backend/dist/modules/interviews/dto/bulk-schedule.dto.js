@@ -12,6 +12,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.BulkScheduleDto = exports.BulkScheduleStrategy = exports.BulkMode = void 0;
 const class_validator_1 = require("class-validator");
 const swagger_1 = require("@nestjs/swagger");
+const timezone_validator_1 = require("../../../common/validators/timezone.validator");
 var BulkMode;
 (function (BulkMode) {
     BulkMode["SEQUENTIAL"] = "SEQUENTIAL";
@@ -89,7 +90,7 @@ __decorate([
 __decorate([
     (0, swagger_1.ApiPropertyOptional)({ description: 'Timezone for scheduling', example: 'Asia/Kolkata' }),
     (0, class_validator_1.IsOptional)(),
-    (0, class_validator_1.IsString)(),
+    (0, timezone_validator_1.IsTimezone)(),
     __metadata("design:type", String)
 ], BulkScheduleDto.prototype, "timezone", void 0);
 __decorate([

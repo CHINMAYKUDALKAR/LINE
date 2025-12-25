@@ -110,39 +110,59 @@ const Dashboard = () => {
             // Process funnel data for stage pipeline
             if (funnelData.status === 'fulfilled') {
                 const funnel = funnelData.value;
-                // Normalize funnel stages to match interview stage format (lowercase-hyphenated)
-                const normalizeStage = (stage: string): string => {
-                    if (!stage) return 'interview-1';
-                    return stage.toLowerCase().replace(/_/g, '-');
+
+                // Define the correct pipeline stage order (uppercase keys matching DB)
+                const STAGE_ORDER = [
+                    'APPLIED',
+                    'SCREENING',
+                    'INTERVIEW',
+                    'INTERVIEW_1',
+                    'INTERVIEW_2',
+                    'HR_ROUND',
+                    'OFFER',
+                    'HIRED',
+                    'REJECTED'
+                ];
+
+                // Format stage name for display
+                const formatStageName = (stage: string): string => {
+                    return stage.toLowerCase().replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
                 };
 
-                // Aggregate counts by normalized stage to avoid duplicate keys
+                // Aggregate counts by stage
                 const aggregatedStages = funnel.reduce((acc, s) => {
-                    const normalizedStage = normalizeStage(s.stage) as InterviewStage;
+                    const stageKey = s.stage.toUpperCase() as InterviewStage;
 
-                    if (!acc[normalizedStage]) {
-                        acc[normalizedStage] = {
-                            stage: normalizedStage,
-                            // Ensure label is nicely formatted (Title Case) regardless of input casing
-                            label: s.stage.toLowerCase().replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
+                    if (!acc[stageKey]) {
+                        acc[stageKey] = {
+                            stage: stageKey,
+                            label: formatStageName(s.stage),
                             count: 0,
                             pending: 0,
                             completed: 0,
                         };
                     }
 
-                    acc[normalizedStage].count += s.count;
-                    // Distribute pending/completed counts roughly 50/50 as per original logic
-                    acc[normalizedStage].pending += Math.floor(s.count / 2);
-                    acc[normalizedStage].completed += Math.ceil(s.count / 2);
+                    acc[stageKey].count += s.count;
+                    // For now, show all as pending (since we don't have actual pending/completed breakdown)
+                    acc[stageKey].pending += s.count;
+                    acc[stageKey].completed += 0;
 
                     return acc;
                 }, {} as Record<InterviewStage, StageCount>);
 
-                const newStageCounts = Object.values(aggregatedStages);
+                // Sort stages by the defined pipeline order
+                const sortedStages = Object.values(aggregatedStages).sort((a, b) => {
+                    const aIndex = STAGE_ORDER.indexOf(a.stage.toUpperCase());
+                    const bIndex = STAGE_ORDER.indexOf(b.stage.toUpperCase());
+                    // Put unknown stages at the end
+                    const aOrder = aIndex === -1 ? 999 : aIndex;
+                    const bOrder = bIndex === -1 ? 999 : bIndex;
+                    return aOrder - bOrder;
+                });
 
-                if (newStageCounts.length > 0) {
-                    setStageCounts(newStageCounts);
+                if (sortedStages.length > 0) {
+                    setStageCounts(sortedStages);
                 }
             }
 

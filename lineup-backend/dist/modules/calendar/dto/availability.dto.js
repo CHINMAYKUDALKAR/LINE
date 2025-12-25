@@ -11,6 +11,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AvailabilityQueryDto = void 0;
 const class_validator_1 = require("class-validator");
+const timezone_validator_1 = require("../../../common/validators/timezone.validator");
 class AvailabilityQueryDto {
     userIds;
     start;
@@ -40,7 +41,7 @@ __decorate([
 ], AvailabilityQueryDto.prototype, "durationMins", void 0);
 __decorate([
     (0, class_validator_1.IsOptional)(),
-    (0, class_validator_1.IsString)(),
+    (0, timezone_validator_1.IsTimezone)(),
     __metadata("design:type", String)
 ], AvailabilityQueryDto.prototype, "timezone", void 0);
 //# sourceMappingURL=availability.dto.js.map

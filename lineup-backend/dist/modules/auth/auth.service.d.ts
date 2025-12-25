@@ -39,6 +39,7 @@ export declare class AuthService {
     private emailService;
     private bruteForceService;
     private passwordPolicyService;
+    private readonly TRIAL_DURATION_DAYS;
     constructor(prisma: PrismaService, invitationService: InvitationService, passwordResetService: PasswordResetService, emailService: EmailService, bruteForceService: BruteForceService, passwordPolicyService: PasswordPolicyService);
     signUpCreateTenant(dto: SignupDto, req?: Request): Promise<AuthResponse>;
     register(dto: {
@@ -56,23 +57,25 @@ export declare class AuthService {
             };
         } & {
             id: string;
-            userId: string;
-            tenantId: string;
-            role: import(".prisma/client").$Enums.Role;
-            status: import(".prisma/client").$Enums.UserTenantStatus;
-            invitedBy: string | null;
-            invitedAt: Date | null;
             createdAt: Date;
             updatedAt: Date;
+            tenantId: string;
+            role: import("@prisma/client").$Enums.Role;
+            userId: string;
+            status: import("@prisma/client").$Enums.UserTenantStatus;
+            invitedBy: string | null;
+            invitedAt: Date | null;
         })[];
     } & {
-        id: string;
-        tenantId: string | null;
-        email: string;
-        password: string;
         name: string | null;
-        role: import(".prisma/client").$Enums.Role;
-        status: import(".prisma/client").$Enums.UserStatus;
+        id: string;
+        email: string;
+        createdAt: Date;
+        updatedAt: Date;
+        tenantId: string | null;
+        role: import("@prisma/client").$Enums.Role;
+        status: import("@prisma/client").$Enums.UserStatus;
+        password: string;
         emailVerified: boolean;
         verificationToken: string | null;
         verificationExpiry: Date | null;
@@ -84,8 +87,6 @@ export declare class AuthService {
         recoveryCodes: string[];
         timezone: string | null;
         lastLogin: Date | null;
-        createdAt: Date;
-        updatedAt: Date;
     }>;
     login(email: string, password: string, req?: Request): Promise<AuthResponse>;
     switchTenant(userId: string, tenantId: string, req?: Request): Promise<AuthResponse>;
@@ -101,7 +102,7 @@ export declare class AuthService {
         tenants: {
             id: string;
             name: string;
-            role: import(".prisma/client").$Enums.Role;
+            role: import("@prisma/client").$Enums.Role;
             brandingLogoUrl: string | null;
         }[];
         accessToken: string;
@@ -109,6 +110,9 @@ export declare class AuthService {
     }>;
     logout(userId: string): Promise<{
         success: boolean;
+    }>;
+    cleanupOldTokens(olderThanDays?: number): Promise<{
+        deleted: number;
     }>;
     forgotPassword(email: string): Promise<{
         success: boolean;
@@ -138,43 +142,43 @@ export declare class AuthService {
     createInvitation(tenantId: string, email: string, role: any, createdBy?: string): Promise<{
         id: string;
         email: string;
-        role: import(".prisma/client").$Enums.Role;
+        role: import("@prisma/client").$Enums.Role;
         expiresAt: Date;
         inviteUrl: string;
     }>;
     getInvitePreview(token: string): Promise<{
         id: string;
         email: string;
-        role: import(".prisma/client").$Enums.Role;
+        role: import("@prisma/client").$Enums.Role;
         expiresAt: Date;
         tenant: {
             name: string;
             id: string;
             brandingLogoUrl: string | null;
-            brandingColors: import(".prisma/client").Prisma.JsonValue;
+            brandingColors: import("@prisma/client/runtime/library").JsonValue;
         };
     }>;
     listPendingInvitations(tenantId: string): Promise<{
         id: string;
-        tenantId: string;
         email: string;
-        role: import(".prisma/client").$Enums.Role;
+        createdAt: Date;
+        tenantId: string;
+        role: import("@prisma/client").$Enums.Role;
         tokenHash: string;
         expiresAt: Date;
         createdBy: string | null;
         usedAt: Date | null;
-        createdAt: Date;
     }[]>;
     cancelInvitation(tenantId: string, inviteId: string): Promise<{
         id: string;
-        tenantId: string;
         email: string;
-        role: import(".prisma/client").$Enums.Role;
+        createdAt: Date;
+        tenantId: string;
+        role: import("@prisma/client").$Enums.Role;
         tokenHash: string;
         expiresAt: Date;
         createdBy: string | null;
         usedAt: Date | null;
-        createdAt: Date;
     }>;
     checkPassword(password: string): Promise<import("../../common/password-policy.service").PasswordValidationResult>;
 }

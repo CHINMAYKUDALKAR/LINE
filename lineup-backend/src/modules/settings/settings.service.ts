@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { PrismaService } from '../../common/prisma.service';
 import { UpdateBrandingDto } from './dto/update-branding.dto';
 import { UpdateSsoDto } from './dto/update-sso.dto';
@@ -11,6 +11,8 @@ import * as nodemailer from 'nodemailer';
 
 @Injectable()
 export class SettingsService {
+    private readonly logger = new Logger(SettingsService.name);
+
     constructor(private prisma: PrismaService) { }
 
     async getSettings(tenantId: string) {
@@ -82,6 +84,7 @@ export class SettingsService {
         try {
             if (pass) pass = decrypt(pass);
         } catch (e) {
+            this.logger.warn('Failed to decrypt SMTP password - may be stored unencrypted', e);
         }
 
         const transporter = nodemailer.createTransport({

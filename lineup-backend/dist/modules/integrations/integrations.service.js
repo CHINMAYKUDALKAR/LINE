@@ -11,6 +11,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
+var IntegrationsService_1;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.IntegrationsService = void 0;
 const common_1 = require("@nestjs/common");
@@ -21,15 +22,20 @@ const provider_factory_1 = require("./provider.factory");
 const oauth_util_1 = require("./utils/oauth.util");
 const mapping_util_1 = require("./utils/mapping.util");
 const audit_service_1 = require("../audit/audit.service");
-let IntegrationsService = class IntegrationsService {
+const zoho_api_1 = require("./providers/zoho/zoho.api");
+let IntegrationsService = IntegrationsService_1 = class IntegrationsService {
     prisma;
     providerFactory;
     auditService;
+    zohoApi;
     syncQueue;
-    constructor(prisma, providerFactory, auditService, syncQueue) {
+    logger = new common_1.Logger(IntegrationsService_1.name);
+    syncRateLimiter = new Map();
+    constructor(prisma, providerFactory, auditService, zohoApi, syncQueue) {
         this.prisma = prisma;
         this.providerFactory = providerFactory;
         this.auditService = auditService;
+        this.zohoApi = zohoApi;
         this.syncQueue = syncQueue;
     }
     async listIntegrations(tenantId) {
@@ -160,6 +166,18 @@ let IntegrationsService = class IntegrationsService {
         if (integration.status !== 'connected') {
             throw new common_1.BadRequestException(`Integration ${provider} is not connected`);
         }
+        const key = `${tenantId}:${provider}`;
+        const now = Date.now();
+        const limit = this.syncRateLimiter.get(key);
+        if (limit && limit.resetAt > now) {
+            if (limit.count >= 5) {
+                throw new common_1.BadRequestException('Rate limit exceeded: max 5 syncs per hour');
+            }
+            limit.count++;
+        }
+        else {
+            this.syncRateLimiter.set(key, { count: 1, resetAt: now + 3600000 });
+        }
         await this.syncQueue.add('sync', {
             tenantId,
             provider,
@@ -183,7 +201,7 @@ let IntegrationsService = class IntegrationsService {
         if (!this.providerFactory.isSupported(provider)) {
             throw new common_1.BadRequestException(`Provider ${provider} is not supported`);
         }
-        const tenantId = this.extractTenantFromWebhook(provider, payload);
+        const tenantId = await this.extractTenantFromWebhook(provider, payload);
         if (!tenantId) {
             throw new common_1.BadRequestException('Could not identify tenant from webhook');
         }
@@ -219,19 +237,39 @@ let IntegrationsService = class IntegrationsService {
         });
         return { success: true };
     }
-    extractTenantFromWebhook(provider, payload) {
+    async extractTenantFromWebhook(provider, payload) {
+        let externalId = null;
         if (provider === 'zoho' && payload.organization_id) {
+            externalId = payload.organization_id;
+        }
+        else if (provider === 'google_calendar' && payload.channelId) {
+            externalId = payload.channelId;
+        }
+        else if (provider === 'outlook_calendar' && payload.subscriptionId) {
+            externalId = payload.subscriptionId;
+        }
+        if (!externalId) {
+            this.logger.warn(`Could not extract external ID from ${provider} webhook payload`);
             return null;
         }
-        if (provider === 'google_calendar' && payload.channelId) {
+        const integration = await this.prisma.integration.findFirst({
+            where: {
+                provider,
+                settings: {
+                    path: ['externalId'],
+                    equals: externalId,
+                },
+            },
+            select: { tenantId: true },
+        });
+        if (!integration) {
+            this.logger.warn(`No integration found for ${provider} with external ID: ${externalId}`);
             return null;
         }
-        if (provider === 'outlook_calendar' && payload.subscriptionId) {
-            return null;
-        }
-        return null;
+        return integration.tenantId;
     }
     async getWebhookEvents(tenantId, provider, limit = 50) {
+        const safeLimit = Math.min(limit || 50, 200);
         const integration = await this.getIntegration(tenantId, provider);
         if (!integration) {
             return { events: [] };
@@ -239,7 +277,7 @@ let IntegrationsService = class IntegrationsService {
         const events = [];
         const eventTypes = ['candidate.created', 'candidate.updated', 'job.closed', 'application.submitted'];
         const statuses = ['success', 'failed', 'retrying', 'pending'];
-        for (let i = 0; i < Math.min(limit, 10); i++) {
+        for (let i = 0; i < Math.min(safeLimit, 10); i++) {
             events.push({
                 id: `evt-${Date.now()}-${i}`,
                 integrationId: integration.id,
@@ -341,7 +379,8 @@ let IntegrationsService = class IntegrationsService {
                 capabilities = providerInstance.getCapabilities();
             }
         }
-        catch {
+        catch (e) {
+            this.logger.warn(`Could not get capabilities for provider ${provider}:`, e);
         }
         return {
             connected: integration.status === 'connected',
@@ -359,6 +398,7 @@ let IntegrationsService = class IntegrationsService {
         };
     }
     async getSyncLogs(tenantId, provider, limit = 50, status) {
+        const safeLimit = Math.min(limit || 50, 200);
         const where = { tenantId, provider };
         if (status) {
             where.status = status;
@@ -366,7 +406,7 @@ let IntegrationsService = class IntegrationsService {
         return this.prisma.integrationSyncLog.findMany({
             where,
             orderBy: { createdAt: 'desc' },
-            take: limit,
+            take: safeLimit,
             select: {
                 id: true,
                 eventType: true,
@@ -420,14 +460,68 @@ let IntegrationsService = class IntegrationsService {
             totalFailures24h: errors.length,
         };
     }
+    async testZohoConnection(tenantId) {
+        try {
+            return await this.zohoApi.testConnection(tenantId);
+        }
+        catch (error) {
+            return {
+                success: false,
+                message: error.message || 'Failed to connect to Zoho CRM',
+            };
+        }
+    }
+    async getZohoContacts(tenantId, page = 1, perPage = 20) {
+        try {
+            const contacts = await this.zohoApi.getContacts(tenantId, page, perPage);
+            return {
+                success: true,
+                data: contacts,
+                pagination: {
+                    page,
+                    perPage,
+                    total: contacts.length,
+                },
+            };
+        }
+        catch (error) {
+            return {
+                success: false,
+                error: error.message || 'Failed to fetch contacts',
+                data: [],
+            };
+        }
+    }
+    async getZohoLeads(tenantId, page = 1, perPage = 20) {
+        try {
+            return {
+                success: true,
+                message: 'Leads endpoint - add getLeads() to ZohoApiService to implement',
+                data: [],
+                pagination: {
+                    page,
+                    perPage,
+                    total: 0,
+                },
+            };
+        }
+        catch (error) {
+            return {
+                success: false,
+                error: error.message || 'Failed to fetch leads',
+                data: [],
+            };
+        }
+    }
 };
 exports.IntegrationsService = IntegrationsService;
-exports.IntegrationsService = IntegrationsService = __decorate([
+exports.IntegrationsService = IntegrationsService = IntegrationsService_1 = __decorate([
     (0, common_1.Injectable)(),
-    __param(3, (0, bullmq_2.InjectQueue)('integration-sync')),
+    __param(4, (0, bullmq_2.InjectQueue)('integration-sync')),
     __metadata("design:paramtypes", [prisma_service_1.PrismaService,
         provider_factory_1.ProviderFactory,
         audit_service_1.AuditService,
+        zoho_api_1.ZohoApiService,
         bullmq_1.Queue])
 ], IntegrationsService);
 //# sourceMappingURL=integrations.service.js.map

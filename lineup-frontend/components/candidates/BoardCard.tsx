@@ -73,7 +73,13 @@ export function BoardCard({ candidate, onClick }: BoardCardProps) {
                         )}
                     </div>
                     <div className="flex items-center justify-between text-xs text-muted-foreground">
-                        <span>{candidate.source}</span>
+                        {candidate.source === 'ZOHO_CRM' || candidate.source === 'zoho' ? (
+                            <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200 text-[10px] px-1 py-0">
+                                Zoho CRM
+                            </Badge>
+                        ) : (
+                            <span>{candidate.source}</span>
+                        )}
                         <span>{formatDistanceToNow(new Date(candidate.lastActivity))} ago</span>
                     </div>
                 </CardContent>

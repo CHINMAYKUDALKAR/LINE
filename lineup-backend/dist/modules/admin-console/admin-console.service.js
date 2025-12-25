@@ -55,19 +55,25 @@ const bcrypt = __importStar(require("bcrypt"));
 let AdminConsoleService = class AdminConsoleService {
     prisma;
     queue;
+    redisConnection;
     constructor(prisma) {
         this.prisma = prisma;
-        const conn = new ioredis_1.default(process.env.REDIS_URL || 'redis://127.0.0.1:6379', {
+        this.redisConnection = new ioredis_1.default(process.env.REDIS_URL || 'redis://127.0.0.1:6379', {
             maxRetriesPerRequest: null
         });
-        this.queue = new bullmq_1.Queue('tenant-provision', { connection: conn });
+        this.queue = new bullmq_1.Queue('tenant-provision', { connection: this.redisConnection });
+    }
+    async onModuleDestroy() {
+        await this.queue.close();
+        await this.redisConnection.quit();
     }
     async createPlatformUser(dto, currentUserId) {
         const exists = await this.prisma.user.findUnique({ where: { email: dto.email } });
         if (exists)
             throw new common_1.BadRequestException('User already exists');
         const pwd = dto.password || (0, provisioning_util_1.randomPassword)();
-        const hashed = await bcrypt.hash(pwd, 10);
+        const saltRounds = Number(process.env.BCRYPT_SALT_ROUNDS || 12);
+        const hashed = await bcrypt.hash(pwd, saltRounds);
         const user = await this.prisma.user.create({
             data: {
                 email: dto.email,
@@ -110,7 +116,8 @@ let AdminConsoleService = class AdminConsoleService {
     }
     async createTenantAdmin(tenantId, email, adminUserId) {
         const pwd = (0, provisioning_util_1.randomPassword)();
-        const hashed = await bcrypt.hash(pwd, 10);
+        const saltRounds = Number(process.env.BCRYPT_SALT_ROUNDS || 12);
+        const hashed = await bcrypt.hash(pwd, saltRounds);
         const user = await this.prisma.user.create({
             data: {
                 tenantId,

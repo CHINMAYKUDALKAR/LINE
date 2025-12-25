@@ -9,57 +9,51 @@
 
 # 🎯 Lineup
 
-**Enterprise-Grade Interview Management Platform**
+**Interview Management Platform** - *In Development*
 
-Lineup is a modern, multi-tenant SaaS platform designed to streamline hiring workflows for recruitment teams. It centralizes candidate management, interview scheduling, team collaboration, and communication automation—all built for scale, security, and extensibility.
+Lineup is a multi-tenant SaaS platform for recruitment teams to manage candidates, schedule interviews, and automate communications.
+
+> ⚠️ **Development Status**: This is an early-stage implementation with scaffolding in place. Many features are stubbed with TODO markers for future development.
 
 ---
 
-## ✨ Features
+## ✨ Planned Features
 
 ### 📊 Dashboard
-- Real-time interview statistics and KPIs
-- Candidate pipeline visualization
-- Interviewer load distribution
-- Quick actions for common tasks
+- [ ] Real-time interview statistics and KPIs
+- [ ] Candidate pipeline visualization
+- [ ] Interviewer load distribution
 
 ### 👥 Candidate Management
-- Single & bulk candidate import (CSV)
-- Customizable hiring stages
-- Document & notes management
-- Kanban board view for pipeline
+- [x] Basic CRUD operations
+- [ ] Bulk candidate import (CSV)
+- [ ] Document & notes management
+- [ ] Resume parsing
 
 ### 📅 Calendar & Scheduling
-- Day / Week / Month calendar views
-- Drag-and-drop rescheduling
-- Duration resizing
-- Interviewer availability management
-- Bulk interview scheduling
+- [x] Basic interview scheduling
+- [x] Day / Week / Month views
+- [ ] Drag-and-drop rescheduling
+- [ ] Interviewer availability management
+- [ ] Conflict detection
 
 ### 💬 Communication Hub
-- Email, SMS & WhatsApp integration
-- Twilio SMS with fallback support
-- Message templates with variables
-- Automated notifications
-- Delivery tracking & retry logic
+- [ ] Email integration (stubbed)
+- [ ] SMS via Twilio (stubbed)
+- [ ] WhatsApp integration (stubbed)
+- [ ] Message templates
 
-### 🔐 Multi-Tenant Architecture
-- Complete data isolation per tenant
-- Role-based access control (RBAC)
-- Admin / Manager / Recruiter / Interviewer roles
-- Team-based permissions
+### 🔐 Authentication
+- [x] JWT-based authentication
+- [x] Multi-tenant architecture
+- [ ] Two-Factor Authentication (stubbed)
+- [ ] Password reset (stubbed)
+- [ ] Email verification (stubbed)
 
 ### ⚙️ Integrations
-- Webhook framework
-- Field mapping configuration
-- Extensible connector architecture
-- ATS/CRM ready (planned)
-
-### 📈 Reports & Analytics
-- Interview performance metrics
-- Source effectiveness tracking
-- Interviewer load analysis
-- Scheduled report delivery
+- [ ] Google Calendar sync (planned)
+- [ ] Zoho CRM integration (planned)
+- [ ] Webhook framework (scaffolded)
 
 ---
 
@@ -73,9 +67,6 @@ Lineup is a modern, multi-tenant SaaS platform designed to streamline hiring wor
 | Tailwind CSS | 3.4 | Styling |
 | Radix UI | Latest | Accessible components |
 | TanStack Query | 5 | Server state management |
-| Framer Motion | 12 | Animations |
-| Recharts | 3 | Data visualization |
-| dnd-kit | 6 | Drag and drop |
 
 ### Backend
 | Technology | Version | Purpose |
@@ -85,12 +76,6 @@ Lineup is a modern, multi-tenant SaaS platform designed to streamline hiring wor
 | Prisma | 5 | ORM |
 | Redis | 7+ | Caching & rate limiting |
 | BullMQ | 5 | Job queues |
-| Twilio | 5 | SMS integration |
-
-### DevOps
-- Docker & Docker Compose
-- GitHub Actions CI/CD
-- MinIO (S3-compatible storage)
 
 ---
 
@@ -99,12 +84,12 @@ Lineup is a modern, multi-tenant SaaS platform designed to streamline hiring wor
 ### Prerequisites
 - Node.js 20+
 - Docker & Docker Compose
-- pnpm (recommended) or npm
+- npm or pnpm
 
 ### 1. Clone & Install
 
 ```bash
-git clone https://github.com/CHINMAYKUDALKAR/Lineup2.git
+git clone <repository-url>
 cd lineup
 
 # Install dependencies
@@ -124,7 +109,7 @@ docker-compose up -d
 ```bash
 # Backend
 cp lineup-backend/.env.example lineup-backend/.env
-# Edit with your database credentials
+# Edit .env with your database credentials
 
 # Frontend
 cp lineup-frontend/.env.example lineup-frontend/.env.local
@@ -142,10 +127,6 @@ npx prisma db seed
 ### 5. Run the Application
 
 ```bash
-# Option 1: Use the start script
-./start.sh
-
-# Option 2: Run manually
 # Terminal 1 - Backend
 cd lineup-backend && npm run start:dev
 
@@ -160,133 +141,55 @@ Access the application:
 
 ---
 
-## � API Documentation
-
-Lineup provides comprehensive **Swagger/OpenAPI** documentation for all API endpoints.
-
-### Accessing the API Docs
-
-When the backend is running, visit: **http://localhost:3001/api/docs**
-
-### API Modules
-
-| Module | Endpoints | Description |
-|--------|-----------|-------------|
-| **Auth** | 10+ | Login, signup, JWT tokens, password reset |
-| **Candidates** | 15+ | CRUD, bulk import, stage management |
-| **Interviews** | 15+ | Scheduling, rescheduling, feedback |
-| **Calendar** | 30+ | Availability, slots, working hours, sync |
-| **Communication** | 20+ | Messages, templates, automations |
-| **Reports** | 10+ | Analytics, exports, scheduled reports |
-| **Users** | 7 | Invitations, roles, management |
-| **Teams** | 8 | Team creation, member management |
-| **Settings** | 10+ | Branding, SSO, SMTP, API keys |
-| **Integrations** | 10 | OAuth, field mapping, webhooks |
-
-### Authentication
-
-All protected endpoints require a **Bearer JWT token**:
-
-```bash
-curl -H "Authorization: Bearer YOUR_JWT_TOKEN" \
-  http://localhost:3001/api/v1/candidates
-```
-
-### Example Endpoints
-
-```bash
-# Login
-POST /api/v1/auth/login
-{ "email": "user@example.com", "password": "..." }
-
-# List Candidates
-GET /api/v1/candidates?stage=Interview&page=1&perPage=20
-
-# Schedule Interview
-POST /api/v1/interviews
-{ "candidateId": "...", "interviewerIds": [...], "startAt": "...", "durationMins": 60 }
-
-# Get Availability
-GET /api/v1/calendar/availability?userIds=...&start=...&end=...
-```
-
----
-
-
-## �📁 Project Structure
+## 📁 Project Structure
 
 ```
 lineup/
 ├── lineup-backend/          # NestJS backend
 │   ├── prisma/              # Database schema & migrations
-│   ├── src/
-│   │   ├── common/          # Guards, decorators, filters
-│   │   └── modules/         # Feature modules
-│   │       ├── auth/        # Authentication & JWT
-│   │       ├── candidates/  # Candidate management
-│   │       ├── calendar/    # Scheduling engine
-│   │       ├── communication/  # Email, SMS, WhatsApp
-│   │       ├── interviews/  # Interview lifecycle
-│   │       ├── reports/     # Analytics & reporting
-│   │       ├── settings/    # Tenant configuration
-│   │       └── integrations/  # External connectors
-│   └── test/                # E2E tests
+│   └── src/
+│       ├── common/          # Guards, decorators, filters
+│       └── modules/         # Feature modules
+│           ├── auth/        # Authentication (partial)
+│           ├── candidates/  # Candidate management (partial)
+│           ├── calendar/    # Scheduling (scaffolded)
+│           ├── communication/  # Email, SMS (stubbed)
+│           ├── interviews/  # Interview lifecycle (partial)
+│           └── integrations/  # External connectors (stubbed)
 │
 ├── lineup-frontend/         # Next.js frontend
 │   ├── app/                 # App router pages
 │   ├── components/          # React components
 │   ├── hooks/               # Custom hooks
-│   ├── lib/                 # Utilities & API clients
-│   └── types/               # TypeScript definitions
+│   └── lib/                 # Utilities & API clients
 │
-├── performance/             # Load testing & benchmarks
 └── docker-compose.yml       # Infrastructure services
 ```
 
 ---
 
-## � Security
+## 🔧 Development Guidelines
 
-- **JWT Authentication** with refresh tokens
-- **Rate Limiting** per tenant/user with Redis
-- **SQL Injection Protection** via Prisma parameterized queries
-- **RBAC Guards** at controller & service level
-- **Tenant Isolation** on all database queries
-- **Audit Logging** for sensitive actions
+### TODO Convention
 
----
+Features that are stubbed or incomplete are marked with `TODO:` comments:
 
-## 📊 Performance Targets
+```typescript
+// TODO: Implement email sending via SMTP
+console.log('[TODO] Email would be sent:', { to, subject });
+```
 
-| Metric | Target |
-|--------|--------|
-| API Response (p95) | < 200ms |
-| Page Load (p95) | < 2s |
-| Database Query | < 100ms |
-| System Uptime | 99.5% |
-| Concurrent Users | 5,000+ |
+### Adding Features
 
----
+1. Check the TODO markers in the relevant service file
+2. Implement the actual logic
+3. Update tests as needed
+4. Remove the TODO marker once complete
 
-## 🗺️ Roadmap
-
-- [x] Multi-tenant architecture
-- [x] Calendar scheduling engine
-- [x] Communication module (Email, SMS, WhatsApp)
-- [x] Twilio integration
-- [x] Rate limiting
-- [x] Hiring stages customization
-- [ ] Google Calendar sync
-- [ ] Microsoft Outlook sync
-- [ ] External ATS integrations
-- [ ] AI-powered resume parsing
-- [ ] Interview conflict detection
-- [ ] Mobile app (React Native)
+See [CONTRIBUTING.md](./CONTRIBUTING.md) for detailed guidelines.
 
 ---
 
 ## 📄 License
 
 This project is proprietary software. All rights reserved.
-
-

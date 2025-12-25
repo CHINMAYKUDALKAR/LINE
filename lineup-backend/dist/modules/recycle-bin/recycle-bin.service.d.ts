@@ -2,17 +2,18 @@ import { PrismaService } from '../../common/prisma.service';
 export declare class RecycleBinService {
     private prisma;
     constructor(prisma: PrismaService);
+    private getRetentionDays;
     softDelete(tenantId: string, userId: string, module: string, itemId: string, itemSnapshot: any): Promise<{
         id: string;
         tenantId: string;
+        expiresAt: Date | null;
         module: string;
         itemId: string;
-        itemSnapshot: import(".prisma/client").Prisma.JsonValue;
+        itemSnapshot: import("@prisma/client/runtime/library").JsonValue;
         deletedBy: string;
         deletedAt: Date;
         restoredAt: Date | null;
         purgedAt: Date | null;
-        expiresAt: Date | null;
     }>;
     findAll(tenantId: string, userId: string, userRole: string, filters?: {
         module?: string;
@@ -25,14 +26,14 @@ export declare class RecycleBinService {
         data: {
             id: string;
             tenantId: string;
+            expiresAt: Date | null;
             module: string;
             itemId: string;
-            itemSnapshot: import(".prisma/client").Prisma.JsonValue;
+            itemSnapshot: import("@prisma/client/runtime/library").JsonValue;
             deletedBy: string;
             deletedAt: Date;
             restoredAt: Date | null;
             purgedAt: Date | null;
-            expiresAt: Date | null;
         }[];
         meta: {
             total: number;
@@ -51,14 +52,14 @@ export declare class RecycleBinService {
     findOne(tenantId: string, userId: string, userRole: string, id: string): Promise<{
         id: string;
         tenantId: string;
+        expiresAt: Date | null;
         module: string;
         itemId: string;
-        itemSnapshot: import(".prisma/client").Prisma.JsonValue;
+        itemSnapshot: import("@prisma/client/runtime/library").JsonValue;
         deletedBy: string;
         deletedAt: Date;
         restoredAt: Date | null;
         purgedAt: Date | null;
-        expiresAt: Date | null;
     }>;
     restore(tenantId: string, userId: string, userRole: string, id: string): Promise<{
         success: boolean;

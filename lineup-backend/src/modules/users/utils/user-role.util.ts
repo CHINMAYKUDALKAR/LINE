@@ -120,3 +120,15 @@ export function isInvitationExpired(expiry: Date | null): boolean {
     if (!expiry) return true;
     return new Date() > expiry;
 }
+
+/**
+ * Timing-safe comparison for tokens to prevent timing attacks
+ */
+export function timingSafeCompare(a: string, b: string): boolean {
+    if (a.length !== b.length) {
+        // Still perform comparison to maintain constant time
+        crypto.timingSafeEqual(Buffer.from(a), Buffer.from(a));
+        return false;
+    }
+    return crypto.timingSafeEqual(Buffer.from(a), Buffer.from(b));
+}

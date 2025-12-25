@@ -43,6 +43,9 @@ export interface AuthResponse {
 
 @Injectable()
 export class AuthService {
+    // Trial period configuration - can be overridden via environment variable
+    private readonly TRIAL_DURATION_DAYS = Number(process.env.TRIAL_DURATION_DAYS) || 14;
+
     constructor(
         private prisma: PrismaService,
         private invitationService: InvitationService,
@@ -76,7 +79,7 @@ export class AuthService {
                     name: dto.companyName,
                     domain: dto.domain || null,
                     trialActive: true,
-                    trialEndsAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000), // 14 days trial
+                    trialEndsAt: new Date(Date.now() + this.TRIAL_DURATION_DAYS * 24 * 60 * 60 * 1000),
                 },
             });
 
@@ -535,6 +538,29 @@ export class AuthService {
             data: { revoked: true },
         });
         return { success: true };
+    }
+
+    /**
+     * Cleanup old revoked/expired refresh tokens to prevent unbounded table growth
+     * This should be called by a scheduled job (e.g., daily via cron)
+     * @param olderThanDays - Delete tokens older than this many days (default: 30)
+     * @returns Number of deleted tokens
+     */
+    async cleanupOldTokens(olderThanDays: number = 30): Promise<{ deleted: number }> {
+        const cutoffDate = new Date(Date.now() - olderThanDays * 24 * 60 * 60 * 1000);
+
+        const result = await this.prisma.refreshToken.deleteMany({
+            where: {
+                OR: [
+                    // Revoked tokens older than cutoff
+                    { revoked: true, createdAt: { lt: cutoffDate } },
+                    // Expired tokens older than cutoff
+                    { expiresAt: { lt: cutoffDate } },
+                ],
+            },
+        });
+
+        return { deleted: result.count };
     }
 
     /**

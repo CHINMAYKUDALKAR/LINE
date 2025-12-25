@@ -13,12 +13,25 @@ exports.RecycleBinService = void 0;
 const common_1 = require("@nestjs/common");
 const prisma_service_1 = require("../../common/prisma.service");
 const ADMIN_ROLES = ['ADMIN', 'SUPERADMIN', 'SUPPORT'];
+const DEFAULT_RETENTION_DAYS = Number(process.env.RECYCLE_BIN_RETENTION_DAYS) || 30;
 let RecycleBinService = class RecycleBinService {
     prisma;
     constructor(prisma) {
         this.prisma = prisma;
     }
+    async getRetentionDays(tenantId) {
+        const tenant = await this.prisma.tenant.findUnique({
+            where: { id: tenantId },
+            select: { settings: true },
+        });
+        const tenantRetention = tenant?.settings?.recycleBinRetentionDays;
+        if (typeof tenantRetention === 'number' && tenantRetention > 0) {
+            return tenantRetention;
+        }
+        return DEFAULT_RETENTION_DAYS;
+    }
     async softDelete(tenantId, userId, module, itemId, itemSnapshot) {
+        const retentionDays = await this.getRetentionDays(tenantId);
         return this.prisma.$transaction(async (tx) => {
             if (module === 'candidate') {
                 await tx.candidate.update({
@@ -39,14 +52,14 @@ let RecycleBinService = class RecycleBinService {
                     itemId,
                     itemSnapshot,
                     deletedBy: userId,
-                    expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+                    expiresAt: new Date(Date.now() + retentionDays * 24 * 60 * 60 * 1000)
                 }
             });
         });
     }
     async findAll(tenantId, userId, userRole, filters) {
         const page = filters?.page || 1;
-        const perPage = filters?.perPage || 20;
+        const perPage = Math.min(filters?.perPage || 20, 100);
         const where = {
             tenantId,
             restoredAt: null,

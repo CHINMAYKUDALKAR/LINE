@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { AppSidebar } from './AppSidebar';
 import { MobileHeader } from './MobileHeader';
-import { CommandPalette } from '@/components/command-palette';
+import { CommandPalette, useCommandEvent } from '@/components/command-palette';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { toast } from '@/hooks/use-toast';
 import {
@@ -13,6 +13,8 @@ import {
   mainNavItems,
   adminNavItems
 } from '@/lib/navigation-mock-data';
+import { UploadCandidatesModal } from '@/components/candidates/UploadCandidatesModal';
+import { ScheduleInterviewModal } from '@/components/scheduling/ScheduleInterviewModal';
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -21,6 +23,22 @@ interface AppShellProps {
 export function AppShell({ children }: AppShellProps) {
   const router = useRouter();
   const [currentTenantId, setCurrentTenantId] = useState(mockCurrentUser.tenantId);
+
+  // Modal states for keyboard shortcuts
+  const [showAddCandidateModal, setShowAddCandidateModal] = useState(false);
+  const [showScheduleModal, setShowScheduleModal] = useState(false);
+
+  // Listen for command events from keyboard shortcuts
+  const handleAddCandidate = useCallback(() => {
+    setShowAddCandidateModal(true);
+  }, []);
+
+  const handleScheduleInterview = useCallback(() => {
+    setShowScheduleModal(true);
+  }, []);
+
+  useCommandEvent('ADD_CANDIDATE', handleAddCandidate);
+  useCommandEvent('SCHEDULE_INTERVIEW', handleScheduleInterview);
 
   const handleTenantChange = (tenantId: string) => {
     setCurrentTenantId(tenantId);
@@ -65,6 +83,30 @@ export function AppShell({ children }: AppShellProps) {
           {children}
         </main>
       </div>
+
+      {/* Global modals triggered by keyboard shortcuts */}
+      <UploadCandidatesModal
+        open={showAddCandidateModal}
+        onOpenChange={setShowAddCandidateModal}
+        onSuccess={() => {
+          toast({
+            title: 'Candidates Added',
+            description: 'Candidates have been imported successfully.',
+          });
+        }}
+      />
+
+      <ScheduleInterviewModal
+        open={showScheduleModal}
+        onOpenChange={setShowScheduleModal}
+        onSuccess={() => {
+          toast({
+            title: 'Interview Scheduled',
+            description: 'The interview has been scheduled successfully.',
+          });
+        }}
+      />
     </TooltipProvider>
   );
 }
+

@@ -8,6 +8,9 @@ import * as crypto from 'crypto';
 
 @Injectable()
 export class TenantsService {
+    // Rate limiting for domain verification
+    private domainVerifyRateLimiter = new Map<string, { count: number; resetAt: number }>();
+
     constructor(
         private prisma: PrismaService,
         @InjectQueue('domain-verification') private domainQueue: Queue
@@ -30,7 +33,7 @@ export class TenantsService {
     }
 
     async findAll() {
-        return this.prisma.tenant.findMany();
+        return this.prisma.tenant.findMany({ take: 100 });
     }
 
     async findOne(id: string) {
@@ -52,6 +55,18 @@ export class TenantsService {
     }
 
     async generateDomainVerificationToken(tenantId: string, domain: string) {
+        // Rate limiting: max 3 verification attempts per hour per tenant
+        const now = Date.now();
+        const limit = this.domainVerifyRateLimiter.get(tenantId);
+        if (limit && limit.resetAt > now) {
+            if (limit.count >= 3) {
+                throw new BadRequestException('Rate limit exceeded: max 3 domain verifications per hour');
+            }
+            limit.count++;
+        } else {
+            this.domainVerifyRateLimiter.set(tenantId, { count: 1, resetAt: now + 3600000 });
+        }
+
         const token = crypto.randomBytes(32).toString('hex');
         const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24h
 
@@ -166,6 +181,13 @@ export class TenantsService {
     }
 
     /**
+     * Validate branding color format
+     */
+    private isValidHexColor(color: string): boolean {
+        return /^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/.test(color);
+    }
+
+    /**
      * Update tenant branding
      */
     async updateBranding(
@@ -174,6 +196,15 @@ export class TenantsService {
         branding: { logoUrl?: string; colors?: Record<string, string> },
     ) {
         const tenant = await this.findOne(tenantId);
+
+        // Validate color format if provided
+        if (branding.colors) {
+            for (const [key, value] of Object.entries(branding.colors)) {
+                if (!this.isValidHexColor(value)) {
+                    throw new BadRequestException(`Invalid color format for ${key}: ${value}. Use hex format like #fff or #ffffff`);
+                }
+            }
+        }
 
         const updated = await this.prisma.tenant.update({
             where: { id: tenantId },

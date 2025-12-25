@@ -8,7 +8,7 @@
 @layer base {
     :root {
         /* App Background: Soft Cool Gray */
-        --background: 210 40% 98%; 
+        --background: 210 40% 98%;
         /* Foreground: Deep Navy/Black */
         --foreground: 222 47% 11%;
 
@@ -42,18 +42,24 @@
         /* Borders: Subtle cool gray */
         --border: 214.3 31.8% 91.4%;
         --input: 214.3 31.8% 91.4%;
-        
+
         /* Ring: Primary with opacity */
         --ring: 221 83% 53%;
 
-        --radius: 0.75rem; /* More rounded friendliness */
+        --radius: 0.75rem;
+        /* More rounded friendliness */
 
         /* Chart Colors - Vibrant & Distinct */
-        --chart-1: 221 83% 53%;   /* Blue */
-        --chart-2: 162 94% 30%;   /* Emerald */
-        --chart-3: 43 96% 64%;    /* Amber */
-        --chart-4: 262 83% 58%;   /* Purple */
-        --chart-5: 199 89% 48%;   /* Cyan */
+        --chart-1: 221 83% 53%;
+        /* Blue */
+        --chart-2: 162 94% 30%;
+        /* Emerald */
+        --chart-3: 43 96% 64%;
+        /* Amber */
+        --chart-4: 262 83% 58%;
+        /* Purple */
+        --chart-5: 199 89% 48%;
+        /* Cyan */
 
         /* Sidebar: Glassy Light */
         --sidebar-background: 0 0% 100%;
@@ -73,7 +79,7 @@
         --foreground: 210 40% 98%;
 
         /* Card: Slightly lighter navy */
-        --card: 222 47% 8%; 
+        --card: 222 47% 8%;
         --card-foreground: 210 40% 98%;
 
         --popover: 222 47% 8%;
@@ -102,7 +108,7 @@
         /* Borders: Darker, subtle */
         --border: 217.2 32.6% 17.5%;
         --input: 217.2 32.6% 17.5%;
-        
+
         --ring: 224.3 76.3% 48%;
 
         /* Chart Colors - Adjust for dark mode */
@@ -134,7 +140,12 @@
     }
 
     /* Modern Typography Headings */
-    h1, h2, h3, h4, h5, h6 {
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6 {
         @apply font-display tracking-tight text-foreground;
     }
 }
@@ -144,7 +155,7 @@
     .glass {
         @apply bg-white/70 backdrop-blur-md border border-white/20 shadow-sm;
     }
-    
+
     .dark .glass {
         @apply bg-slate-900/70 backdrop-blur-md border border-white/10 shadow-sm;
     }
@@ -156,7 +167,7 @@
     .dark .glass-card {
         @apply bg-card/60 backdrop-blur-sm border border-border/50 hover:bg-card/80;
     }
-    
+
     .glass-sidebar {
         @apply bg-background/80 backdrop-blur-xl border-r border-border;
     }

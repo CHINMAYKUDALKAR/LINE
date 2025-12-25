@@ -37,8 +37,19 @@ exports.encrypt = encrypt;
 exports.decrypt = decrypt;
 const crypto = __importStar(require("crypto"));
 const ALGORITHM = 'aes-256-gcm';
+function getEncryptionKey() {
+    const key = process.env.TOKEN_ENCRYPTION_KEY;
+    if (!key) {
+        if (process.env.NODE_ENV === 'production') {
+            throw new Error('TOKEN_ENCRYPTION_KEY must be set in production');
+        }
+        console.warn('WARNING: Using insecure default encryption key. Set TOKEN_ENCRYPTION_KEY in production!');
+        return 'default-insecure-key-32-bytes-lng!';
+    }
+    return key;
+}
 function encrypt(text) {
-    const key = process.env.TOKEN_ENCRYPTION_KEY || 'default-insecure-key-32-bytes-lng!';
+    const key = getEncryptionKey();
     const iv = crypto.randomBytes(16);
     const cipher = crypto.createCipheriv(ALGORITHM, Buffer.from(key), iv);
     let encrypted = cipher.update(text, 'utf8', 'hex');
@@ -47,7 +58,7 @@ function encrypt(text) {
     return `${iv.toString('hex')}.${tag.toString('hex')}.${encrypted}`;
 }
 function decrypt(ciphertext) {
-    const key = process.env.TOKEN_ENCRYPTION_KEY || 'default-insecure-key-32-bytes-lng!';
+    const key = getEncryptionKey();
     const parts = ciphertext.split('.');
     if (parts.length !== 3)
         throw new Error('Invalid ciphertext format');

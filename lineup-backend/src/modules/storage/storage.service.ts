@@ -142,7 +142,7 @@ export class StorageService {
 
     async listFiles(tenantId: string, dto: ListFilesDto) {
         const page = Number(dto.page) || 1;
-        const perPage = Number(dto.perPage) || 20;
+        const perPage = Math.min(Number(dto.perPage) || 20, 100); // Cap at 100
 
         const where: any = { tenantId };
 
@@ -280,24 +280,37 @@ export class StorageService {
                 filename: file.filename,
             },
             orderBy: { version: 'desc' },
+            take: 50, // Limit to 50 versions
         });
     }
 
-    async getRecycleBin(tenantId: string) {
+    async getRecycleBin(tenantId: string, limit = 100) {
         return this.prisma.fileObject.findMany({
             where: {
                 tenantId,
                 status: 'deleted',
             },
             orderBy: { deletedAt: 'desc' },
+            take: Math.min(limit, 200), // Cap at 200
         });
     }
 
+    /**
+     * Sanitize filename to prevent path traversal and special characters
+     */
+    private sanitizeFilename(filename: string): string {
+        return filename
+            .replace(/[\/\\]/g, '_')  // Remove path separators
+            .replace(/\.\.+/g, '_')   // Remove multiple dots (path traversal)
+            .replace(/[<>:"'|?*]/g, '_'); // Remove special characters
+    }
+
     private generateS3Key(tenantId: string, linkedType?: string, linkedId?: string, fileId?: string, filename?: string): string {
+        const safeFilename = filename ? this.sanitizeFilename(filename) : 'unnamed';
         if (linkedType && linkedId) {
-            return `${tenantId}/${linkedType}/${linkedId}/files/${fileId}/${filename}`;
+            return `${tenantId}/${linkedType}/${linkedId}/files/${fileId}/${safeFilename}`;
         }
-        return `${tenantId}/files/${fileId}/${filename}`;
+        return `${tenantId}/files/${fileId}/${safeFilename}`;
     }
 
     private canAccessFile(user: any, file: any): boolean {
@@ -306,8 +319,8 @@ export class StorageService {
             return false;
         }
 
-        // ADMINs can access all files within their tenant
-        if (user.role === 'ADMIN') return true;
+        // ADMINs and SUPERADMINs can access all files within their tenant
+        if (['ADMIN', 'SUPERADMIN'].includes(user.role)) return true;
 
         if (file.linkedType === 'candidate') {
             return ['MANAGER', 'RECRUITER'].includes(user.role);

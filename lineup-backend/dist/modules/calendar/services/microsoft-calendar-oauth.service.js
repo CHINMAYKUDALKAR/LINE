@@ -157,6 +157,68 @@ let MicrosoftCalendarOAuthService = MicrosoftCalendarOAuthService_1 = class Micr
         });
         this.logger.log(`Disconnected Microsoft Calendar for user ${userId} in tenant ${tenantId}`);
     }
+    async getBusySlots(accountId, from, to) {
+        try {
+            const account = await this.prisma.calendarSyncAccount.findUnique({
+                where: { id: accountId },
+            });
+            if (!account) {
+                return { busySlots: [], success: false, error: 'Account not found' };
+            }
+            const accessToken = await this.getValidAccessToken(accountId);
+            const response = await axios_1.default.post('https://graph.microsoft.com/v1.0/me/calendar/getSchedule', {
+                schedules: [account.providerAccountId],
+                startTime: {
+                    dateTime: from.toISOString(),
+                    timeZone: 'UTC',
+                },
+                endTime: {
+                    dateTime: to.toISOString(),
+                    timeZone: 'UTC',
+                },
+                availabilityViewInterval: 30,
+            }, {
+                headers: { Authorization: `Bearer ${accessToken}` },
+            });
+            const busySlots = [];
+            const scheduleItems = response.data.value?.[0]?.scheduleItems || [];
+            for (const item of scheduleItems) {
+                if (['busy', 'tentative', 'oof'].includes(item.status?.toLowerCase())) {
+                    busySlots.push({
+                        start: new Date(item.start.dateTime),
+                        end: new Date(item.end.dateTime),
+                        source: 'microsoft',
+                        reason: `Outlook: ${item.status || 'Busy'}`,
+                    });
+                }
+            }
+            this.logger.debug(`Fetched ${busySlots.length} busy slots from Microsoft Calendar for account ${accountId}`);
+            return { busySlots, success: true };
+        }
+        catch (error) {
+            this.logger.warn(`Failed to fetch Microsoft Calendar busy slots for account ${accountId}: ${error.message}`);
+            return {
+                busySlots: [],
+                success: false,
+                error: error.message || 'Failed to fetch Microsoft Calendar availability',
+            };
+        }
+    }
+    async isTokenExpired(accountId) {
+        try {
+            const account = await this.prisma.calendarSyncAccount.findUnique({
+                where: { id: accountId },
+            });
+            if (!account)
+                return true;
+            const tokens = account.credentials;
+            const expiresAt = tokens?.expires_at || 0;
+            return expiresAt - Date.now() < 5 * 60 * 1000;
+        }
+        catch {
+            return true;
+        }
+    }
 };
 exports.MicrosoftCalendarOAuthService = MicrosoftCalendarOAuthService;
 exports.MicrosoftCalendarOAuthService = MicrosoftCalendarOAuthService = MicrosoftCalendarOAuthService_1 = __decorate([

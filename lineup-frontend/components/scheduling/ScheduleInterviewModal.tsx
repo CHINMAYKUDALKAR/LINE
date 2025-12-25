@@ -11,8 +11,12 @@ import { toast } from '@/hooks/use-toast';
 import { listCandidates } from '@/lib/api/candidates';
 import { getUsers } from '@/lib/api/users';
 import { createInterview } from '@/lib/api/interviews';
-import { getAuthToken } from '@/lib/auth';
 import { Candidate, Interviewer, TimeSlot } from '@/types/scheduling';
+
+// Max lengths for text fields
+const MAX_NOTES_LENGTH = 2000;
+const MAX_EMAIL_SUBJECT_LENGTH = 200;
+const MAX_EMAIL_BODY_LENGTH = 10000;
 
 interface ScheduleInterviewModalProps {
   open: boolean;
@@ -82,10 +86,9 @@ export function ScheduleInterviewModal({ open, onOpenChange, onSuccess, initialD
   useEffect(() => {
     if (open) {
       setIsLoading(true);
-      const token = getAuthToken();
 
       Promise.all([
-        listCandidates(token || '', { perPage: 100 }),
+        listCandidates(undefined, { perPage: 100 }),
         getUsers({ role: 'INTERVIEWER' }),
       ])
         .then(([candidatesRes, usersRes]: [any, any]) => {
@@ -119,7 +122,6 @@ export function ScheduleInterviewModal({ open, onOpenChange, onSuccess, initialD
           setInterviewers(mappedInterviewers);
         })
         .catch((err) => {
-          console.error('Failed to load data details:', err);
           toast({
             title: 'Error Loading Data',
             description: err instanceof Error ? err.message : 'Failed to load candidates and interviewers',
@@ -238,7 +240,6 @@ export function ScheduleInterviewModal({ open, onOpenChange, onSuccess, initialD
           variant: 'destructive',
         });
       } else {
-        console.error('Failed to schedule interview:', error);
         toast({
           title: 'Scheduling Failed',
           description: errorMessage || 'Failed to schedule interview. Please try again.',
@@ -259,12 +260,14 @@ export function ScheduleInterviewModal({ open, onOpenChange, onSuccess, initialD
         <DialogTitle className="sr-only">Schedule Interview</DialogTitle>
 
         <div className="flex h-full min-h-0 flex-col md:flex-row">
-          {/* Sidebar Stepper - Hidden on mobile */}
-          <div className="hidden md:flex w-64 flex-shrink-0 bg-muted/40 backdrop-blur-md border-r border-border/50 p-6 flex-col">
-            <h2 className="text-lg font-semibold text-foreground mb-1 tracking-tight">Schedule Interview</h2>
-            <p className="text-xs text-muted-foreground mb-8">Set up a new interview session</p>
+          {/* Sidebar Stepper - Hidden on mobile, more compact */}
+          <div className="hidden md:flex w-56 flex-shrink-0 bg-gradient-to-b from-muted/60 to-muted/30 backdrop-blur-md border-r border-border/50 p-5 flex-col">
+            <div className="mb-6">
+              <h2 className="text-base font-semibold text-foreground tracking-tight">Schedule Interview</h2>
+              <p className="text-[11px] text-muted-foreground mt-0.5">Set up a new interview session</p>
+            </div>
 
-            <nav className="flex-1 space-y-2" aria-label="Progress">
+            <nav className="flex-1 space-y-1" aria-label="Progress">
               {steps.map((step, index) => {
                 const Icon = step.icon;
                 const isActive = currentStep === step.id;
@@ -276,51 +279,65 @@ export function ScheduleInterviewModal({ open, onOpenChange, onSuccess, initialD
                       onClick={() => isCompleted && setCurrentStep(step.id)}
                       disabled={!isCompleted && !isActive}
                       className={cn(
-                        'w-full flex items-center gap-3 p-3 rounded-lg text-left transition-all',
+                        'w-full flex items-center gap-2.5 p-2.5 rounded-lg text-left transition-all',
                         'focus:outline-none focus:ring-2 focus:ring-primary/20',
-                        isActive && 'bg-primary/10 border border-primary/30',
-                        isCompleted && 'hover:bg-accent cursor-pointer',
-                        !isActive && !isCompleted && 'opacity-50'
+                        isActive && 'bg-primary/10 border border-primary/30 shadow-sm',
+                        isCompleted && 'hover:bg-accent/50 cursor-pointer',
+                        !isActive && !isCompleted && 'opacity-40'
                       )}
                     >
                       <div
                         className={cn(
-                          'w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-colors',
-                          isActive && 'bg-primary text-primary-foreground shadow-sm ring-2 ring-primary/20',
+                          'w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 transition-all',
+                          isActive && 'bg-primary text-primary-foreground shadow-sm',
                           isCompleted && 'bg-primary/20 text-primary',
-                          !isActive && !isCompleted && 'bg-secondary/50 text-muted-foreground border border-border/50'
+                          !isActive && !isCompleted && 'bg-muted text-muted-foreground border border-border/50'
                         )}
                       >
                         {isCompleted ? (
-                          <Check className="h-3.5 w-3.5" />
+                          <Check className="h-3 w-3" />
                         ) : (
-                          <Icon className="h-4 w-4" />
+                          <Icon className="h-3.5 w-3.5" />
                         )}
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className={cn(
-                          'text-sm font-medium truncate',
-                          isActive ? 'text-primary' : 'text-foreground'
+                          'text-[13px] font-medium truncate leading-tight',
+                          isActive ? 'text-primary' : isCompleted ? 'text-foreground' : 'text-muted-foreground'
                         )}>
                           {step.label}
                         </p>
-                        <p className="text-xs text-muted-foreground">Step {step.id}</p>
                       </div>
+                      {isCompleted && (
+                        <span className="text-[10px] text-muted-foreground">✓</span>
+                      )}
                     </button>
 
                     {/* Connector line */}
                     {index < steps.length - 1 && (
-                      <div className="absolute left-[1.625rem] top-[3.25rem] w-0.5 h-4 bg-border" />
+                      <div className={cn(
+                        "absolute left-[1.125rem] top-[2.75rem] w-0.5 h-2 rounded-full transition-colors",
+                        isCompleted ? "bg-primary/30" : "bg-border"
+                      )} />
                     )}
                   </div>
                 );
               })}
             </nav>
 
-            {/* Quick help */}
-            <div className="pt-6 border-t border-border mt-auto">
-              <p className="text-xs text-muted-foreground">
-                Need help? Press <kbd className="px-1.5 py-0.5 bg-secondary rounded text-[10px] font-mono">?</kbd> for shortcuts
+            {/* Progress summary */}
+            <div className="pt-4 border-t border-border/50 mt-auto space-y-2">
+              <div className="flex items-center gap-2">
+                <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-primary rounded-full transition-all duration-300"
+                    style={{ width: `${((currentStep - 1) / 2) * 100}%` }}
+                  />
+                </div>
+                <span className="text-[10px] text-muted-foreground font-medium">{currentStep}/3</span>
+              </div>
+              <p className="text-[10px] text-muted-foreground">
+                Press <kbd className="px-1 py-0.5 bg-secondary rounded text-[9px] font-mono">?</kbd> for shortcuts
               </p>
             </div>
           </div>
@@ -330,15 +347,21 @@ export function ScheduleInterviewModal({ open, onOpenChange, onSuccess, initialD
             {/* Header */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-border flex-shrink-0">
               <div>
-                <div className="flex items-center gap-2 md:hidden mb-1">
-                  <div className="flex gap-1">
+                <div className="flex items-center gap-3 md:hidden mb-2">
+                  <div className="flex gap-1.5">
                     {[1, 2, 3].map(i => (
-                      <div key={i} className={cn("h-1 w-6 rounded-full", currentStep >= i ? "bg-primary" : "bg-muted")} />
+                      <div
+                        key={i}
+                        className={cn(
+                          "h-1.5 w-8 rounded-full transition-all",
+                          currentStep > i ? "bg-primary" : currentStep === i ? "bg-primary" : "bg-muted"
+                        )}
+                      />
                     ))}
                   </div>
-                  <span className="text-xs text-muted-foreground">Step {currentStep} of 3</span>
+                  <span className="text-[11px] text-muted-foreground font-medium">Step {currentStep} of 3</span>
                 </div>
-                <h3 className="text-base font-semibold text-foreground">
+                <h3 className="text-lg font-semibold text-foreground">
                   {steps.find((s) => s.id === currentStep)?.label}
                 </h3>
                 <p className="text-sm text-muted-foreground">

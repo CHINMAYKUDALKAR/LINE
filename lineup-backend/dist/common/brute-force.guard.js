@@ -15,97 +15,20 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.BruteForceService = exports.BruteForceGuard = void 0;
+exports.BruteForceGuard = exports.BruteForceService = void 0;
 const common_1 = require("@nestjs/common");
 const ioredis_1 = __importDefault(require("ioredis"));
 const MAX_FAILED_ATTEMPTS = 5;
 const LOCKOUT_DURATION = 15 * 60;
-let BruteForceGuard = class BruteForceGuard {
-    redis;
-    constructor(redis) {
-        this.redis = redis;
-    }
-    async canActivate(context) {
-        const request = context.switchToHttp().getRequest();
-        const ip = this.getClientIP(request);
-        if (!this.isLoginEndpoint(request)) {
-            return true;
-        }
-        const email = request.body?.email?.toLowerCase();
-        if (!email) {
-            return true;
-        }
-        const lockKey = `bruteforce:lock:${ip}:${email}`;
-        const isLocked = await this.redis.get(lockKey);
-        if (isLocked) {
-            const ttl = await this.redis.ttl(lockKey);
-            throw new common_1.HttpException({
-                statusCode: common_1.HttpStatus.TOO_MANY_REQUESTS,
-                message: `Account temporarily locked due to too many failed login attempts. Try again in ${Math.ceil(ttl / 60)} minutes.`,
-                retryAfter: ttl,
-                code: 'ACCOUNT_LOCKED',
-            }, common_1.HttpStatus.TOO_MANY_REQUESTS);
-        }
-        return true;
-    }
-    async recordFailedAttempt(ip, email) {
-        const attemptKey = `bruteforce:attempts:${ip}:${email.toLowerCase()}`;
-        const lockKey = `bruteforce:lock:${ip}:${email.toLowerCase()}`;
-        const attempts = await this.redis.incr(attemptKey);
-        if (attempts === 1) {
-            await this.redis.expire(attemptKey, LOCKOUT_DURATION);
-        }
-        if (attempts >= MAX_FAILED_ATTEMPTS) {
-            await this.redis.set(lockKey, '1', 'EX', LOCKOUT_DURATION);
-            await this.redis.del(attemptKey);
-            return { locked: true, attempts };
-        }
-        return { locked: false, attempts };
-    }
-    async clearFailedAttempts(ip, email) {
-        const attemptKey = `bruteforce:attempts:${ip}:${email.toLowerCase()}`;
-        await this.redis.del(attemptKey);
-    }
-    async unlockAccount(ip, email) {
-        const lockKey = `bruteforce:lock:${ip}:${email.toLowerCase()}`;
-        const attemptKey = `bruteforce:attempts:${ip}:${email.toLowerCase()}`;
-        await this.redis.del(lockKey, attemptKey);
-    }
-    async getLockStatus(ip, email) {
-        const lockKey = `bruteforce:lock:${ip}:${email.toLowerCase()}`;
-        const attemptKey = `bruteforce:attempts:${ip}:${email.toLowerCase()}`;
-        const isLocked = await this.redis.get(lockKey);
-        const ttl = isLocked ? await this.redis.ttl(lockKey) : 0;
-        const attempts = parseInt(await this.redis.get(attemptKey) || '0');
-        return { locked: !!isLocked, ttl, attempts };
-    }
-    isLoginEndpoint(request) {
-        const path = request.route?.path || request.url;
-        return (path.includes('/auth/login') ||
-            path.includes('/auth/signin'));
-    }
-    getClientIP(request) {
-        const forwarded = request.headers['x-forwarded-for'];
-        if (forwarded) {
-            return forwarded.split(',')[0].trim();
-        }
-        return request.ip || request.connection?.remoteAddress || 'unknown';
-    }
-};
-exports.BruteForceGuard = BruteForceGuard;
-exports.BruteForceGuard = BruteForceGuard = __decorate([
-    (0, common_1.Injectable)(),
-    __param(0, (0, common_1.Inject)('REDIS_CLIENT')),
-    __metadata("design:paramtypes", [ioredis_1.default])
-], BruteForceGuard);
+const TRUSTED_PROXIES = (process.env.TRUSTED_PROXIES || '127.0.0.1,::1').split(',').map(p => p.trim());
 let BruteForceService = class BruteForceService {
     redis;
     constructor(redis) {
         this.redis = redis;
     }
     async recordFailedAttempt(ip, email) {
-        const attemptKey = `bruteforce:attempts:${ip}:${email.toLowerCase()}`;
-        const lockKey = `bruteforce:lock:${ip}:${email.toLowerCase()}`;
+        const attemptKey = this.getAttemptKey(ip, email);
+        const lockKey = this.getLockKey(ip, email);
         const attempts = await this.redis.incr(attemptKey);
         if (attempts === 1) {
             await this.redis.expire(attemptKey, LOCKOUT_DURATION);
@@ -122,19 +45,44 @@ let BruteForceService = class BruteForceService {
         };
     }
     async clearFailedAttempts(ip, email) {
-        const attemptKey = `bruteforce:attempts:${ip}:${email.toLowerCase()}`;
+        const attemptKey = this.getAttemptKey(ip, email);
         await this.redis.del(attemptKey);
     }
     async isLocked(ip, email) {
-        const lockKey = `bruteforce:lock:${ip}:${email.toLowerCase()}`;
+        const lockKey = this.getLockKey(ip, email);
         const isLocked = await this.redis.get(lockKey);
         const ttl = isLocked ? await this.redis.ttl(lockKey) : 0;
         return { locked: !!isLocked, ttl };
     }
+    async getLockStatus(ip, email) {
+        const lockKey = this.getLockKey(ip, email);
+        const attemptKey = this.getAttemptKey(ip, email);
+        const isLocked = await this.redis.get(lockKey);
+        const ttl = isLocked ? await this.redis.ttl(lockKey) : 0;
+        const attempts = parseInt(await this.redis.get(attemptKey) || '0');
+        return { locked: !!isLocked, ttl, attempts };
+    }
     async unlockAccount(ip, email) {
-        const lockKey = `bruteforce:lock:${ip}:${email.toLowerCase()}`;
-        const attemptKey = `bruteforce:attempts:${ip}:${email.toLowerCase()}`;
+        const lockKey = this.getLockKey(ip, email);
+        const attemptKey = this.getAttemptKey(ip, email);
         await this.redis.del(lockKey, attemptKey);
+    }
+    getClientIP(request) {
+        const connectionIP = request.ip || request.connection?.remoteAddress || '';
+        const normalizedConnectionIP = connectionIP.replace(/^::ffff:/, '');
+        if (TRUSTED_PROXIES.includes(normalizedConnectionIP)) {
+            const forwarded = request.headers['x-forwarded-for'];
+            if (forwarded) {
+                return forwarded.split(',')[0].trim();
+            }
+        }
+        return normalizedConnectionIP || 'unknown';
+    }
+    getLockKey(ip, email) {
+        return `bruteforce:lock:${ip}:${email.toLowerCase()}`;
+    }
+    getAttemptKey(ip, email) {
+        return `bruteforce:attempts:${ip}:${email.toLowerCase()}`;
     }
 };
 exports.BruteForceService = BruteForceService;
@@ -143,4 +91,41 @@ exports.BruteForceService = BruteForceService = __decorate([
     __param(0, (0, common_1.Inject)('REDIS_CLIENT')),
     __metadata("design:paramtypes", [ioredis_1.default])
 ], BruteForceService);
+let BruteForceGuard = class BruteForceGuard {
+    bruteForceService;
+    constructor(bruteForceService) {
+        this.bruteForceService = bruteForceService;
+    }
+    async canActivate(context) {
+        const request = context.switchToHttp().getRequest();
+        const ip = this.bruteForceService.getClientIP(request);
+        if (!this.isLoginEndpoint(request)) {
+            return true;
+        }
+        const email = request.body?.email?.toLowerCase();
+        if (!email) {
+            return true;
+        }
+        const lockStatus = await this.bruteForceService.isLocked(ip, email);
+        if (lockStatus.locked) {
+            throw new common_1.HttpException({
+                statusCode: common_1.HttpStatus.TOO_MANY_REQUESTS,
+                message: `Account temporarily locked due to too many failed login attempts. Try again in ${Math.ceil(lockStatus.ttl / 60)} minutes.`,
+                retryAfter: lockStatus.ttl,
+                code: 'ACCOUNT_LOCKED',
+            }, common_1.HttpStatus.TOO_MANY_REQUESTS);
+        }
+        return true;
+    }
+    isLoginEndpoint(request) {
+        const path = request.route?.path || request.url;
+        return (path.includes('/auth/login') ||
+            path.includes('/auth/signin'));
+    }
+};
+exports.BruteForceGuard = BruteForceGuard;
+exports.BruteForceGuard = BruteForceGuard = __decorate([
+    (0, common_1.Injectable)(),
+    __metadata("design:paramtypes", [BruteForceService])
+], BruteForceGuard);
 //# sourceMappingURL=brute-force.guard.js.map

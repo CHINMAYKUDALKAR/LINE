@@ -193,4 +193,97 @@ export class MicrosoftCalendarOAuthService {
         });
         this.logger.log(`Disconnected Microsoft Calendar for user ${userId} in tenant ${tenantId}`);
     }
+
+    /**
+     * Get busy slots using Microsoft Graph API getSchedule.
+     * Returns only start/end times - no event metadata.
+     * Never throws - returns empty result on failure for graceful degradation.
+     */
+    async getBusySlots(
+        accountId: string,
+        from: Date,
+        to: Date,
+    ): Promise<{ busySlots: Array<{ start: Date; end: Date; source: 'microsoft'; reason?: string }>; success: boolean; error?: string }> {
+        try {
+            const account = await this.prisma.calendarSyncAccount.findUnique({
+                where: { id: accountId },
+            });
+
+            if (!account) {
+                return { busySlots: [], success: false, error: 'Account not found' };
+            }
+
+            const accessToken = await this.getValidAccessToken(accountId);
+
+            // Use getSchedule API - returns only availability, not event details
+            const response = await axios.post(
+                'https://graph.microsoft.com/v1.0/me/calendar/getSchedule',
+                {
+                    schedules: [account.providerAccountId],
+                    startTime: {
+                        dateTime: from.toISOString(),
+                        timeZone: 'UTC',
+                    },
+                    endTime: {
+                        dateTime: to.toISOString(),
+                        timeZone: 'UTC',
+                    },
+                    availabilityViewInterval: 30, // 30-minute intervals
+                },
+                {
+                    headers: { Authorization: `Bearer ${accessToken}` },
+                },
+            );
+
+            const busySlots: Array<{ start: Date; end: Date; source: 'microsoft'; reason?: string }> = [];
+
+            // Extract busy periods from scheduleItems
+            const scheduleItems = response.data.value?.[0]?.scheduleItems || [];
+
+            for (const item of scheduleItems) {
+                // Only include busy, tentative, or oof (out of office)
+                if (['busy', 'tentative', 'oof'].includes(item.status?.toLowerCase())) {
+                    busySlots.push({
+                        start: new Date(item.start.dateTime),
+                        end: new Date(item.end.dateTime),
+                        source: 'microsoft',
+                        reason: `Outlook: ${item.status || 'Busy'}`,
+                    });
+                }
+            }
+
+            this.logger.debug(`Fetched ${busySlots.length} busy slots from Microsoft Calendar for account ${accountId}`);
+            return { busySlots, success: true };
+        } catch (error: any) {
+            // Graceful failure - log error but don't block scheduling
+            this.logger.warn(`Failed to fetch Microsoft Calendar busy slots for account ${accountId}: ${error.message}`);
+
+            return {
+                busySlots: [],
+                success: false,
+                error: error.message || 'Failed to fetch Microsoft Calendar availability',
+            };
+        }
+    }
+
+    /**
+     * Check if token is expired or will expire soon
+     */
+    async isTokenExpired(accountId: string): Promise<boolean> {
+        try {
+            const account = await this.prisma.calendarSyncAccount.findUnique({
+                where: { id: accountId },
+            });
+
+            if (!account) return true;
+
+            const tokens = account.credentials as unknown as MicrosoftTokens;
+            const expiresAt = tokens?.expires_at || 0;
+
+            // Consider expired if within 5 minutes
+            return expiresAt - Date.now() < 5 * 60 * 1000;
+        } catch {
+            return true;
+        }
+    }
 }

@@ -17,30 +17,59 @@ let AutomationService = class AutomationService {
     constructor(prisma) {
         this.prisma = prisma;
     }
-    async createRule(tenantId, data) {
-        return this.prisma.automationRule.create({
+    async createRule(tenantId, userId, data) {
+        const rule = await this.prisma.automationRule.create({
             data: {
                 ...data,
                 tenant: { connect: { id: tenantId } },
             },
         });
+        await this.prisma.auditLog.create({
+            data: {
+                tenantId,
+                userId,
+                action: 'automation.rule.created',
+                metadata: { ruleId: rule.id, name: rule.name },
+            },
+        });
+        return rule;
     }
-    async getRules(tenantId) {
+    async getRules(tenantId, limit = 100) {
         return this.prisma.automationRule.findMany({
             where: { tenantId },
             include: { template: true },
+            take: Math.min(limit, 100),
+            orderBy: { createdAt: 'desc' },
         });
     }
-    async updateRule(tenantId, id, data) {
-        return this.prisma.automationRule.update({
+    async updateRule(tenantId, userId, id, data) {
+        const rule = await this.prisma.automationRule.update({
             where: { id, tenantId },
             data,
         });
+        await this.prisma.auditLog.create({
+            data: {
+                tenantId,
+                userId,
+                action: 'automation.rule.updated',
+                metadata: { ruleId: id, changes: JSON.parse(JSON.stringify(data)) },
+            },
+        });
+        return rule;
     }
-    async deleteRule(tenantId, id) {
-        return this.prisma.automationRule.delete({
+    async deleteRule(tenantId, userId, id) {
+        const rule = await this.prisma.automationRule.delete({
             where: { id, tenantId },
         });
+        await this.prisma.auditLog.create({
+            data: {
+                tenantId,
+                userId,
+                action: 'automation.rule.deleted',
+                metadata: { ruleId: id, name: rule.name },
+            },
+        });
+        return rule;
     }
 };
 exports.AutomationService = AutomationService;

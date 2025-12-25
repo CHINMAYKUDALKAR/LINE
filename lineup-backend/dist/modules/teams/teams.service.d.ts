@@ -7,25 +7,25 @@ export declare class TeamsService {
     private prisma;
     constructor(prisma: PrismaService);
     createTeam(tenantId: string, userId: string, dto: CreateTeamDto): Promise<{
-        id: string;
-        tenantId: string;
         name: string;
-        description: string | null;
-        leadId: string | null;
+        id: string;
         createdAt: Date;
         updatedAt: Date;
+        tenantId: string;
+        description: string | null;
+        leadId: string | null;
     }>;
     listTeams(tenantId: string, dto: ListTeamsDto): Promise<{
         data: {
             memberCount: number;
             _count: undefined;
-            id: string;
-            tenantId: string;
             name: string;
-            description: string | null;
-            leadId: string | null;
+            id: string;
             createdAt: Date;
             updatedAt: Date;
+            tenantId: string;
+            description: string | null;
+            leadId: string | null;
         }[];
         meta: {
             total: number;
@@ -37,22 +37,22 @@ export declare class TeamsService {
     getTeam(tenantId: string, teamId: string): Promise<{
         memberCount: number;
         _count: undefined;
-        id: string;
-        tenantId: string;
         name: string;
-        description: string | null;
-        leadId: string | null;
+        id: string;
         createdAt: Date;
         updatedAt: Date;
+        tenantId: string;
+        description: string | null;
+        leadId: string | null;
     }>;
     updateTeam(tenantId: string, userId: string, teamId: string, dto: UpdateTeamDto): Promise<{
-        id: string;
-        tenantId: string;
         name: string;
-        description: string | null;
-        leadId: string | null;
+        id: string;
         createdAt: Date;
         updatedAt: Date;
+        tenantId: string;
+        description: string | null;
+        leadId: string | null;
     }>;
     deleteTeam(tenantId: string, userId: string, teamId: string): Promise<{
         success: boolean;
@@ -60,11 +60,11 @@ export declare class TeamsService {
     }>;
     addMember(tenantId: string, userId: string, teamId: string, dto: AddMemberDto): Promise<{
         id: string;
-        tenantId: string;
-        teamId: string;
-        userId: string;
-        role: string | null;
         createdAt: Date;
+        tenantId: string;
+        role: string | null;
+        userId: string;
+        teamId: string;
     }>;
     removeMember(tenantId: string, userId: string, teamId: string, memberId: string): Promise<{
         success: boolean;
@@ -74,21 +74,21 @@ export declare class TeamsService {
         id: string;
         userId: string;
         teamRole: string | null;
-        effectiveRole: import(".prisma/client").$Enums.Role;
+        effectiveRole: import("@prisma/client").$Enums.Role;
         user: {
             name: string | null;
             id: string;
             email: string;
-            role: import(".prisma/client").$Enums.Role;
-            status: import(".prisma/client").$Enums.UserStatus;
+            role: import("@prisma/client").$Enums.Role;
+            status: import("@prisma/client").$Enums.UserStatus;
         };
         createdAt: Date;
     }[]>;
-    getAvailableInterviewers(teamId: string, dateRange?: any): Promise<{
+    getAvailableInterviewers(tenantId: string, teamId: string, dateRange?: any): Promise<{
         name: string | null;
         id: string;
         email: string;
-        role: import(".prisma/client").$Enums.Role;
-        status: import(".prisma/client").$Enums.UserStatus;
+        role: import("@prisma/client").$Enums.Role;
+        status: import("@prisma/client").$Enums.UserStatus;
     }[]>;
 }

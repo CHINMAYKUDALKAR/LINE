@@ -1,5 +1,6 @@
 import { IsArray, IsISO8601, IsInt, IsString, IsEnum, IsOptional, Min, ArrayMinSize } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsTimezone } from '../../../common/validators/timezone.validator';
 
 /**
  * Bulk scheduling mode - explicit selection required
@@ -71,7 +72,7 @@ export class BulkScheduleDto {
 
     @ApiPropertyOptional({ description: 'Timezone for scheduling', example: 'Asia/Kolkata' })
     @IsOptional()
-    @IsString()
+    @IsTimezone()
     timezone?: string;
 
     // Legacy fields - kept for backward compatibility

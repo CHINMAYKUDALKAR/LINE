@@ -6,32 +6,70 @@ import { AutomationRule, Prisma } from '@prisma/client';
 export class AutomationService {
     constructor(private prisma: PrismaService) { }
 
-    async createRule(tenantId: string, data: Prisma.AutomationRuleCreateWithoutTenantInput): Promise<AutomationRule> {
-        return this.prisma.automationRule.create({
+    async createRule(tenantId: string, userId: string, data: Prisma.AutomationRuleCreateWithoutTenantInput): Promise<AutomationRule> {
+        const rule = await this.prisma.automationRule.create({
             data: {
                 ...data,
                 tenant: { connect: { id: tenantId } },
             },
         });
+
+        // Audit log
+        await this.prisma.auditLog.create({
+            data: {
+                tenantId,
+                userId,
+                action: 'automation.rule.created',
+                metadata: { ruleId: rule.id, name: rule.name },
+            },
+        });
+
+        return rule;
     }
 
-    async getRules(tenantId: string): Promise<AutomationRule[]> {
+    async getRules(tenantId: string, limit = 100): Promise<AutomationRule[]> {
         return this.prisma.automationRule.findMany({
             where: { tenantId },
             include: { template: true },
+            take: Math.min(limit, 100),
+            orderBy: { createdAt: 'desc' },
         });
     }
 
-    async updateRule(tenantId: string, id: string, data: Prisma.AutomationRuleUpdateInput): Promise<AutomationRule> {
-        return this.prisma.automationRule.update({
+    async updateRule(tenantId: string, userId: string, id: string, data: Prisma.AutomationRuleUpdateInput): Promise<AutomationRule> {
+        const rule = await this.prisma.automationRule.update({
             where: { id, tenantId },
             data,
         });
+
+        // Audit log
+        await this.prisma.auditLog.create({
+            data: {
+                tenantId,
+                userId,
+                action: 'automation.rule.updated',
+                metadata: { ruleId: id, changes: JSON.parse(JSON.stringify(data)) },
+            },
+        });
+
+        return rule;
     }
 
-    async deleteRule(tenantId: string, id: string): Promise<AutomationRule> {
-        return this.prisma.automationRule.delete({
+    async deleteRule(tenantId: string, userId: string, id: string): Promise<AutomationRule> {
+        const rule = await this.prisma.automationRule.delete({
             where: { id, tenantId },
         });
+
+        // Audit log
+        await this.prisma.auditLog.create({
+            data: {
+                tenantId,
+                userId,
+                action: 'automation.rule.deleted',
+                metadata: { ruleId: id, name: rule.name },
+            },
+        });
+
+        return rule;
     }
 }

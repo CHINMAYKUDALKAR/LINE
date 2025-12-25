@@ -19,12 +19,14 @@ export declare class GenerateSlotsDto {
     slotDurationMins: number;
     ruleId?: string;
     timezone: string;
+    maxSlots?: number;
 }
 export declare class BookSlotDto {
     interviewId?: string;
     candidate: SlotParticipantDto;
     candidateId?: string;
     metadata?: Record<string, any>;
+    forceBook?: boolean;
 }
 export declare class RescheduleSlotDto {
     newStartAt: string;

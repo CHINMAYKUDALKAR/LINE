@@ -1,12 +1,30 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import axios from 'axios';
 import { PrismaService } from '../../../common/prisma.service';
 import { ZohoOAuthService } from './zoho.oauth.service';
 import { ZohoFieldMapService } from './zoho.fieldmap.service';
 
+/**
+ * Zoho Lead Status → Lineup Stage mapping (inbound)
+ */
+const ZOHO_STATUS_TO_STAGE: Record<string, string> = {
+    'Attempted to Contact': 'SCREENING',
+    'Contact in Future': 'APPLIED',
+    'Contacted': 'SCREENING',
+    'Junk Lead': 'REJECTED',
+    'Lost Lead': 'REJECTED',
+    'Not Contacted': 'APPLIED',
+    'Pre-Qualified': 'PHONE_SCREEN',
+    'Not Qualified': 'REJECTED',
+    'Qualified': 'INTERVIEW',
+    'Closed Won': 'HIRED',
+    'Closed Lost': 'REJECTED',
+};
+
 @Injectable()
 export class ZohoSyncService {
-    private zohoApi = 'https://www.zohoapis.com/crm/v2';
+    private readonly logger = new Logger(ZohoSyncService.name);
+    private zohoApi = 'https://www.zohoapis.in/crm/v2'; // India region
 
     constructor(
         private prisma: PrismaService,
@@ -14,9 +32,17 @@ export class ZohoSyncService {
         private fieldmap: ZohoFieldMapService,
     ) { }
 
+    /**
+     * Sync Leads from Zoho CRM to Lineup Candidates
+     */
     async syncLeads(tenantId: string) {
+        this.logger.log(`Starting Zoho Leads sync for tenant: ${tenantId}`);
         const token = await this.oauth.getAccessToken(tenantId);
         const mapping = await this.fieldmap.getMapping(tenantId, 'leads');
+
+        let imported = 0;
+        let updated = 0;
+        let errors = 0;
 
         try {
             const res = await axios.get(`${this.zohoApi}/Leads`, {
@@ -24,51 +50,101 @@ export class ZohoSyncService {
             });
 
             const records = res.data?.data || [];
+            this.logger.log(`Found ${records.length} leads in Zoho`);
+
             for (const rec of records) {
-                const mapped = this.applyMapping(rec, mapping);
+                try {
+                    const mapped = this.applyMapping(rec, mapping);
+                    const zohoId = rec.id;
+                    const stage = this.mapZohoStatusToStage(rec.Lead_Status);
 
-                const existing = await this.prisma.candidate.findFirst({
-                    where: { tenantId, email: mapped.email }
-                });
-
-                if (existing) {
-                    await this.prisma.candidate.update({
-                        where: { id: existing.id },
-                        data: {
-                            name: mapped.name,
-                            phone: mapped.phone
-                        }
-                    });
-                } else {
-                    await this.prisma.candidate.create({
-                        data: {
+                    // Try to find by externalId first (Zoho ID), then by email
+                    let existing = await this.prisma.candidate.findFirst({
+                        where: {
                             tenantId,
-                            name: mapped.name || 'Unknown',
-                            email: mapped.email,
-                            phone: mapped.phone,
-                            stage: 'imported',
-                            source: 'zoho',
-                            tags: []
+                            externalId: zohoId,
+                            externalSource: 'ZOHO_CRM',
                         }
                     });
+
+                    if (!existing && mapped.email) {
+                        existing = await this.prisma.candidate.findFirst({
+                            where: { tenantId, email: mapped.email }
+                        });
+                    }
+
+                    if (existing) {
+                        await this.prisma.candidate.update({
+                            where: { id: existing.id },
+                            data: {
+                                name: mapped.name || existing.name,
+                                phone: mapped.phone || existing.phone,
+                                roleTitle: mapped.roleTitle || existing.roleTitle,
+                                externalId: zohoId,
+                                externalSource: 'ZOHO_CRM',
+                                rawExternalData: rec as any, // Store complete Zoho payload
+                                // Don't overwrite stage if already set to something meaningful
+                                ...(existing.stage === 'APPLIED' || existing.stage === 'imported' ? { stage } : {}),
+                            }
+                        });
+                        updated++;;
+                    } else {
+                        await this.prisma.candidate.create({
+                            data: {
+                                tenantId,
+                                name: mapped.name || 'Unknown',
+                                email: mapped.email,
+                                phone: mapped.phone,
+                                roleTitle: mapped.roleTitle,
+                                stage: 'APPLIED', // SOW default
+                                source: 'ZOHO_CRM',
+                                externalId: zohoId,
+                                externalSource: 'ZOHO_CRM',
+                                rawExternalData: rec as any, // Store complete Zoho payload
+                                tags: [],
+                            }
+                        });
+                        imported++;
+                    }
+                } catch (err: any) {
+                    this.logger.error(`Failed to sync lead ${rec.id}: ${err.message}`);
+                    errors++;
                 }
             }
 
+            // Update integration last sync time
             await this.prisma.integration.updateMany({
                 where: { tenantId, provider: 'zoho' },
-                data: { status: 'active' }
+                data: {
+                    status: 'connected',
+                    lastSyncedAt: new Date(),
+                }
             });
 
-            return { imported: records.length };
-        } catch (e) {
-            // If token invalid, could trigger refresh here or let processor retry
+            const result = { imported, updated, errors, total: records.length };
+            this.logger.log(`Zoho Leads sync complete: ${JSON.stringify(result)}`);
+            return result;
+        } catch (e: any) {
+            this.logger.error(`Zoho Leads sync failed: ${e.message}`);
+            await this.prisma.integration.updateMany({
+                where: { tenantId, provider: 'zoho' },
+                data: { status: 'error', lastError: e.message }
+            });
             throw e;
         }
     }
 
+    /**
+     * Sync Contacts from Zoho CRM to Lineup Candidates
+     */
     async syncContacts(tenantId: string) {
+        this.logger.log(`Starting Zoho Contacts sync for tenant: ${tenantId}`);
         const token = await this.oauth.getAccessToken(tenantId);
         const mapping = await this.fieldmap.getMapping(tenantId, 'contacts');
+
+        let imported = 0;
+        let updated = 0;
+        let errors = 0;
 
         try {
             const res = await axios.get(`${this.zohoApi}/Contacts`, {
@@ -76,52 +152,352 @@ export class ZohoSyncService {
             });
 
             const records = res.data?.data || [];
+            this.logger.log(`Found ${records.length} contacts in Zoho`);
+
             for (const rec of records) {
-                const mapped = this.applyMapping(rec, mapping);
+                try {
+                    const mapped = this.applyMapping(rec, mapping);
+                    const zohoId = rec.id;
 
-                const existing = await this.prisma.candidate.findFirst({
-                    where: { tenantId, email: mapped.email }
-                });
-
-                if (existing) {
-                    await this.prisma.candidate.update({
-                        where: { id: existing.id },
-                        data: {
-                            name: mapped.name,
-                            phone: mapped.phone
-                        }
-                    });
-                } else {
-                    await this.prisma.candidate.create({
-                        data: {
+                    // Try to find by externalId first (Zoho ID), then by email
+                    let existing = await this.prisma.candidate.findFirst({
+                        where: {
                             tenantId,
-                            name: mapped.name || 'Unknown',
-                            email: mapped.email,
-                            phone: mapped.phone,
-                            stage: 'imported',
-                            source: 'zoho'
+                            externalId: zohoId,
+                            externalSource: 'ZOHO_CRM',
                         }
                     });
+
+                    if (!existing && mapped.email) {
+                        existing = await this.prisma.candidate.findFirst({
+                            where: { tenantId, email: mapped.email }
+                        });
+                    }
+
+                    if (existing) {
+                        await this.prisma.candidate.update({
+                            where: { id: existing.id },
+                            data: {
+                                name: mapped.name || existing.name,
+                                phone: mapped.phone || existing.phone,
+                                roleTitle: mapped.roleTitle || existing.roleTitle,
+                                externalId: zohoId,
+                                externalSource: 'ZOHO_CRM',
+                                rawExternalData: rec as any, // Store complete Zoho payload
+                            }
+                        });
+                        updated++;
+                    } else {
+                        await this.prisma.candidate.create({
+                            data: {
+                                tenantId,
+                                name: mapped.name || 'Unknown',
+                                email: mapped.email,
+                                phone: mapped.phone,
+                                roleTitle: mapped.roleTitle,
+                                stage: 'APPLIED', // SOW default
+                                source: 'ZOHO_CRM',
+                                externalId: zohoId,
+                                externalSource: 'ZOHO_CRM',
+                                rawExternalData: rec as any, // Store complete Zoho payload
+                                tags: [],
+                            }
+                        });
+                        imported++;
+                    }
+                } catch (err: any) {
+                    this.logger.error(`Failed to sync contact ${rec.id}: ${err.message}`);
+                    errors++;
                 }
             }
-            return { imported: records.length };
-        } catch (e) {
+
+            // Update integration last sync time
+            await this.prisma.integration.updateMany({
+                where: { tenantId, provider: 'zoho' },
+                data: {
+                    status: 'connected',
+                    lastSyncedAt: new Date(),
+                }
+            });
+
+            const result = { imported, updated, errors, total: records.length };
+            this.logger.log(`Zoho Contacts sync complete: ${JSON.stringify(result)}`);
+            return result;
+        } catch (e: any) {
+            this.logger.error(`Zoho Contacts sync failed: ${e.message}`);
+            await this.prisma.integration.updateMany({
+                where: { tenantId, provider: 'zoho' },
+                data: { status: 'error', lastError: e.message }
+            });
             throw e;
         }
     }
 
+    /**
+     * Map Zoho fields to Lineup candidate fields
+     */
     applyMapping(record: any, mapping: Record<string, string>) {
         const result: any = {};
-        // If no mapping, try default field names
+
         if (!mapping || Object.keys(mapping).length === 0) {
-            result.name = record.Full_Name || `${record.First_Name} ${record.Last_Name}`.trim();
+            // Default field mapping
+            result.name = record.Full_Name ||
+                `${record.First_Name || ''} ${record.Last_Name || ''}`.trim() ||
+                'Unknown';
             result.email = record.Email;
-            result.phone = record.Phone;
+            result.phone = record.Phone || record.Mobile;
+            result.roleTitle = record.Title || record.Designation;
         } else {
             for (const [localField, zohoField] of Object.entries(mapping)) {
                 result[localField] = record[zohoField];
             }
         }
+
         return result;
+    }
+
+    /**
+     * Map Zoho Lead Status to Lineup stage
+     */
+    mapZohoStatusToStage(zohoStatus: string): string {
+        if (!zohoStatus) return 'APPLIED';
+        return ZOHO_STATUS_TO_STAGE[zohoStatus] || 'APPLIED';
+    }
+
+    // ============================================
+    // Pipeline Stages Sync
+    // ============================================
+
+    /**
+     * Sync pipeline stages from Zoho CRM to Lineup HiringStage table
+     */
+    async syncStages(tenantId: string) {
+        this.logger.log(`Starting Zoho Stages sync for tenant: ${tenantId}`);
+        const token = await this.oauth.getAccessToken(tenantId);
+
+        let imported = 0;
+        let updated = 0;
+
+        try {
+            // Fetch Lead_Status picklist values from Zoho
+            const res = await axios.get(`${this.zohoApi}/settings/fields`, {
+                headers: { Authorization: `Zoho-oauthtoken ${token}` },
+                params: { module: 'Leads' }
+            });
+
+            const fields = res.data?.fields || [];
+            const statusField = fields.find((f: any) =>
+                f.api_name === 'Lead_Status' || f.field_label === 'Lead Status'
+            );
+
+            const stages = statusField?.pick_list_values || [];
+            this.logger.log(`Found ${stages.length} stages in Zoho`);
+
+            // Sync each stage to HiringStage table
+            for (let i = 0; i < stages.length; i++) {
+                const stage = stages[i];
+                const stageName = stage.display_value || stage.actual_value;
+                const stageKey = stageName.toUpperCase().replace(/\s+/g, '_');
+
+                const existing = await this.prisma.hiringStage.findFirst({
+                    where: {
+                        tenantId,
+                        name: stageName,
+                    }
+                });
+
+                if (existing) {
+                    await this.prisma.hiringStage.update({
+                        where: { id: existing.id },
+                        data: { order: i }
+                    });
+                    updated++;
+                } else {
+                    await this.prisma.hiringStage.create({
+                        data: {
+                            tenantId,
+                            name: stageName,
+                            key: stageKey,
+                            order: i,
+                            color: this.getStageColor(i),
+                        }
+                    });
+                    imported++;
+                }
+            }
+
+            const result = { imported, updated, total: stages.length };
+            this.logger.log(`Zoho Stages sync complete: ${JSON.stringify(result)}`);
+            return result;
+        } catch (e: any) {
+            this.logger.error(`Zoho Stages sync failed: ${e.message}`);
+            throw e;
+        }
+    }
+
+    /**
+     * Get a color for a stage based on its order
+     */
+    private getStageColor(index: number): string {
+        const colors = [
+            '#3B82F6', // blue
+            '#8B5CF6', // purple
+            '#EC4899', // pink
+            '#F59E0B', // amber
+            '#10B981', // green
+            '#EF4444', // red
+            '#6366F1', // indigo
+            '#14B8A6', // teal
+        ];
+        return colors[index % colors.length];
+    }
+
+    // ============================================
+    // Users/Recruiters Sync
+    // ============================================
+
+    /**
+     * Sync users/recruiters from Zoho CRM to Lineup User table
+     */
+    async syncUsers(tenantId: string) {
+        this.logger.log(`Starting Zoho Users sync for tenant: ${tenantId}`);
+        const token = await this.oauth.getAccessToken(tenantId);
+
+        let imported = 0;
+        let updated = 0;
+        let errors = 0;
+
+        try {
+            // Fetch all users from Zoho
+            const res = await axios.get(`${this.zohoApi}/users`, {
+                headers: { Authorization: `Zoho-oauthtoken ${token}` },
+                params: { type: 'AllUsers' }
+            });
+
+            const users = res.data?.users || [];
+            this.logger.log(`Found ${users.length} users in Zoho`);
+
+            for (const zohoUser of users) {
+                try {
+                    // Skip inactive users
+                    if (zohoUser.status === 'deleted' || zohoUser.status === 'inactive') {
+                        continue;
+                    }
+
+                    const email = zohoUser.email?.toLowerCase();
+                    if (!email) continue;
+
+                    const zohoUserId = zohoUser.id;
+                    const fullName = zohoUser.full_name || zohoUser.name || 'Unknown';
+
+                    // Check if user already exists in Lineup
+                    let existingUser = await this.prisma.user.findFirst({
+                        where: { email }
+                    });
+
+                    if (existingUser) {
+                        // Update user with externalId if not set
+                        // Note: We don't create new users, just link existing ones
+                        this.logger.debug(`User ${email} already exists in Lineup`);
+                        updated++;
+                    } else {
+                        // Create a new user with basic info
+                        // In production, you'd want to handle password/invite flow
+                        const newUser = await this.prisma.user.create({
+                            data: {
+                                email,
+                                name: fullName,
+                                password: '', // No password - needs invite flow
+                                emailVerified: false,
+                            }
+                        });
+
+                        // Link user to tenant
+                        await this.prisma.userTenant.create({
+                            data: {
+                                userId: newUser.id,
+                                tenantId,
+                                role: this.mapZohoRoleToLineup(zohoUser.role?.name),
+                                status: 'ACTIVE',
+                            }
+                        });
+
+                        imported++;
+                        this.logger.log(`Created user: ${email} with role ${zohoUser.role?.name}`);
+                    }
+                } catch (err: any) {
+                    this.logger.error(`Failed to sync user ${zohoUser.email}: ${err.message}`);
+                    errors++;
+                }
+            }
+
+            const result = { imported, updated, errors, total: users.length };
+            this.logger.log(`Zoho Users sync complete: ${JSON.stringify(result)}`);
+            return result;
+        } catch (e: any) {
+            this.logger.error(`Zoho Users sync failed: ${e.message}`);
+            throw e;
+        }
+    }
+
+    /**
+     * Map Zoho role to Lineup role
+     */
+    private mapZohoRoleToLineup(zohoRole: string): any {
+        const roleMap: Record<string, string> = {
+            'Administrator': 'ADMIN',
+            'CEO': 'ADMIN',
+            'Manager': 'MANAGER',
+            'Standard': 'RECRUITER',
+        };
+        return roleMap[zohoRole] || 'RECRUITER';
+    }
+
+    // ============================================
+    // Full Sync (All Data)
+    // ============================================
+
+    /**
+     * Perform a full sync of all Zoho data
+     */
+    async syncAll(tenantId: string, module: string = 'leads') {
+        this.logger.log(`Starting full Zoho sync for tenant: ${tenantId}`);
+
+        const results: any = {
+            stages: null,
+            users: null,
+            candidates: null,
+        };
+
+        try {
+            // 1. Sync stages first (needed for candidate stage mapping)
+            results.stages = await this.syncStages(tenantId);
+        } catch (e: any) {
+            this.logger.error(`Stages sync failed: ${e.message}`);
+            results.stages = { error: e.message };
+        }
+
+        try {
+            // 2. Sync users (recruiters)
+            results.users = await this.syncUsers(tenantId);
+        } catch (e: any) {
+            this.logger.error(`Users sync failed: ${e.message}`);
+            results.users = { error: e.message };
+        }
+
+        try {
+            // 3. Sync candidates
+            if (module === 'leads') {
+                results.candidates = await this.syncLeads(tenantId);
+            } else {
+                results.candidates = await this.syncContacts(tenantId);
+            }
+        } catch (e: any) {
+            this.logger.error(`Candidates sync failed: ${e.message}`);
+            results.candidates = { error: e.message };
+        }
+
+        this.logger.log(`Full Zoho sync complete: ${JSON.stringify(results)}`);
+        return results;
     }
 }

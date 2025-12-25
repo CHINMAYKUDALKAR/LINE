@@ -12,7 +12,9 @@ const bullmq_1 = require("@nestjs/bullmq");
 const config_1 = require("@nestjs/config");
 const prisma_service_1 = require("../../common/prisma.service");
 const audit_module_1 = require("../audit/audit.module");
+const zoho_module_1 = require("./zoho/zoho.module");
 const integrations_controller_1 = require("./integrations.controller");
+const oauth_callback_controller_1 = require("./oauth-callback.controller");
 const webhook_controller_1 = require("./webhooks/webhook.controller");
 const integrations_service_1 = require("./integrations.service");
 const webhook_service_1 = require("./webhooks/webhook.service");
@@ -57,11 +59,12 @@ exports.IntegrationsModule = IntegrationsModule;
 exports.IntegrationsModule = IntegrationsModule = __decorate([
     (0, common_1.Module)({
         imports: [
-            bullmq_1.BullModule.registerQueue({ name: 'integration-sync' }, { name: 'integration-dlq' }),
+            bullmq_1.BullModule.registerQueue({ name: 'integration-sync' }, { name: 'integration-dlq' }, { name: 'zoho-sync' }),
             audit_module_1.AuditModule,
             config_1.ConfigModule,
+            zoho_module_1.ZohoModule,
         ],
-        controllers: [integrations_controller_1.IntegrationsController, webhook_controller_1.WebhookController],
+        controllers: [integrations_controller_1.IntegrationsController, oauth_callback_controller_1.OAuthCallbackController, webhook_controller_1.WebhookController],
         providers: [
             prisma_service_1.PrismaService,
             integrations_service_1.IntegrationsService,

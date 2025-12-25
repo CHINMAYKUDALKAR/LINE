@@ -5,7 +5,7 @@
 
 import { client } from './client';
 
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
 interface UploadUrlResponse {
     fileId: string;
@@ -26,7 +26,7 @@ interface AttachResumeRequest {
 export async function uploadCandidateResume(
     candidateId: string,
     file: File,
-    token: string // kept for compat, client handles auth
+    _token?: string // deprecated, kept for backward compatibility
 ): Promise<{ success: boolean; fileId: string }> {
     try {
         // Step 1: Request upload URL
@@ -68,7 +68,6 @@ export async function uploadCandidateResume(
             fileId: result.fileId,
         };
     } catch (error) {
-        console.error('Resume upload failed:', error);
         throw error;
     }
 }
@@ -76,7 +75,7 @@ export async function uploadCandidateResume(
 /**
  * Get candidate details
  */
-export async function getCandidate(candidateId: string, token?: string) {
+export async function getCandidate(candidateId: string, _token?: string) {
     return client.get(`/candidates/${candidateId}`);
 }
 
@@ -84,7 +83,7 @@ export async function getCandidate(candidateId: string, token?: string) {
  * List all candidates with filters
  */
 export async function listCandidates(
-    token?: string,
+    _token?: string, // deprecated, auth handled by client
     params?: {
         page?: number;
         perPage?: number;
@@ -112,7 +111,7 @@ export async function listCandidates(
 /**
  * Get all documents for a candidate
  */
-export async function getCandidateDocuments(candidateId: string, token?: string) {
+export async function getCandidateDocuments(candidateId: string, _token?: string) {
     return client.get(`/candidates/${candidateId}/documents`);
 }
 
@@ -137,7 +136,7 @@ export interface CandidateNoteResponse {
 /**
  * Get all notes for a candidate
  */
-export async function getCandidateNotes(candidateId: string, token?: string): Promise<{ data: CandidateNoteResponse[] }> {
+export async function getCandidateNotes(candidateId: string, _token?: string): Promise<{ data: CandidateNoteResponse[] }> {
     return client.get(`/candidates/${candidateId}/notes`);
 }
 
@@ -147,7 +146,7 @@ export async function getCandidateNotes(candidateId: string, token?: string): Pr
 export async function addCandidateNote(
     candidateId: string,
     content: string,
-    token?: string
+    _token?: string
 ): Promise<CandidateNoteResponse> {
     return client.post(`/candidates/${candidateId}/notes`, { content });
 }
@@ -159,7 +158,7 @@ export async function updateCandidateNote(
     candidateId: string,
     noteId: string,
     content: string,
-    token?: string
+    _token?: string
 ): Promise<CandidateNoteResponse> {
     return client.patch(`/candidates/${candidateId}/notes/${noteId}`, { content });
 }
@@ -170,7 +169,7 @@ export async function updateCandidateNote(
 export async function deleteCandidateNote(
     candidateId: string,
     noteId: string,
-    token?: string
+    _token?: string
 ): Promise<{ success: boolean }> {
     return client.delete(`/candidates/${candidateId}/notes/${noteId}`);
 }

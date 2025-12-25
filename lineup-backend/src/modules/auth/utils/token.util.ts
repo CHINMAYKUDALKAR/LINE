@@ -12,9 +12,27 @@ export function signRefreshToken(payload: object) {
 }
 
 export function verifyAccessToken(token: string) {
-    return jwt.verify(token, process.env.JWT_SECRET as string);
+    try {
+        return jwt.verify(token, process.env.JWT_SECRET as string);
+    } catch (error: any) {
+        if (error.name === 'TokenExpiredError') {
+            throw new Error('Access token has expired');
+        } else if (error.name === 'JsonWebTokenError') {
+            throw new Error('Invalid access token');
+        }
+        throw error;
+    }
 }
 
 export function verifyRefreshToken(token: string) {
-    return jwt.verify(token, (process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET) as string);
+    try {
+        return jwt.verify(token, (process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET) as string);
+    } catch (error: any) {
+        if (error.name === 'TokenExpiredError') {
+            throw new Error('Refresh token has expired');
+        } else if (error.name === 'JsonWebTokenError') {
+            throw new Error('Invalid refresh token');
+        }
+        throw error;
+    }
 }

@@ -21,6 +21,7 @@ export default function Integrations() {
     const [selectedIntegration, setSelectedIntegration] = useState<Integration | null>(null);
     const [isPanelOpen, setIsPanelOpen] = useState(false);
     const [isConnecting, setIsConnecting] = useState(false);
+    const [syncingProvider, setSyncingProvider] = useState<string | null>(null);
 
     // Always allow access (real RBAC should use auth context)
     const hasAccess = true;
@@ -71,8 +72,10 @@ export default function Integrations() {
     }, [fetchIntegrations]);
 
     const filteredIntegrations = integrations.filter((integration) => {
-        const matchesSearch = integration.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            integration.provider.toLowerCase().includes(searchQuery.toLowerCase());
+        const name = integration.name || '';
+        const provider = integration.provider || '';
+        const matchesSearch = name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            provider.toLowerCase().includes(searchQuery.toLowerCase());
         const matchesStatus = statusFilter === 'all' || integration.status === statusFilter;
         return matchesSearch && matchesStatus;
     });
@@ -132,19 +135,30 @@ export default function Integrations() {
         }
     };
 
-    const handleSync = async (provider: string) => {
+    const handleSync = async (integrationId: string) => {
+        // Find the integration to get the provider
+        const integration = integrations.find((i) => i.id === integrationId);
+        if (!integration) return;
+
+        const provider = integration.provider;
+        setSyncingProvider(provider);
+
         try {
             const response = await integrationsApi.triggerSync(provider);
             if (response.success) {
                 toast.success('Sync Started', {
-                    description: response.message || 'Sync job has been queued.'
+                    description: response.message || 'Sync job has been queued. Candidates will appear shortly.'
                 });
+                // Refresh integrations to show updated lastSyncAt
+                setTimeout(() => fetchIntegrations(), 2000);
             }
         } catch (err) {
             console.error('Failed to trigger sync:', err);
             toast.error('Sync Failed', {
                 description: 'Could not start sync. Please try again.'
             });
+        } finally {
+            setSyncingProvider(null);
         }
     };
 
@@ -243,7 +257,9 @@ export default function Integrations() {
                                         integration={integration}
                                         onConfigure={handleConfigure}
                                         onConnect={handleConnect}
+                                        onSync={handleSync}
                                         isConnecting={isConnecting}
+                                        isSyncing={syncingProvider === integration.provider}
                                     />
                                 </motion.div>
                             ))}

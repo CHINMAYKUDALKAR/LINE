@@ -57,7 +57,7 @@ export class TeamsService {
 
     async listTeams(tenantId: string, dto: ListTeamsDto) {
         const page = dto.page || 1;
-        const perPage = dto.perPage || 20;
+        const perPage = Math.min(dto.perPage || 20, 100);
         const where: any = { tenantId };
 
         if (dto.q) where.name = { contains: dto.q, mode: 'insensitive' };
@@ -212,6 +212,7 @@ export class TeamsService {
 
         const members = await this.prisma.teamMember.findMany({
             where: { teamId, tenantId },
+            take: 200, // Limit to 200 members
             include: {
                 user: {
                     select: {
@@ -235,9 +236,15 @@ export class TeamsService {
         }));
     }
 
-    async getAvailableInterviewers(teamId: string, dateRange?: any) {
+    async getAvailableInterviewers(tenantId: string, teamId: string, dateRange?: any) {
+        // Validate team belongs to tenant
+        const team = await this.prisma.team.findFirst({
+            where: { id: teamId, tenantId },
+        });
+        if (!team) throw new NotFoundException('Team not found');
+
         const members = await this.prisma.teamMember.findMany({
-            where: { teamId },
+            where: { teamId, tenantId },
             include: {
                 user: {
                     select: {

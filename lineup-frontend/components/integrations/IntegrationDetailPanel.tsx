@@ -40,10 +40,10 @@ export function IntegrationDetailPanel({ integration, isOpen, onClose, onUpdate,
 
   if (!integration) return null;
 
-  const status = statusConfig[integration.status];
+  const status = statusConfig[integration.status] || statusConfig.disconnected;
   const StatusIcon = status.icon;
   const isConnected = integration.status === 'connected' || integration.status === 'syncing';
-  const needsAuth = integration.status === 'pending_auth' || integration.status === 'error' || integration.status === 'disconnected';
+  const needsAuth = !isConnected; // Any status that isn't connected needs auth
 
   const handleDisconnect = async () => {
     if (onDisconnect) {

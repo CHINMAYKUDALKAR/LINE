@@ -61,6 +61,19 @@ export class IdentityProviderService {
     }
 
     /**
+     * Omit sensitive fields from identity provider responses
+     */
+    private sanitizeProvider(provider: any) {
+        if (!provider) return provider;
+        const { clientSecret, samlCertificate, ...safe } = provider;
+        return {
+            ...safe,
+            hasSecret: !!clientSecret,
+            hasCertificate: !!samlCertificate,
+        };
+    }
+
+    /**
      * Create a new identity provider configuration
      * Only Tenant SuperAdmin can create
      */
@@ -76,7 +89,7 @@ export class IdentityProviderService {
             throw new ForbiddenException(`Provider ${dto.providerType} already configured for this tenant`);
         }
 
-        return this.prisma.identityProvider.create({
+        const provider = await this.prisma.identityProvider.create({
             data: {
                 tenantId,
                 providerType: dto.providerType as any,
@@ -95,6 +108,8 @@ export class IdentityProviderService {
                 createdById: userId
             }
         });
+
+        return this.sanitizeProvider(provider);
     }
 
     /**
@@ -110,13 +125,15 @@ export class IdentityProviderService {
         // Verify provider exists and belongs to tenant
         await this.findOne(tenantId, id);
 
-        return this.prisma.identityProvider.update({
+        const provider = await this.prisma.identityProvider.update({
             where: { id },
             data: {
                 ...dto,
                 updatedById: userId
             }
         });
+
+        return this.sanitizeProvider(provider);
     }
 
     /**

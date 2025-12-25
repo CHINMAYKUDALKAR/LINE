@@ -61,7 +61,7 @@ let TeamsService = class TeamsService {
     }
     async listTeams(tenantId, dto) {
         const page = dto.page || 1;
-        const perPage = dto.perPage || 20;
+        const perPage = Math.min(dto.perPage || 20, 100);
         const where = { tenantId };
         if (dto.q)
             where.name = { contains: dto.q, mode: 'insensitive' };
@@ -200,6 +200,7 @@ let TeamsService = class TeamsService {
             throw new common_1.NotFoundException('Team not found');
         const members = await this.prisma.teamMember.findMany({
             where: { teamId, tenantId },
+            take: 200,
             include: {
                 user: {
                     select: {
@@ -221,9 +222,14 @@ let TeamsService = class TeamsService {
             createdAt: m.createdAt,
         }));
     }
-    async getAvailableInterviewers(teamId, dateRange) {
+    async getAvailableInterviewers(tenantId, teamId, dateRange) {
+        const team = await this.prisma.team.findFirst({
+            where: { id: teamId, tenantId },
+        });
+        if (!team)
+            throw new common_1.NotFoundException('Team not found');
         const members = await this.prisma.teamMember.findMany({
-            where: { teamId },
+            where: { teamId, tenantId },
             include: {
                 user: {
                     select: {

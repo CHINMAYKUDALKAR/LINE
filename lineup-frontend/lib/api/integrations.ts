@@ -67,7 +67,6 @@ export async function getIntegrations(): Promise<Integration[]> {
         const response = await client.get<Integration[]>('/integrations');
         return response || [];
     } catch (error) {
-        console.error('Failed to fetch integrations:', error);
         throw error;
     }
 }
@@ -80,7 +79,6 @@ export async function getIntegration(provider: string): Promise<Integration | nu
         const response = await client.get<Integration>(`/integrations/${provider}`);
         return response;
     } catch (error) {
-        console.error(`Failed to fetch integration ${provider}:`, error);
         throw error;
     }
 }
@@ -96,7 +94,6 @@ export async function connect(provider: string): Promise<ConnectResponse> {
         });
         return response;
     } catch (error) {
-        console.error(`Failed to initiate connection for ${provider}:`, error);
         throw error;
     }
 }
@@ -111,7 +108,6 @@ export async function disconnect(provider: string): Promise<DisconnectResponse> 
         });
         return response;
     } catch (error) {
-        console.error(`Failed to disconnect ${provider}:`, error);
         throw error;
     }
 }
@@ -132,7 +128,6 @@ export async function updateMapping(
         });
         return response;
     } catch (error) {
-        console.error(`Failed to update mapping for ${provider}:`, error);
         throw error;
     }
 }
@@ -151,7 +146,6 @@ export async function triggerSync(
         });
         return response;
     } catch (error) {
-        console.error(`Failed to trigger sync for ${provider}:`, error);
         throw error;
     }
 }
@@ -169,7 +163,6 @@ export async function getWebhookEvents(
         });
         return response;
     } catch (error) {
-        console.error(`Failed to fetch webhook events for ${provider}:`, error);
         throw error;
     }
 }
@@ -182,7 +175,6 @@ export async function getMetrics(provider: string): Promise<IntegrationMetrics |
         const response = await client.get<IntegrationMetrics>(`/integrations/${provider}/metrics`);
         return response;
     } catch (error) {
-        console.error(`Failed to fetch metrics for ${provider}:`, error);
         throw error;
     }
 }
@@ -203,7 +195,6 @@ export async function getFieldSchemas(provider: string): Promise<{
         }>(`/integrations/${provider}/fields`);
         return response;
     } catch (error) {
-        console.error(`Failed to fetch field schemas for ${provider}:`, error);
         throw error;
     }
 }
