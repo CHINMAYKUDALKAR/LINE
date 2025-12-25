@@ -1,14 +1,47 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Menu, X, Search } from 'lucide-react';
+import { useState } from 'react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { TenantSelector } from './TenantSelector';
+import { Input } from '@/components/ui/input';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import {
+  Search,
+  LayoutDashboard,
+  Users,
+  Calendar,
+  BarChart3,
+  Settings,
+  Trash2,
+  Activity,
+  Plug,
+  Video,
+  MessageSquare,
+  UserCog,
+  LucideIcon
+} from 'lucide-react';
 import { SidebarNavItem } from './SidebarNavItem';
 import { SidebarUserFooter } from './SidebarUserFooter';
-import { Tenant, CurrentUser, NavGroup } from '@/types/navigation';
-import { cn } from '@/lib/utils';
+import { TenantSelector } from './TenantSelector';
+import { NavGroup, NavItem as NavItemType, CurrentUser, Tenant } from '@/types/navigation';
+
+// Icon mapping from string to actual icon component
+const iconMap: Record<string, LucideIcon> = {
+  LayoutDashboard,
+  Users,
+  Calendar,
+  BarChart3,
+  Settings,
+  Trash2,
+  Activity,
+  Plug,
+  Video,
+  MessageSquare,
+  UserCog,
+};
 
 interface AppSidebarProps {
   tenants: Tenant[];
@@ -30,148 +63,120 @@ export function AppSidebar({
   onLogout,
 }: AppSidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
-  const [mobileOpen, setMobileOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const pathname = usePathname();
 
-  // Check if user has admin access
-  const hasAdminAccess = adminNav.requiredRole?.includes(currentUser.role) ?? false;
+  const currentTenant = tenants.find((t) => t.id === currentTenantId);
 
-  // Handle responsive behavior
-  useEffect(() => {
-    const handleResize = () => {
-      if (window.innerWidth < 768) {
-        setCollapsed(false);
-      } else if (window.innerWidth < 1024) {
-        setCollapsed(true);
-      }
-    };
-
-    handleResize();
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
-  // Platform detection for shortcut hint
-  const [shortcutKey, setShortcutKey] = useState<string>('Ctrl');
-
-  useEffect(() => {
-    if (typeof navigator !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.platform)) {
-      setShortcutKey('⌘');
-    }
-  }, []);
-
-  const SidebarContent = ({ isMobile = false }: { isMobile?: boolean }) => (
-    <div className="flex flex-col h-full">
-      {/* Tenant Selector */}
-      <div className="p-3 border-b border-border">
-        <TenantSelector
-          tenants={tenants}
-          currentTenantId={currentTenantId}
-          collapsed={isMobile ? false : collapsed}
-          onTenantChange={(id) => {
-            onTenantChange(id);
-            if (isMobile) setMobileOpen(false);
-          }}
-        />
-      </div>
-
-      {/* Search Button */}
-      <div className="px-3 py-2">
-        {!collapsed ? (
-          <Button
-            variant="outline"
-            className="relative w-full justify-start text-sm text-muted-foreground shadow-sm bg-background/50 h-9"
-            onClick={() => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true }))}
-          >
-            <Search className="mr-2 h-4 w-4" />
-            <span>Search...</span>
-            <kbd className="pointer-events-none absolute right-1.5 top-1.5 hidden h-6 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium opacity-100 sm:flex">
-              <span className="text-xs">{shortcutKey}</span>K
-            </kbd>
-          </Button>
-        ) : (
-          <div className="flex justify-center">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-9 w-9"
-              onClick={() => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true }))}
-            >
-              <Search className="h-4 w-4" />
-            </Button>
-          </div>
-        )}
-      </div>
-
-      {/* Navigation */}
-      <div className="flex-1 overflow-y-auto py-4 px-3 space-y-6">
-        {/* Main Navigation */}
-        <nav className="space-y-1">
-          {mainNav.items.map((item) => (
-            <div key={item.path} onClick={() => isMobile && setMobileOpen(false)}>
-              <SidebarNavItem
-                item={item}
-                collapsed={isMobile ? false : collapsed}
-              />
-            </div>
-          ))}
-        </nav>
-
-        {/* Admin Navigation */}
-        {hasAdminAccess && (
-          <div className="space-y-2">
-            {!collapsed && !isMobile && adminNav.label && (
-              <p className="px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                {adminNav.label}
-              </p>
-            )}
-            {(isMobile || (!isMobile && !collapsed)) && adminNav.label && collapsed && (
-              <div className="h-px bg-border mx-2" />
-            )}
-            {isMobile && adminNav.label && (
-              <p className="px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                {adminNav.label}
-              </p>
-            )}
-            <nav className="space-y-1">
-              {adminNav.items.map((item) => (
-                <div key={item.path} onClick={() => isMobile && setMobileOpen(false)}>
-                  <SidebarNavItem
-                    item={item}
-                    collapsed={isMobile ? false : collapsed}
-                  />
-                </div>
-              ))}
-            </nav>
-          </div>
-        )}
-      </div>
-
-      {/* User Footer */}
-      <SidebarUserFooter
-        user={currentUser}
-        collapsed={isMobile ? false : collapsed}
-        onToggleCollapse={() => setCollapsed(!collapsed)}
-        onLogout={() => {
-          onLogout();
-          if (isMobile) setMobileOpen(false);
-        }}
-      />
-    </div>
-  );
+  // Transform NavItem from types to the format expected by SidebarNavItem
+  const transformNavItem = (item: NavItemType) => ({
+    name: item.title,
+    href: item.path,
+    icon: iconMap[item.icon] || LayoutDashboard,
+    badge: item.badge,
+  });
 
   return (
-    <>
-      {/* Desktop Sidebar */}
-      <aside
-        className={cn(
-          'hidden md:flex flex-col h-[calc(100vh-2rem)] my-4 ml-4 rounded-2xl border border-white/20 shadow-xl',
-          'transition-all duration-500 ease-spring flex-shrink-0 z-30',
-          'bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl', // Glass effect
-          collapsed ? 'w-[80px]' : 'w-72'
+    <aside
+      className={cn(
+        'hidden md:flex flex-col h-screen bg-white border-r border-slate-200 transition-all duration-300 relative',
+        collapsed ? 'w-[68px]' : 'w-64'
+      )}
+    >
+      {/* Header / Tenant Selector */}
+      <div className="p-4 border-b border-slate-200">
+        {collapsed ? (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm cursor-pointer">
+                {currentTenant?.name?.charAt(0) || 'L'}
+              </div>
+            </TooltipTrigger>
+            <TooltipContent side="right">{currentTenant?.name || 'Lineup'}</TooltipContent>
+          </Tooltip>
+        ) : (
+          <TenantSelector
+            tenants={tenants}
+            currentTenantId={currentTenantId}
+            onTenantChange={onTenantChange}
+          />
         )}
-      >
-        <SidebarContent />
-      </aside>
-    </>
+      </div>
+
+      {/* Search */}
+      {!collapsed && (
+        <div className="px-4 py-3">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+            <Input
+              placeholder="Search..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9 h-9 bg-slate-50 border-slate-200 focus:bg-white"
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Navigation */}
+      <ScrollArea className="flex-1 px-3">
+        {/* Main Section */}
+        {!collapsed && (
+          <div className="mb-2 px-3 py-2">
+            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Main</span>
+          </div>
+        )}
+        <nav className="space-y-1">
+          {mainNav.items.map((item) => {
+            const transformed = transformNavItem(item);
+            return (
+              <SidebarNavItem
+                key={transformed.href}
+                item={transformed}
+                collapsed={collapsed}
+                isActive={pathname === transformed.href || pathname.startsWith(transformed.href + '/')}
+              />
+            );
+          })}
+        </nav>
+
+        {/* Admin Section */}
+        {!collapsed && (
+          <div className="mt-6 mb-2 px-3 py-2">
+            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+              {adminNav.label || 'Management'}
+            </span>
+          </div>
+        )}
+        <nav className="space-y-1 mt-2">
+          {adminNav.items.map((item) => {
+            const transformed = transformNavItem(item);
+            return (
+              <SidebarNavItem
+                key={transformed.href}
+                item={transformed}
+                collapsed={collapsed}
+                isActive={pathname === transformed.href || pathname.startsWith(transformed.href + '/')}
+              />
+            );
+          })}
+        </nav>
+      </ScrollArea>
+
+      {/* Footer */}
+      <div className="mt-auto border-t border-slate-200">
+        <SidebarUserFooter
+          user={{
+            name: currentUser.name,
+            email: currentUser.email,
+            role: currentUser.role,
+            avatar: currentUser.avatarUrl,
+          }}
+          collapsed={collapsed}
+          onCollapsedChange={setCollapsed}
+          onLogout={onLogout}
+        />
+      </div>
+    </aside>
   );
 }

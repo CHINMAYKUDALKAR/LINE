@@ -23,6 +23,7 @@ interface SyncJobData {
     provider: string;
     since?: string;
     triggeredBy?: string;
+    module?: 'leads' | 'contacts' | 'both'; // For Zoho: which module(s) to sync
 }
 
 interface EventJobData {
@@ -231,13 +232,32 @@ export class SyncProcessor extends WorkerHost {
             `Processing full sync job for tenant ${tenantId}, provider ${provider}`,
         );
 
+        // Check if integration requires re-authentication
+        const integration = await this.prisma.integration.findFirst({
+            where: { tenantId, provider },
+            select: { status: true },
+        });
+
+        if (integration?.status === 'auth_required') {
+            this.logger.warn(
+                `Skipping sync for ${provider} - authentication required. Admin must reconnect.`,
+            );
+            // Don't throw error - just return success: false to avoid retries
+            return {
+                success: false,
+                skipped: true,
+                reason: 'Authentication required. Admin must reconnect.',
+            };
+        }
+
         try {
             const providerInstance = this.providerFactory.getProvider(provider);
 
             // Special handling for Zoho - use dedicated ZohoSyncService
             if (provider === 'zoho') {
-                this.logger.log(`Using ZohoSyncService for inbound sync`);
-                const result = await this.zohoSyncService.syncAll(tenantId, 'leads');
+                const module = (data as any).module || 'leads';
+                this.logger.log(`Using ZohoSyncService for inbound sync (module: ${module})`);
+                const result = await this.zohoSyncService.syncAll(tenantId, module);
 
                 // Create audit log
                 await this.auditService.log({

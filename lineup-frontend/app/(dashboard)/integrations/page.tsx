@@ -136,7 +136,7 @@ export default function Integrations() {
     };
 
     const handleSync = async (integrationId: string) => {
-        // Find the integration to get the provider
+        // Find the integration to get the provider and config
         const integration = integrations.find((i) => i.id === integrationId);
         if (!integration) return;
 
@@ -144,13 +144,42 @@ export default function Integrations() {
         setSyncingProvider(provider);
 
         try {
-            const response = await integrationsApi.triggerSync(provider);
+            // Get the zohoModule from config if provider is Zoho
+            const zohoModule = provider === 'zoho' ? integration.config?.zohoModule : undefined;
+            const response = await integrationsApi.triggerSync(provider, undefined, zohoModule);
             if (response.success) {
                 toast.success('Sync Started', {
-                    description: response.message || 'Sync job has been queued. Candidates will appear shortly.'
+                    description: response.message || `Sync job has been queued. ${provider === 'zoho' ? `Syncing ${zohoModule || 'leads'}...` : 'Candidates will appear shortly.'}`
                 });
                 // Refresh integrations to show updated lastSyncAt
                 setTimeout(() => fetchIntegrations(), 2000);
+
+                // Poll for sync completion and refresh candidates cache
+                // The sync job runs in the background, so we poll every 2s for up to 30s
+                let pollCount = 0;
+                const maxPolls = 15;
+                const pollInterval = setInterval(async () => {
+                    pollCount++;
+                    if (pollCount >= maxPolls) {
+                        clearInterval(pollInterval);
+                        return;
+                    }
+
+                    // Check if sync is complete by fetching integration status
+                    try {
+                        const updatedIntegration = await integrationsApi.getIntegration(provider);
+                        if (updatedIntegration && updatedIntegration.status !== 'syncing') {
+                            clearInterval(pollInterval);
+                            // Dispatch event to notify other pages (like Candidates) to refresh
+                            window.dispatchEvent(new CustomEvent('sync-complete', { detail: { provider } }));
+                            toast.success('Sync Complete', {
+                                description: 'Candidates have been imported. View them on the Candidates page.'
+                            });
+                        }
+                    } catch (e) {
+                        // Ignore polling errors
+                    }
+                }, 2000);
             }
         } catch (err) {
             console.error('Failed to trigger sync:', err);

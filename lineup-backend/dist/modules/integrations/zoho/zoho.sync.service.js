@@ -43,17 +43,25 @@ let ZohoSyncService = ZohoSyncService_1 = class ZohoSyncService {
         this.oauth = oauth;
         this.fieldmap = fieldmap;
     }
-    async syncLeads(tenantId) {
-        this.logger.log(`Starting Zoho Leads sync for tenant: ${tenantId}`);
+    async syncLeads(tenantId, since) {
+        this.logger.log(`Starting Zoho Leads sync for tenant: ${tenantId}${since ? ` (delta since ${since.toISOString()})` : ' (full sync)'}`);
         const token = await this.oauth.getAccessToken(tenantId);
         const mapping = await this.fieldmap.getMapping(tenantId, 'leads');
         let imported = 0;
         let updated = 0;
         let errors = 0;
         try {
-            const res = await axios_1.default.get(`${this.zohoApi}/Leads`, {
-                headers: { Authorization: `Zoho-oauthtoken ${token}` }
-            });
+            let apiUrl = `${this.zohoApi}/Leads`;
+            const params = {};
+            if (since) {
+                const isoDate = since.toISOString().replace('T', ' ').substring(0, 19);
+                apiUrl = `${this.zohoApi}/coql`;
+            }
+            const res = since
+                ? await axios_1.default.post(apiUrl, {
+                    select_query: `SELECT * FROM Leads WHERE Modified_Time >= '${since.toISOString().replace('T', ' ').substring(0, 19)}'`
+                }, { headers: { Authorization: `Zoho-oauthtoken ${token}` } })
+                : await axios_1.default.get(apiUrl, { headers: { Authorization: `Zoho-oauthtoken ${token}` } });
             const records = res.data?.data || [];
             this.logger.log(`Found ${records.length} leads in Zoho`);
             for (const rec of records) {
@@ -98,11 +106,11 @@ let ZohoSyncService = ZohoSyncService_1 = class ZohoSyncService {
                                 phone: mapped.phone,
                                 roleTitle: mapped.roleTitle,
                                 stage: 'APPLIED',
-                                source: 'ZOHO_CRM',
+                                source: 'ZOHO_LEAD',
                                 externalId: zohoId,
                                 externalSource: 'ZOHO_CRM',
                                 rawExternalData: rec,
-                                tags: [],
+                                tags: ['zoho-lead'],
                             }
                         });
                         imported++;
@@ -133,17 +141,20 @@ let ZohoSyncService = ZohoSyncService_1 = class ZohoSyncService {
             throw e;
         }
     }
-    async syncContacts(tenantId) {
-        this.logger.log(`Starting Zoho Contacts sync for tenant: ${tenantId}`);
+    async syncContacts(tenantId, since) {
+        this.logger.log(`Starting Zoho Contacts sync for tenant: ${tenantId}${since ? ` (delta since ${since.toISOString()})` : ' (full sync)'}`);
         const token = await this.oauth.getAccessToken(tenantId);
         const mapping = await this.fieldmap.getMapping(tenantId, 'contacts');
         let imported = 0;
         let updated = 0;
         let errors = 0;
         try {
-            const res = await axios_1.default.get(`${this.zohoApi}/Contacts`, {
-                headers: { Authorization: `Zoho-oauthtoken ${token}` }
-            });
+            let apiUrl = `${this.zohoApi}/Contacts`;
+            const res = since
+                ? await axios_1.default.post(`${this.zohoApi}/coql`, {
+                    select_query: `SELECT * FROM Contacts WHERE Modified_Time >= '${since.toISOString().replace('T', ' ').substring(0, 19)}'`
+                }, { headers: { Authorization: `Zoho-oauthtoken ${token}` } })
+                : await axios_1.default.get(apiUrl, { headers: { Authorization: `Zoho-oauthtoken ${token}` } });
             const records = res.data?.data || [];
             this.logger.log(`Found ${records.length} contacts in Zoho`);
             for (const rec of records) {
@@ -185,11 +196,11 @@ let ZohoSyncService = ZohoSyncService_1 = class ZohoSyncService {
                                 phone: mapped.phone,
                                 roleTitle: mapped.roleTitle,
                                 stage: 'APPLIED',
-                                source: 'ZOHO_CRM',
+                                source: 'ZOHO_CONTACT',
                                 externalId: zohoId,
                                 externalSource: 'ZOHO_CRM',
                                 rawExternalData: rec,
-                                tags: [],
+                                tags: ['zoho-contact'],
                             }
                         });
                         imported++;
@@ -382,12 +393,14 @@ let ZohoSyncService = ZohoSyncService_1 = class ZohoSyncService {
         };
         return roleMap[zohoRole] || 'RECRUITER';
     }
-    async syncAll(tenantId, module = 'leads') {
-        this.logger.log(`Starting full Zoho sync for tenant: ${tenantId}`);
+    async syncAll(tenantId, module = 'leads', since) {
+        this.logger.log(`Starting Zoho sync for tenant: ${tenantId}, module: ${module}${since ? ' (delta)' : ' (full)'}`);
         const results = {
             stages: null,
             users: null,
             candidates: null,
+            syncType: since ? 'delta' : 'full',
+            module,
         };
         try {
             results.stages = await this.syncStages(tenantId);
@@ -404,19 +417,46 @@ let ZohoSyncService = ZohoSyncService_1 = class ZohoSyncService {
             results.users = { error: e.message };
         }
         try {
-            if (module === 'leads') {
-                results.candidates = await this.syncLeads(tenantId);
+            if (module === 'both') {
+                const leadsResult = await this.syncLeads(tenantId, since);
+                const contactsResult = await this.syncContacts(tenantId, since);
+                results.candidates = {
+                    leads: leadsResult,
+                    contacts: contactsResult,
+                    totalImported: (leadsResult.imported || 0) + (contactsResult.imported || 0),
+                    totalUpdated: (leadsResult.updated || 0) + (contactsResult.updated || 0),
+                    totalErrors: (leadsResult.errors || 0) + (contactsResult.errors || 0),
+                };
+            }
+            else if (module === 'contacts') {
+                results.candidates = await this.syncContacts(tenantId, since);
             }
             else {
-                results.candidates = await this.syncContacts(tenantId);
+                results.candidates = await this.syncLeads(tenantId, since);
             }
         }
         catch (e) {
             this.logger.error(`Candidates sync failed: ${e.message}`);
             results.candidates = { error: e.message };
         }
-        this.logger.log(`Full Zoho sync complete: ${JSON.stringify(results)}`);
+        this.logger.log(`Zoho sync complete: ${JSON.stringify(results)}`);
         return results;
+    }
+    async demandDrivenSync(tenantId, module = 'leads') {
+        const integration = await this.prisma.integration.findUnique({
+            where: {
+                tenantId_provider: { tenantId, provider: 'zoho' },
+            },
+            select: { lastSyncedAt: true },
+        });
+        const since = integration?.lastSyncedAt || undefined;
+        return this.syncAll(tenantId, module, since);
+    }
+    isSyncStale(lastSyncedAt, thresholdMinutes = 15) {
+        if (!lastSyncedAt)
+            return true;
+        const staleThreshold = new Date(Date.now() - thresholdMinutes * 60 * 1000);
+        return lastSyncedAt < staleThreshold;
     }
 };
 exports.ZohoSyncService = ZohoSyncService;

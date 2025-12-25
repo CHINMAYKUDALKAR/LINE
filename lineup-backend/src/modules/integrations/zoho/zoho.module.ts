@@ -5,9 +5,16 @@ import { ZohoOAuthService } from './zoho.oauth.service';
 import { ZohoSyncService } from './zoho.sync.service';
 import { ZohoFieldMapService } from './zoho.fieldmap.service';
 import { ZohoWebhookService } from './zoho.webhook.service';
-import { ZohoSchedulerService } from './zoho.scheduler.service';
 import { PrismaService } from '../../../common/prisma.service';
 
+/**
+ * Zoho CRM Integration Module
+ * 
+ * IMPORTANT: This module uses a DEMAND-DRIVEN sync strategy.
+ * - NO automatic cron/scheduled polling
+ * - Sync only when user triggers via UI or webhook arrives
+ * - Respects API rate limits for free/low-tier accounts
+ */
 @Module({
   imports: [
     BullModule.registerQueue({ name: 'zoho-sync' }),
@@ -19,8 +26,7 @@ import { PrismaService } from '../../../common/prisma.service';
     ZohoSyncService,
     ZohoFieldMapService,
     ZohoWebhookService,
-    ZohoSchedulerService,
   ],
-  exports: [ZohoSyncService, ZohoSchedulerService]
+  exports: [ZohoSyncService]
 })
 export class ZohoModule { }

@@ -100,7 +100,17 @@ export class CandidatesService {
         };
 
         if (dto.stage) where.stage = dto.stage;
-        if (dto.source) where.source = dto.source;
+
+        // Handle source filter - ZOHO_CRM is a wildcard for all Zoho sources
+        if (dto.source) {
+            if (dto.source === 'ZOHO_CRM') {
+                // Match any Zoho source (ZOHO_LEAD, ZOHO_CONTACT, or legacy ZOHO_CRM)
+                where.source = { in: ['ZOHO_CRM', 'ZOHO_LEAD', 'ZOHO_CONTACT'] };
+            } else {
+                where.source = dto.source;
+            }
+        }
+
         if (dto.role) where.roleTitle = { contains: dto.role, mode: 'insensitive' };
         if (dto.recruiterId && dto.recruiterId !== 'all') where.createdById = dto.recruiterId;
 

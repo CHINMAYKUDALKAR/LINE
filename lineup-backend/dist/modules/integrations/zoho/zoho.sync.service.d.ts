@@ -8,13 +8,13 @@ export declare class ZohoSyncService {
     private readonly logger;
     private zohoApi;
     constructor(prisma: PrismaService, oauth: ZohoOAuthService, fieldmap: ZohoFieldMapService);
-    syncLeads(tenantId: string): Promise<{
+    syncLeads(tenantId: string, since?: Date): Promise<{
         imported: number;
         updated: number;
         errors: number;
         total: any;
     }>;
-    syncContacts(tenantId: string): Promise<{
+    syncContacts(tenantId: string, since?: Date): Promise<{
         imported: number;
         updated: number;
         errors: number;
@@ -35,5 +35,7 @@ export declare class ZohoSyncService {
         total: any;
     }>;
     private mapZohoRoleToLineup;
-    syncAll(tenantId: string, module?: string): Promise<any>;
+    syncAll(tenantId: string, module?: string, since?: Date): Promise<any>;
+    demandDrivenSync(tenantId: string, module?: string): Promise<any>;
+    isSyncStale(lastSyncedAt: Date | null, thresholdMinutes?: number): boolean;
 }

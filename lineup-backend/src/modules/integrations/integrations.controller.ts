@@ -116,6 +116,17 @@ export class IntegrationsController {
         );
     }
 
+    @Post('config')
+    @Roles(Role.ADMIN, Role.MANAGER)
+    @ApiOperation({ summary: 'Update integration configuration (sync settings, zohoModule, etc.)' })
+    @ApiBody({ schema: { example: { provider: 'zoho', config: { zohoModule: 'contacts' } } } })
+    @ApiResponse({ status: 200, description: 'Config updated successfully' })
+    @ApiResponse({ status: 404, description: 'Integration not found' })
+    async updateConfig(@Req() req: any, @Body() body: { provider: string; config: any }) {
+        const tenantId = req.user.tenantId;
+        return this.integrationsService.updateConfig(tenantId, body.provider, body.config);
+    }
+
     @Post('sync')
     @Roles(Role.ADMIN, Role.MANAGER)
     @ApiOperation({ summary: 'Trigger manual sync with external system' })
@@ -131,6 +142,7 @@ export class IntegrationsController {
             syncDto.provider,
             userId,
             since,
+            syncDto.module, // Pass module for Zoho: 'leads', 'contacts', or 'both'
         );
     }
 

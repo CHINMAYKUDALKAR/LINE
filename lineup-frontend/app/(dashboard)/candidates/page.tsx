@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { CandidateListHeader, ViewType } from '@/components/candidates/CandidateListHeader';
 import { CandidateFilters } from '@/components/candidates/CandidateFilters';
@@ -71,6 +72,20 @@ export default function Candidates() {
 
     // Bulk delete loading state (separate from deleteCandidateMutation)
     const [isBulkDeleting, setIsBulkDeleting] = useState(false);
+
+    // Query client for cache invalidation
+    const queryClient = useQueryClient();
+
+    // Listen for sync-complete event from integrations page
+    useEffect(() => {
+        const handleSyncComplete = () => {
+            // Invalidate and refetch candidates when sync completes
+            queryClient.invalidateQueries({ queryKey: ['candidates'] });
+        };
+
+        window.addEventListener('sync-complete', handleSyncComplete);
+        return () => window.removeEventListener('sync-complete', handleSyncComplete);
+    }, [queryClient]);
 
     // Use real API data with pagination
     // Use real API data with pagination

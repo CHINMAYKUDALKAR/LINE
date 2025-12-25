@@ -45,13 +45,18 @@ let IntegrationsService = IntegrationsService_1 = class IntegrationsService {
                 id: true,
                 provider: true,
                 status: true,
+                settings: true,
                 lastSyncedAt: true,
                 lastError: true,
                 createdAt: true,
                 updatedAt: true,
             },
         });
-        return integrations;
+        return integrations.map(i => ({
+            ...i,
+            config: i.settings?.config || undefined,
+            settings: undefined,
+        }));
     }
     async getIntegration(tenantId, provider) {
         const integration = await this.prisma.integration.findUnique({
@@ -151,7 +156,7 @@ let IntegrationsService = IntegrationsService_1 = class IntegrationsService {
         });
         return { success: true, mapping: mergedMapping };
     }
-    async syncNow(tenantId, provider, userId, since) {
+    async updateConfig(tenantId, provider, config) {
         const integration = await this.prisma.integration.findUnique({
             where: {
                 tenantId_provider: {
@@ -162,6 +167,42 @@ let IntegrationsService = IntegrationsService_1 = class IntegrationsService {
         });
         if (!integration) {
             throw new common_1.NotFoundException(`Integration ${provider} not found`);
+        }
+        const existingSettings = integration.settings || {};
+        const updatedSettings = {
+            ...existingSettings,
+            config: {
+                ...(existingSettings.config || {}),
+                ...config,
+            },
+        };
+        await this.prisma.integration.update({
+            where: {
+                tenantId_provider: {
+                    tenantId,
+                    provider,
+                },
+            },
+            data: {
+                settings: updatedSettings,
+            },
+        });
+        return { success: true, config: updatedSettings.config };
+    }
+    async syncNow(tenantId, provider, userId, since, module) {
+        const integration = await this.prisma.integration.findUnique({
+            where: {
+                tenantId_provider: {
+                    tenantId,
+                    provider,
+                },
+            },
+        });
+        if (!integration) {
+            throw new common_1.NotFoundException(`Integration ${provider} not found`);
+        }
+        if (integration.status === 'auth_required') {
+            throw new common_1.BadRequestException(`Cannot sync: Zoho authentication expired. Please reconnect the integration to resume syncing.`);
         }
         if (integration.status !== 'connected') {
             throw new common_1.BadRequestException(`Integration ${provider} is not connected`);
@@ -182,6 +223,7 @@ let IntegrationsService = IntegrationsService_1 = class IntegrationsService {
             tenantId,
             provider,
             since: since?.toISOString(),
+            module: module || 'leads',
         }, {
             attempts: 5,
             backoff: {
@@ -296,17 +338,79 @@ let IntegrationsService = IntegrationsService_1 = class IntegrationsService {
         if (!integration) {
             return null;
         }
+        const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+        const statusCounts = await this.prisma.integrationSyncLog.groupBy({
+            by: ['status'],
+            where: {
+                tenantId,
+                provider,
+                createdAt: { gte: since },
+            },
+            _count: true,
+        });
+        let totalSyncs = 0, successfulSyncs = 0, failedSyncs = 0, queuedJobs = 0;
+        for (const row of statusCounts) {
+            totalSyncs += row._count;
+            if (row.status === 'SUCCESS')
+                successfulSyncs = row._count;
+            if (row.status === 'FAILED')
+                failedSyncs = row._count;
+            if (row.status === 'PENDING' || row.status === 'IN_PROGRESS') {
+                queuedJobs += row._count;
+            }
+        }
+        const completedSyncs = await this.prisma.integrationSyncLog.findMany({
+            where: {
+                tenantId,
+                provider,
+                status: 'SUCCESS',
+                createdAt: { gte: since },
+                completedAt: { not: null },
+            },
+            select: {
+                createdAt: true,
+                completedAt: true,
+            },
+            take: 100,
+        });
+        let avgLatencyMs = 0;
+        if (completedSyncs.length > 0) {
+            const totalLatency = completedSyncs.reduce((sum, s) => {
+                return sum + (s.completedAt.getTime() - s.createdAt.getTime());
+            }, 0);
+            avgLatencyMs = Math.round(totalLatency / completedSyncs.length);
+        }
+        const recordsProcessed = await this.prisma.integrationSyncLog.count({
+            where: {
+                tenantId,
+                provider,
+                status: 'SUCCESS',
+                createdAt: { gte: since },
+            },
+        });
+        const lastError = await this.prisma.integrationSyncLog.findFirst({
+            where: {
+                tenantId,
+                provider,
+                status: 'FAILED',
+            },
+            orderBy: { createdAt: 'desc' },
+            select: { errorMessage: true },
+        });
+        const successRate = totalSyncs > 0
+            ? Math.round((successfulSyncs / totalSyncs) * 1000) / 10
+            : 100;
         return {
             integrationId: integration.id,
             period: 'Last 7 days',
-            totalSyncs: 168,
-            successfulSyncs: 162,
-            failedSyncs: 6,
-            successRate: 96.4,
-            avgLatencyMs: 245,
-            recordsProcessed: 1847,
-            queuedJobs: 3,
-            lastError: integration.status === 'error' ? 'Rate limit exceeded (2 hours ago)' : null,
+            totalSyncs,
+            successfulSyncs,
+            failedSyncs,
+            successRate,
+            avgLatencyMs,
+            recordsProcessed,
+            queuedJobs,
+            lastError: lastError?.errorMessage || null,
         };
     }
     async getFieldSchemas(tenantId, provider) {

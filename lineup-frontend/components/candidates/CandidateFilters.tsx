@@ -35,7 +35,19 @@ const experienceOptions = [
 ];
 
 // Static source options (no backend endpoint yet)
-const sourceOptions = ['LinkedIn', 'Indeed', 'Referral', 'Company Website', 'Job Board', 'Other'];
+const sourceOptions = [
+  // Zoho CRM sources
+  { value: 'ZOHO_LEAD', label: 'Zoho Lead', group: 'Zoho CRM' },
+  { value: 'ZOHO_CONTACT', label: 'Zoho Contact', group: 'Zoho CRM' },
+  { value: 'ZOHO_CRM', label: 'Zoho CRM (All)', group: 'Zoho CRM' },
+  // Other sources
+  { value: 'LinkedIn', label: 'LinkedIn', group: 'Other' },
+  { value: 'Indeed', label: 'Indeed', group: 'Other' },
+  { value: 'Referral', label: 'Referral', group: 'Other' },
+  { value: 'Company Website', label: 'Company Website', group: 'Other' },
+  { value: 'Job Board', label: 'Job Board', group: 'Other' },
+  { value: 'Other', label: 'Other', group: 'Other' },
+];
 
 export function CandidateFilters({ filters, onFiltersChange }: CandidateFiltersProps) {
   const [searchValue, setSearchValue] = useState(filters.search);
@@ -138,9 +150,10 @@ export function CandidateFilters({ filters, onFiltersChange }: CandidateFiltersP
     });
   }
   if (filters.source !== 'all') {
+    const sourceLabel = sourceOptions.find(s => s.value === filters.source)?.label || filters.source;
     activeFilterChips.push({
       key: 'source',
-      label: filters.source,
+      label: sourceLabel,
       onRemove: () => onFiltersChange({ ...filters, source: 'all' }),
     });
   }
@@ -214,14 +227,14 @@ export function CandidateFilters({ filters, onFiltersChange }: CandidateFiltersP
             value={filters.source}
             onValueChange={(value) => onFiltersChange({ ...filters, source: value })}
           >
-            <SelectTrigger className="w-full sm:w-[140px] bg-background">
+            <SelectTrigger className="w-full sm:w-[160px] bg-background">
               <SelectValue placeholder="Source" />
             </SelectTrigger>
             <SelectContent className="bg-popover">
               <SelectItem value="all">All Sources</SelectItem>
               {sourceOptions.map((source) => (
-                <SelectItem key={source} value={source}>
-                  {source}
+                <SelectItem key={source.value} value={source.value}>
+                  {source.label}
                 </SelectItem>
               ))}
             </SelectContent>

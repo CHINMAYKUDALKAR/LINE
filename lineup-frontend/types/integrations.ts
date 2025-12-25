@@ -42,6 +42,7 @@ export interface IntegrationConfig {
   conflictResolution: ConflictResolution;
   enableWebhooks: boolean;
   webhookUrl?: string;
+  zohoModule?: 'leads' | 'contacts' | 'both'; // For Zoho: which module(s) to sync as candidates
 }
 
 export interface FieldMapping {

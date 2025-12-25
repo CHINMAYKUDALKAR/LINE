@@ -134,15 +134,38 @@ export async function updateMapping(
 
 /**
  * Trigger a manual sync for an integration
+ * @param provider - Integration provider (e.g., 'zoho')
+ * @param since - Optional: Only sync records modified after this date
+ * @param module - Optional: For Zoho, specify 'leads' or 'contacts'
  */
 export async function triggerSync(
     provider: string,
-    since?: Date
+    since?: Date,
+    module?: 'leads' | 'contacts' | 'both'
 ): Promise<SyncResponse> {
     try {
         const response = await client.post<SyncResponse>('/integrations/sync', {
             provider,
             since: since?.toISOString(),
+            module, // Pass module for Zoho
+        });
+        return response;
+    } catch (error) {
+        throw error;
+    }
+}
+
+/**
+ * Update integration configuration (sync settings, zohoModule, etc.)
+ */
+export async function updateConfig(
+    provider: string,
+    config: IntegrationConfig
+): Promise<{ success: boolean }> {
+    try {
+        const response = await client.post<{ success: boolean }>('/integrations/config', {
+            provider,
+            config,
         });
         return response;
     } catch (error) {
@@ -194,6 +217,32 @@ export async function getFieldSchemas(provider: string): Promise<{
             mappings: FieldMapping[];
         }>(`/integrations/${provider}/fields`);
         return response;
+    } catch (error) {
+        throw error;
+    }
+}
+
+/**
+ * Get sync logs for an integration (for audit/logs tab)
+ */
+export async function getSyncLogs(provider: string, limit = 50, status?: string): Promise<Array<{
+    id: string;
+    eventType: string;
+    direction: string;
+    entityType: string;
+    entityId?: string;
+    externalId?: string;
+    status: string;
+    errorMessage?: string;
+    retryCount: number;
+    createdAt: string;
+    completedAt?: string;
+}>> {
+    try {
+        const params: { limit: number; status?: string } = { limit };
+        if (status) params.status = status;
+        const response = await client.get(`/integrations/${provider}/logs`, { params });
+        return response as any;
     } catch (error) {
         throw error;
     }

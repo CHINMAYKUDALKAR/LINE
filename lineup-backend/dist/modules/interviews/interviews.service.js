@@ -23,7 +23,8 @@ const availability_util_1 = require("./utils/availability.util");
 const interview_automation_service_1 = require("./services/interview-automation.service");
 const recycle_bin_service_1 = require("../recycle-bin/recycle-bin.service");
 const integration_events_service_1 = require("../integrations/services/integration-events.service");
-let InterviewsService = InterviewsService_1 = class InterviewsService {
+let InterviewsService = class InterviewsService {
+    static { InterviewsService_1 = this; }
     prisma;
     reminderQueue;
     syncQueue;
@@ -31,6 +32,13 @@ let InterviewsService = InterviewsService_1 = class InterviewsService {
     recycleBinService;
     integrationEvents;
     logger = new common_1.Logger(InterviewsService_1.name);
+    static ALLOWED_STATUS_TRANSITIONS = {
+        SCHEDULED: ['COMPLETED', 'CANCELLED', 'NO_SHOW', 'RESCHEDULED'],
+        RESCHEDULED: ['COMPLETED', 'CANCELLED', 'NO_SHOW', 'SCHEDULED'],
+        COMPLETED: [],
+        CANCELLED: ['SCHEDULED'],
+        NO_SHOW: ['SCHEDULED'],
+    };
     constructor(prisma, reminderQueue, syncQueue, automationService, recycleBinService, integrationEvents) {
         this.prisma = prisma;
         this.reminderQueue = reminderQueue;
@@ -38,6 +46,16 @@ let InterviewsService = InterviewsService_1 = class InterviewsService {
         this.automationService = automationService;
         this.recycleBinService = recycleBinService;
         this.integrationEvents = integrationEvents;
+    }
+    validateStatusTransition(currentStatus, newStatus) {
+        const allowed = InterviewsService_1.ALLOWED_STATUS_TRANSITIONS[currentStatus];
+        if (!allowed) {
+            throw new common_1.BadRequestException(`Unknown interview status: ${currentStatus}`);
+        }
+        if (!allowed.includes(newStatus)) {
+            throw new common_1.BadRequestException(`Cannot transition from ${currentStatus} to ${newStatus}. ` +
+                `Allowed transitions: ${allowed.length > 0 ? allowed.join(', ') : 'none (terminal state)'}`);
+        }
     }
     async create(tenantId, userId, dto) {
         const candidate = await this.prisma.candidate.findUnique({ where: { id: dto.candidateId } });
@@ -327,6 +345,7 @@ let InterviewsService = InterviewsService_1 = class InterviewsService {
     }
     async cancel(tenantId, userId, id) {
         const interview = await this.get(tenantId, id);
+        this.validateStatusTransition(interview.status, 'CANCELLED');
         const updated = await this.prisma.interview.update({
             where: { id },
             data: { status: 'CANCELLED' }
@@ -355,6 +374,7 @@ let InterviewsService = InterviewsService_1 = class InterviewsService {
     }
     async complete(tenantId, userId, id) {
         const interview = await this.get(tenantId, id);
+        this.validateStatusTransition(interview.status, 'COMPLETED');
         const updated = await this.prisma.interview.update({
             where: { id },
             data: { status: 'COMPLETED' }

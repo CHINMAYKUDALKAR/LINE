@@ -14,7 +14,6 @@ const zoho_oauth_service_1 = require("./zoho.oauth.service");
 const zoho_sync_service_1 = require("./zoho.sync.service");
 const zoho_fieldmap_service_1 = require("./zoho.fieldmap.service");
 const zoho_webhook_service_1 = require("./zoho.webhook.service");
-const zoho_scheduler_service_1 = require("./zoho.scheduler.service");
 const prisma_service_1 = require("../../../common/prisma.service");
 let ZohoModule = class ZohoModule {
 };
@@ -31,9 +30,8 @@ exports.ZohoModule = ZohoModule = __decorate([
             zoho_sync_service_1.ZohoSyncService,
             zoho_fieldmap_service_1.ZohoFieldMapService,
             zoho_webhook_service_1.ZohoWebhookService,
-            zoho_scheduler_service_1.ZohoSchedulerService,
         ],
-        exports: [zoho_sync_service_1.ZohoSyncService, zoho_scheduler_service_1.ZohoSchedulerService]
+        exports: [zoho_sync_service_1.ZohoSyncService]
     })
 ], ZohoModule);
 //# sourceMappingURL=zoho.module.js.map

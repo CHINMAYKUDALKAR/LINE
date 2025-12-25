@@ -874,8 +874,31 @@ model InterviewNote {
 }
 
 // ============================================
+// INTEGRATION FIELD MAPPINGS
+// ============================================
+
+// Custom field mappings for integration data sync
+model FieldMapping {
+  id              String   @id @default(cuid())
+  tenantId        String
+  integrationId   String
+  provider        String   // zoho, salesforce, hubspot
+  externalField   String   // Field name in external system
+  internalField   String   // Field name in Lineup (e.g., 'name', 'email', 'phone')
+  dataType        String   // text, email, phone, date, number
+  transform       String?  // Optional transform: uppercase, lowercase, trim
+  isRequired      Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([tenantId, integrationId, externalField])
+  @@index([tenantId, provider])
+}
+
+// ============================================
 // INTEGRATION SYNC LOGS
 // ============================================
+
 
 // Tracks individual sync attempts for auditability
 model IntegrationSyncLog {

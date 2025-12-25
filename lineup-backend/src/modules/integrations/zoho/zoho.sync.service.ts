@@ -34,9 +34,11 @@ export class ZohoSyncService {
 
     /**
      * Sync Leads from Zoho CRM to Lineup Candidates
+     * @param tenantId - Tenant to sync for
+     * @param since - Optional: Only fetch records modified after this date (delta sync)
      */
-    async syncLeads(tenantId: string) {
-        this.logger.log(`Starting Zoho Leads sync for tenant: ${tenantId}`);
+    async syncLeads(tenantId: string, since?: Date) {
+        this.logger.log(`Starting Zoho Leads sync for tenant: ${tenantId}${since ? ` (delta since ${since.toISOString()})` : ' (full sync)'}`);
         const token = await this.oauth.getAccessToken(tenantId);
         const mapping = await this.fieldmap.getMapping(tenantId, 'leads');
 
@@ -45,9 +47,21 @@ export class ZohoSyncService {
         let errors = 0;
 
         try {
-            const res = await axios.get(`${this.zohoApi}/Leads`, {
-                headers: { Authorization: `Zoho-oauthtoken ${token}` }
-            });
+            // Build API URL with optional Modified_Time filter for delta sync
+            let apiUrl = `${this.zohoApi}/Leads`;
+            const params: Record<string, string> = {};
+
+            if (since) {
+                // Use COQL for delta queries - more efficient than fetching all
+                const isoDate = since.toISOString().replace('T', ' ').substring(0, 19);
+                apiUrl = `${this.zohoApi}/coql`;
+            }
+
+            const res = since
+                ? await axios.post(apiUrl, {
+                    select_query: `SELECT * FROM Leads WHERE Modified_Time >= '${since.toISOString().replace('T', ' ').substring(0, 19)}'`
+                }, { headers: { Authorization: `Zoho-oauthtoken ${token}` } })
+                : await axios.get(apiUrl, { headers: { Authorization: `Zoho-oauthtoken ${token}` } });
 
             const records = res.data?.data || [];
             this.logger.log(`Found ${records.length} leads in Zoho`);
@@ -97,11 +111,11 @@ export class ZohoSyncService {
                                 phone: mapped.phone,
                                 roleTitle: mapped.roleTitle,
                                 stage: 'APPLIED', // SOW default
-                                source: 'ZOHO_CRM',
+                                source: 'ZOHO_LEAD', // Differentiate from contacts
                                 externalId: zohoId,
                                 externalSource: 'ZOHO_CRM',
                                 rawExternalData: rec as any, // Store complete Zoho payload
-                                tags: [],
+                                tags: ['zoho-lead'],
                             }
                         });
                         imported++;
@@ -136,9 +150,11 @@ export class ZohoSyncService {
 
     /**
      * Sync Contacts from Zoho CRM to Lineup Candidates
+     * @param tenantId - Tenant to sync for
+     * @param since - Optional: Only fetch records modified after this date (delta sync)
      */
-    async syncContacts(tenantId: string) {
-        this.logger.log(`Starting Zoho Contacts sync for tenant: ${tenantId}`);
+    async syncContacts(tenantId: string, since?: Date) {
+        this.logger.log(`Starting Zoho Contacts sync for tenant: ${tenantId}${since ? ` (delta since ${since.toISOString()})` : ' (full sync)'}`);
         const token = await this.oauth.getAccessToken(tenantId);
         const mapping = await this.fieldmap.getMapping(tenantId, 'contacts');
 
@@ -147,9 +163,14 @@ export class ZohoSyncService {
         let errors = 0;
 
         try {
-            const res = await axios.get(`${this.zohoApi}/Contacts`, {
-                headers: { Authorization: `Zoho-oauthtoken ${token}` }
-            });
+            // Build API URL with optional Modified_Time filter for delta sync
+            let apiUrl = `${this.zohoApi}/Contacts`;
+
+            const res = since
+                ? await axios.post(`${this.zohoApi}/coql`, {
+                    select_query: `SELECT * FROM Contacts WHERE Modified_Time >= '${since.toISOString().replace('T', ' ').substring(0, 19)}'`
+                }, { headers: { Authorization: `Zoho-oauthtoken ${token}` } })
+                : await axios.get(apiUrl, { headers: { Authorization: `Zoho-oauthtoken ${token}` } });
 
             const records = res.data?.data || [];
             this.logger.log(`Found ${records.length} contacts in Zoho`);
@@ -196,11 +217,11 @@ export class ZohoSyncService {
                                 phone: mapped.phone,
                                 roleTitle: mapped.roleTitle,
                                 stage: 'APPLIED', // SOW default
-                                source: 'ZOHO_CRM',
+                                source: 'ZOHO_CONTACT', // Differentiate from leads
                                 externalId: zohoId,
                                 externalSource: 'ZOHO_CRM',
                                 rawExternalData: rec as any, // Store complete Zoho payload
-                                tags: [],
+                                tags: ['zoho-contact'],
                             }
                         });
                         imported++;
@@ -458,19 +479,23 @@ export class ZohoSyncService {
     // ============================================
 
     /**
-     * Perform a full sync of all Zoho data
+     * Perform a sync of all Zoho data
+     * @param module - 'leads', 'contacts', or 'both'
+     * @param since - Optional: Only fetch records modified after this date (delta sync)
      */
-    async syncAll(tenantId: string, module: string = 'leads') {
-        this.logger.log(`Starting full Zoho sync for tenant: ${tenantId}`);
+    async syncAll(tenantId: string, module: string = 'leads', since?: Date) {
+        this.logger.log(`Starting Zoho sync for tenant: ${tenantId}, module: ${module}${since ? ' (delta)' : ' (full)'}`);
 
         const results: any = {
             stages: null,
             users: null,
             candidates: null,
+            syncType: since ? 'delta' : 'full',
+            module,
         };
 
         try {
-            // 1. Sync stages first (needed for candidate stage mapping)
+            // 1. Sync stages first (needed for candidate stage mapping) - always full
             results.stages = await this.syncStages(tenantId);
         } catch (e: any) {
             this.logger.error(`Stages sync failed: ${e.message}`);
@@ -478,7 +503,7 @@ export class ZohoSyncService {
         }
 
         try {
-            // 2. Sync users (recruiters)
+            // 2. Sync users (recruiters) - always full
             results.users = await this.syncUsers(tenantId);
         } catch (e: any) {
             this.logger.error(`Users sync failed: ${e.message}`);
@@ -486,18 +511,64 @@ export class ZohoSyncService {
         }
 
         try {
-            // 3. Sync candidates
-            if (module === 'leads') {
-                results.candidates = await this.syncLeads(tenantId);
+            // 3. Sync candidates - supports delta and 'both' option
+            if (module === 'both') {
+                // Sync both leads and contacts
+                const leadsResult = await this.syncLeads(tenantId, since);
+                const contactsResult = await this.syncContacts(tenantId, since);
+                results.candidates = {
+                    leads: leadsResult,
+                    contacts: contactsResult,
+                    totalImported: (leadsResult.imported || 0) + (contactsResult.imported || 0),
+                    totalUpdated: (leadsResult.updated || 0) + (contactsResult.updated || 0),
+                    totalErrors: (leadsResult.errors || 0) + (contactsResult.errors || 0),
+                };
+            } else if (module === 'contacts') {
+                results.candidates = await this.syncContacts(tenantId, since);
             } else {
-                results.candidates = await this.syncContacts(tenantId);
+                results.candidates = await this.syncLeads(tenantId, since);
             }
         } catch (e: any) {
             this.logger.error(`Candidates sync failed: ${e.message}`);
             results.candidates = { error: e.message };
         }
 
-        this.logger.log(`Full Zoho sync complete: ${JSON.stringify(results)}`);
+        this.logger.log(`Zoho sync complete: ${JSON.stringify(results)}`);
         return results;
+    }
+
+    /**
+     * DEMAND-DRIVEN SYNC
+     * 
+     * Automatically performs delta sync if lastSyncedAt exists,
+     * otherwise performs full sync. This is the PRIMARY entry point
+     * for user-triggered syncs.
+     * 
+     * @param tenantId - Tenant to sync
+     * @param module - 'leads' or 'contacts'
+     */
+    async demandDrivenSync(tenantId: string, module: string = 'leads') {
+        // Get integration to check lastSyncedAt
+        const integration = await this.prisma.integration.findUnique({
+            where: {
+                tenantId_provider: { tenantId, provider: 'zoho' },
+            },
+            select: { lastSyncedAt: true },
+        });
+
+        // Use delta sync if we have a previous sync timestamp
+        const since = integration?.lastSyncedAt || undefined;
+
+        return this.syncAll(tenantId, module, since);
+    }
+
+    /**
+     * Check if sync is stale (older than threshold)
+     * Returns true if sync should be triggered
+     */
+    isSyncStale(lastSyncedAt: Date | null, thresholdMinutes: number = 15): boolean {
+        if (!lastSyncedAt) return true;
+        const staleThreshold = new Date(Date.now() - thresholdMinutes * 60 * 1000);
+        return lastSyncedAt < staleThreshold;
     }
 }

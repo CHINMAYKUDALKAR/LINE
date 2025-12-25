@@ -15,23 +15,25 @@ export declare class IntegrationsService {
     private syncRateLimiter;
     constructor(prisma: PrismaService, providerFactory: ProviderFactory, auditService: AuditService, zohoApi: ZohoApiService, syncQueue: Queue);
     listIntegrations(tenantId: string): Promise<{
+        config: any;
+        settings: undefined;
         id: string;
-        createdAt: Date;
-        updatedAt: Date;
-        status: string | null;
         provider: string;
+        status: string | null;
         lastSyncedAt: Date | null;
         lastError: string | null;
+        createdAt: Date;
+        updatedAt: Date;
     }[]>;
     getIntegration(tenantId: string, provider: string): Promise<{
         id: string;
-        settings: import("@prisma/client/runtime/library").JsonValue;
-        createdAt: Date;
-        updatedAt: Date;
-        status: string | null;
         provider: string;
+        settings: import("@prisma/client/runtime/library").JsonValue;
+        status: string | null;
         lastSyncedAt: Date | null;
         lastError: string | null;
+        createdAt: Date;
+        updatedAt: Date;
     }>;
     connect(tenantId: string, provider: string, userId: string): Promise<{
         authUrl: string;
@@ -45,7 +47,11 @@ export declare class IntegrationsService {
         success: boolean;
         mapping: MappingConfig;
     }>;
-    syncNow(tenantId: string, provider: string, userId: string, since?: Date): Promise<{
+    updateConfig(tenantId: string, provider: string, config: any): Promise<{
+        success: boolean;
+        config: any;
+    }>;
+    syncNow(tenantId: string, provider: string, userId: string, since?: Date, module?: string): Promise<{
         success: boolean;
         message: string;
     }>;
@@ -118,13 +124,13 @@ export declare class IntegrationsService {
     }>;
     getSyncLogs(tenantId: string, provider: string, limit?: number, status?: string): Promise<{
         id: string;
-        createdAt: Date;
         status: import("@prisma/client").$Enums.SyncLogStatus;
-        externalId: string | null;
+        createdAt: Date;
         eventType: string;
         direction: import("@prisma/client").$Enums.SyncDirection;
         entityType: string;
         entityId: string | null;
+        externalId: string | null;
         errorMessage: string | null;
         retryCount: number;
         completedAt: Date | null;

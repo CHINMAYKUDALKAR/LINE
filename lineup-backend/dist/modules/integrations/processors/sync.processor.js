@@ -148,11 +148,24 @@ let SyncProcessor = SyncProcessor_1 = class SyncProcessor extends bullmq_1.Worke
     async processFullSyncJob(data) {
         const { tenantId, provider, since, triggeredBy } = data;
         this.logger.log(`Processing full sync job for tenant ${tenantId}, provider ${provider}`);
+        const integration = await this.prisma.integration.findFirst({
+            where: { tenantId, provider },
+            select: { status: true },
+        });
+        if (integration?.status === 'auth_required') {
+            this.logger.warn(`Skipping sync for ${provider} - authentication required. Admin must reconnect.`);
+            return {
+                success: false,
+                skipped: true,
+                reason: 'Authentication required. Admin must reconnect.',
+            };
+        }
         try {
             const providerInstance = this.providerFactory.getProvider(provider);
             if (provider === 'zoho') {
-                this.logger.log(`Using ZohoSyncService for inbound sync`);
-                const result = await this.zohoSyncService.syncAll(tenantId, 'leads');
+                const module = data.module || 'leads';
+                this.logger.log(`Using ZohoSyncService for inbound sync (module: ${module})`);
+                const result = await this.zohoSyncService.syncAll(tenantId, module);
                 await this.auditService.log({
                     tenantId,
                     userId: null,

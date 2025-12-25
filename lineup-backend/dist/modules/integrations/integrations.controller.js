@@ -65,11 +65,15 @@ let IntegrationsController = class IntegrationsController {
         const userId = req.user.id;
         return this.integrationsService.updateMapping(tenantId, mappingDto.provider, mappingDto, userId);
     }
+    async updateConfig(req, body) {
+        const tenantId = req.user.tenantId;
+        return this.integrationsService.updateConfig(tenantId, body.provider, body.config);
+    }
     async triggerSync(req, syncDto) {
         const tenantId = req.user.tenantId;
         const userId = req.user.id;
         const since = syncDto.since ? new Date(syncDto.since) : undefined;
-        return this.integrationsService.syncNow(tenantId, syncDto.provider, userId, since);
+        return this.integrationsService.syncNow(tenantId, syncDto.provider, userId, since, syncDto.module);
     }
     async disconnect(req, body) {
         const tenantId = req.user.tenantId;
@@ -177,6 +181,19 @@ __decorate([
     __metadata("design:paramtypes", [Object, mapping_dto_1.UpdateMappingDto]),
     __metadata("design:returntype", Promise)
 ], IntegrationsController.prototype, "updateMapping", null);
+__decorate([
+    (0, common_1.Post)('config'),
+    (0, roles_decorator_1.Roles)(client_1.Role.ADMIN, client_1.Role.MANAGER),
+    (0, swagger_1.ApiOperation)({ summary: 'Update integration configuration (sync settings, zohoModule, etc.)' }),
+    (0, swagger_1.ApiBody)({ schema: { example: { provider: 'zoho', config: { zohoModule: 'contacts' } } } }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Config updated successfully' }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: 'Integration not found' }),
+    __param(0, (0, common_1.Req)()),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, Object]),
+    __metadata("design:returntype", Promise)
+], IntegrationsController.prototype, "updateConfig", null);
 __decorate([
     (0, common_1.Post)('sync'),
     (0, roles_decorator_1.Roles)(client_1.Role.ADMIN, client_1.Role.MANAGER),

@@ -19,6 +19,7 @@ export declare class ZohoController {
     getAuthUrl(req: any, redirectUri: string): string;
     exchangeCode(req: any, dto: ZohoAuthDto): Promise<{
         success: boolean;
+        reconnected: boolean;
     }>;
     requestSync(req: any, module: string): Promise<import("bullmq").Job<any, any, string>>;
     saveFieldMap(req: any, dto: ZohoFieldMapDto): Promise<void>;

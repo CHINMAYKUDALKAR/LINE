@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty, IsOptional, IsDateString } from 'class-validator';
+import { IsString, IsNotEmpty, IsOptional, IsDateString, IsIn } from 'class-validator';
 
 export class TriggerSyncDto {
     @IsString()
@@ -8,4 +8,9 @@ export class TriggerSyncDto {
     @IsOptional()
     @IsDateString()
     since?: string;
+
+    @IsOptional()
+    @IsString()
+    @IsIn(['leads', 'contacts', 'both'])
+    module?: 'leads' | 'contacts' | 'both';
 }

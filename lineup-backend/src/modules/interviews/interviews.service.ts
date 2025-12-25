@@ -17,6 +17,15 @@ import { IntegrationEventsService } from '../integrations/services/integration-e
 export class InterviewsService {
     private readonly logger = new Logger(InterviewsService.name);
 
+    // Allowed status transitions for interview workflow hardening
+    private static readonly ALLOWED_STATUS_TRANSITIONS: Record<string, string[]> = {
+        SCHEDULED: ['COMPLETED', 'CANCELLED', 'NO_SHOW', 'RESCHEDULED'],
+        RESCHEDULED: ['COMPLETED', 'CANCELLED', 'NO_SHOW', 'SCHEDULED'],
+        COMPLETED: [], // Terminal state
+        CANCELLED: ['SCHEDULED'], // Can reschedule cancelled interviews
+        NO_SHOW: ['SCHEDULED'], // Can reschedule no-shows
+    };
+
     constructor(
         private prisma: PrismaService,
         @InjectQueue('interview-reminder') private reminderQueue: Queue,
@@ -25,6 +34,23 @@ export class InterviewsService {
         private recycleBinService: RecycleBinService,
         private integrationEvents: IntegrationEventsService
     ) { }
+
+    /**
+     * Validate that a status transition is allowed
+     * @throws BadRequestException if transition is not allowed
+     */
+    private validateStatusTransition(currentStatus: string, newStatus: string): void {
+        const allowed = InterviewsService.ALLOWED_STATUS_TRANSITIONS[currentStatus];
+        if (!allowed) {
+            throw new BadRequestException(`Unknown interview status: ${currentStatus}`);
+        }
+        if (!allowed.includes(newStatus)) {
+            throw new BadRequestException(
+                `Cannot transition from ${currentStatus} to ${newStatus}. ` +
+                `Allowed transitions: ${allowed.length > 0 ? allowed.join(', ') : 'none (terminal state)'}`
+            );
+        }
+    }
 
     async create(tenantId: string, userId: string, dto: CreateInterviewDto) {
         // Validate candidate exists (outside transaction for faster failure)
@@ -394,6 +420,10 @@ export class InterviewsService {
 
     async cancel(tenantId: string, userId: string, id: string) {
         const interview = await this.get(tenantId, id);
+
+        // Validate status transition
+        this.validateStatusTransition(interview.status, 'CANCELLED');
+
         const updated = await this.prisma.interview.update({
             where: { id },
             data: { status: 'CANCELLED' }
@@ -428,6 +458,10 @@ export class InterviewsService {
 
     async complete(tenantId: string, userId: string, id: string) {
         const interview = await this.get(tenantId, id);
+
+        // Validate status transition
+        this.validateStatusTransition(interview.status, 'COMPLETED');
+
         const updated = await this.prisma.interview.update({
             where: { id },
             data: { status: 'COMPLETED' }

@@ -15,7 +15,9 @@ export declare class InterviewsService {
     private recycleBinService;
     private integrationEvents;
     private readonly logger;
+    private static readonly ALLOWED_STATUS_TRANSITIONS;
     constructor(prisma: PrismaService, reminderQueue: Queue, syncQueue: Queue, automationService: InterviewAutomationService, recycleBinService: RecycleBinService, integrationEvents: IntegrationEventsService);
+    private validateStatusTransition;
     create(tenantId: string, userId: string, dto: CreateInterviewDto): Promise<{
         id: string;
         createdAt: Date;

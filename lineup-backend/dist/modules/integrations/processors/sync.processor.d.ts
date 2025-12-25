@@ -10,6 +10,7 @@ interface SyncJobData {
     provider: string;
     since?: string;
     triggeredBy?: string;
+    module?: 'leads' | 'contacts' | 'both';
 }
 interface EventJobData {
     tenantId: string;

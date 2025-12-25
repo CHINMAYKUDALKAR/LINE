@@ -13,42 +13,42 @@ export declare class CandidatesController {
     private resumeParserService;
     constructor(svc: CandidatesService, stageTransitionService: StageTransitionService, resumeParserService: ResumeParserService);
     create(req: any, dto: CreateCandidateDto): Promise<{
-        name: string;
         id: string;
+        name: string;
         email: string | null;
-        createdAt: Date;
-        updatedAt: Date;
-        tags: string[];
-        tenantId: string;
-        deletedAt: Date | null;
         phone: string | null;
         roleTitle: string | null;
         stage: string;
         source: string | null;
         resumeUrl: string | null;
         notes: string | null;
+        tags: string[];
         createdById: string | null;
         externalId: string | null;
         externalSource: string | null;
         rawExternalData: import("@prisma/client/runtime/library").JsonValue | null;
         overallScore: number | null;
         lastFeedbackAt: Date | null;
+        createdAt: Date;
+        updatedAt: Date;
+        deletedAt: Date | null;
+        tenantId: string;
     }>;
     list(req: any, dto: ListCandidatesDto): Promise<{
         data: {
             hasActiveInterview: boolean;
             activeInterviewId: string | undefined;
             activeInterviewDate: Date | undefined;
-            name: string;
             id: string;
+            name: string;
             email: string | null;
-            createdAt: Date;
-            updatedAt: Date;
             phone: string | null;
             roleTitle: string | null;
             stage: string;
             source: string | null;
             createdById: string | null;
+            createdAt: Date;
+            updatedAt: Date;
         }[];
         meta: {
             total: number;
@@ -58,48 +58,48 @@ export declare class CandidatesController {
         };
     }>;
     get(req: any, id: string): Promise<{
-        name: string;
         id: string;
+        name: string;
         email: string | null;
-        createdAt: Date;
-        updatedAt: Date;
-        tags: string[];
-        tenantId: string;
-        deletedAt: Date | null;
         phone: string | null;
         roleTitle: string | null;
         stage: string;
         source: string | null;
         resumeUrl: string | null;
         notes: string | null;
+        tags: string[];
         createdById: string | null;
         externalId: string | null;
         externalSource: string | null;
         rawExternalData: import("@prisma/client/runtime/library").JsonValue | null;
         overallScore: number | null;
         lastFeedbackAt: Date | null;
+        createdAt: Date;
+        updatedAt: Date;
+        deletedAt: Date | null;
+        tenantId: string;
     }>;
     update(req: any, id: string, dto: UpdateCandidateDto): Promise<{
-        name: string;
         id: string;
+        name: string;
         email: string | null;
-        createdAt: Date;
-        updatedAt: Date;
-        tags: string[];
-        tenantId: string;
-        deletedAt: Date | null;
         phone: string | null;
         roleTitle: string | null;
         stage: string;
         source: string | null;
         resumeUrl: string | null;
         notes: string | null;
+        tags: string[];
         createdById: string | null;
         externalId: string | null;
         externalSource: string | null;
         rawExternalData: import("@prisma/client/runtime/library").JsonValue | null;
         overallScore: number | null;
         lastFeedbackAt: Date | null;
+        createdAt: Date;
+        updatedAt: Date;
+        deletedAt: Date | null;
+        tenantId: string;
     }>;
     delete(req: any, id: string): Promise<{
         success: boolean;
@@ -108,20 +108,20 @@ export declare class CandidatesController {
     rejectCandidate(req: any, id: string, dto: RejectCandidateDto): Promise<import("./services/stage-transition.service").StageTransitionResult>;
     getStageHistory(req: any, id: string): Promise<{
         actor: {
-            name: string | null;
             id: string;
+            name: string | null;
             email: string;
         } | null;
         id: string;
+        source: string;
         createdAt: Date;
         tenantId: string;
-        source: string;
         candidateId: string;
-        newStage: string;
-        reason: string | null;
         previousStage: string;
+        newStage: string;
         triggeredBy: string;
         actorId: string | null;
+        reason: string | null;
     }[]>;
     uploadUrl(req: any, id: string, filename: string): Promise<{
         fileId: string;
@@ -164,52 +164,52 @@ export declare class CandidatesController {
         };
     }>;
     createFromResume(req: any, dto: CreateCandidateFromResumeDto): Promise<{
-        name: string;
         id: string;
+        name: string;
         email: string | null;
-        createdAt: Date;
-        updatedAt: Date;
-        tags: string[];
-        tenantId: string;
-        deletedAt: Date | null;
         phone: string | null;
         roleTitle: string | null;
         stage: string;
         source: string | null;
         resumeUrl: string | null;
         notes: string | null;
+        tags: string[];
         createdById: string | null;
         externalId: string | null;
         externalSource: string | null;
         rawExternalData: import("@prisma/client/runtime/library").JsonValue | null;
         overallScore: number | null;
         lastFeedbackAt: Date | null;
+        createdAt: Date;
+        updatedAt: Date;
+        deletedAt: Date | null;
+        tenantId: string;
     }>;
     listDocuments(req: any, id: string): Promise<{
         data: {
             id: string;
             createdAt: Date;
             updatedAt: Date;
-            metadata: import("@prisma/client/runtime/library").JsonValue;
             filename: string;
             mimeType: string | null;
             size: number | null;
+            metadata: import("@prisma/client/runtime/library").JsonValue;
         }[];
     }>;
     listNotes(req: any, id: string): Promise<{
         data: {
             author: {
-                name: string | null;
                 id: string;
+                name: string | null;
                 email: string;
             };
             id: string;
             createdAt: Date;
             updatedAt: Date;
             tenantId: string;
-            content: string;
             candidateId: string;
             authorId: string;
+            content: string;
         }[];
         meta: {
             total: number;
@@ -220,26 +220,26 @@ export declare class CandidatesController {
     }>;
     addNote(req: any, id: string, dto: CreateCandidateNoteDto): Promise<{
         author: {
-            name: string | null;
             id: string;
+            name: string | null;
             email: string;
         };
         id: string;
         createdAt: Date;
         updatedAt: Date;
         tenantId: string;
-        content: string;
         candidateId: string;
         authorId: string;
+        content: string;
     }>;
     updateNote(req: any, noteId: string, dto: UpdateCandidateNoteDto): Promise<{
         id: string;
         createdAt: Date;
         updatedAt: Date;
         tenantId: string;
-        content: string;
         candidateId: string;
         authorId: string;
+        content: string;
     }>;
     deleteNote(req: any, noteId: string): Promise<{
         success: boolean;

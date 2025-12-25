@@ -69,7 +69,7 @@ function MessagesContent() {
     const totalPages = data?.totalPages || 1;
 
     return (
-        <div className="p-4 md:p-8">
+        <div className="p-4 md:p-8 h-full">
             {/* Header */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                 <div>

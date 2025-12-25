@@ -14,6 +14,7 @@ const class_validator_1 = require("class-validator");
 class TriggerSyncDto {
     provider;
     since;
+    module;
 }
 exports.TriggerSyncDto = TriggerSyncDto;
 __decorate([
@@ -26,4 +27,10 @@ __decorate([
     (0, class_validator_1.IsDateString)(),
     __metadata("design:type", String)
 ], TriggerSyncDto.prototype, "since", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsIn)(['leads', 'contacts', 'both']),
+    __metadata("design:type", String)
+], TriggerSyncDto.prototype, "module", void 0);
 //# sourceMappingURL=sync.dto.js.map

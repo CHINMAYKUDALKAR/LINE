@@ -7,23 +7,25 @@ export declare class IntegrationsController {
     constructor(integrationsService: IntegrationsService);
     oauthCallback(code: string, state: string, res: any): Promise<any>;
     listIntegrations(req: any): Promise<{
+        config: any;
+        settings: undefined;
         id: string;
-        createdAt: Date;
-        updatedAt: Date;
-        status: string | null;
         provider: string;
+        status: string | null;
         lastSyncedAt: Date | null;
         lastError: string | null;
+        createdAt: Date;
+        updatedAt: Date;
     }[]>;
     getIntegration(req: any, provider: string): Promise<{
         id: string;
-        settings: import("@prisma/client/runtime/library").JsonValue;
-        createdAt: Date;
-        updatedAt: Date;
-        status: string | null;
         provider: string;
+        settings: import("@prisma/client/runtime/library").JsonValue;
+        status: string | null;
         lastSyncedAt: Date | null;
         lastError: string | null;
+        createdAt: Date;
+        updatedAt: Date;
     }>;
     connect(req: any, connectDto: ConnectDto): Promise<{
         authUrl: string;
@@ -32,6 +34,13 @@ export declare class IntegrationsController {
     updateMapping(req: any, mappingDto: UpdateMappingDto): Promise<{
         success: boolean;
         mapping: import("./types/mapping.interface").MappingConfig;
+    }>;
+    updateConfig(req: any, body: {
+        provider: string;
+        config: any;
+    }): Promise<{
+        success: boolean;
+        config: any;
     }>;
     triggerSync(req: any, syncDto: TriggerSyncDto): Promise<{
         success: boolean;
@@ -104,13 +113,13 @@ export declare class IntegrationsController {
     }>;
     getSyncLogs(req: any, provider: string, limit?: string, status?: string): Promise<{
         id: string;
-        createdAt: Date;
         status: import("@prisma/client").$Enums.SyncLogStatus;
-        externalId: string | null;
+        createdAt: Date;
         eventType: string;
         direction: import("@prisma/client").$Enums.SyncDirection;
         entityType: string;
         entityId: string | null;
+        externalId: string | null;
         errorMessage: string | null;
         retryCount: number;
         completedAt: Date | null;

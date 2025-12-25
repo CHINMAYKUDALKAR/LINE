@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { formatDistanceToNow } from 'date-fns';
-import { Settings, RefreshCw, AlertCircle, CheckCircle, Clock, Loader2 } from 'lucide-react';
+import { Settings, RefreshCw, AlertCircle, CheckCircle, Clock, Loader2, AlertTriangle } from 'lucide-react';
 
 interface IntegrationCardProps {
   integration: Integration;
@@ -22,12 +22,14 @@ const statusConfig: Record<string, { label: string; variant: 'default' | 'second
   error: { label: 'Error', variant: 'destructive', icon: AlertCircle },
   syncing: { label: 'Syncing', variant: 'outline', icon: Loader2 },
   pending_auth: { label: 'Pending Auth', variant: 'outline', icon: Clock },
+  auth_required: { label: 'Auth Required', variant: 'destructive', icon: AlertTriangle },
 };
 
 export function IntegrationCard({ integration, onConfigure, onConnect, onSync, isConnecting, isSyncing }: IntegrationCardProps) {
   const status = statusConfig[integration.status] || statusConfig.disconnected;
   const StatusIcon = status.icon;
   const isConnected = integration.status === 'connected' || integration.status === 'syncing';
+  const isAuthRequired = integration.status === 'auth_required';
   const supportedObjects = integration.supportedObjects || [];
 
   return (
@@ -50,6 +52,21 @@ export function IntegrationCard({ integration, onConfigure, onConnect, onSync, i
           {status.label}
         </Badge>
       </div>
+
+      {/* Auth Required Warning Banner */}
+      {isAuthRequired && (
+        <div className="mt-3 p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
+          <div className="flex items-start gap-2">
+            <AlertTriangle className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
+            <div className="text-sm">
+              <p className="font-medium text-destructive">Authentication Expired</p>
+              <p className="text-muted-foreground text-xs mt-0.5">
+                {integration.lastError || 'OAuth token expired or revoked. Please reconnect to resume syncing.'}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {supportedObjects.length > 0 && (
         <div className="mt-4">
@@ -83,7 +100,24 @@ export function IntegrationCard({ integration, onConfigure, onConnect, onSync, i
       )}
 
       <div className="mt-4 pt-4 border-t border-border flex items-center gap-2">
-        {isConnected ? (
+        {isAuthRequired ? (
+          /* Auth Required - Show prominent Reconnect button */
+          <>
+            <Button
+              variant="destructive"
+              size="sm"
+              className="flex-1"
+              onClick={() => onConnect(integration.id)}
+              disabled={isConnecting}
+            >
+              <AlertTriangle className="mr-2 h-4 w-4" />
+              {isConnecting ? 'Reconnecting...' : 'Reconnect Now'}
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => onConfigure(integration.id)}>
+              <Settings className="h-4 w-4" />
+            </Button>
+          </>
+        ) : isConnected ? (
           <>
             <Button
               variant="default"
@@ -121,3 +155,4 @@ export function IntegrationCard({ integration, onConfigure, onConnect, onSync, i
     </div>
   );
 }
+

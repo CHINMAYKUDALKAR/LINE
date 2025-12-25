@@ -34,6 +34,7 @@ export class IntegrationsService {
                 id: true,
                 provider: true,
                 status: true,
+                settings: true,
                 lastSyncedAt: true,
                 lastError: true,
                 createdAt: true,
@@ -41,7 +42,12 @@ export class IntegrationsService {
             },
         });
 
-        return integrations;
+        // Transform settings.config to top-level config for frontend
+        return integrations.map(i => ({
+            ...i,
+            config: (i.settings as any)?.config || undefined,
+            settings: undefined, // Don't expose raw settings to frontend
+        }));
     }
 
     /**
@@ -187,9 +193,9 @@ export class IntegrationsService {
     }
 
     /**
-     * Trigger manual sync
+     * Update integration configuration (sync settings, zohoModule, etc.)
      */
-    async syncNow(tenantId: string, provider: string, userId: string, since?: Date) {
+    async updateConfig(tenantId: string, provider: string, config: any) {
         const integration = await this.prisma.integration.findUnique({
             where: {
                 tenantId_provider: {
@@ -201,6 +207,56 @@ export class IntegrationsService {
 
         if (!integration) {
             throw new NotFoundException(`Integration ${provider} not found`);
+        }
+
+        // Merge with existing settings
+        const existingSettings = (integration.settings as any) || {};
+        const updatedSettings = {
+            ...existingSettings,
+            config: {
+                ...(existingSettings.config || {}),
+                ...config,
+            },
+        };
+
+        await this.prisma.integration.update({
+            where: {
+                tenantId_provider: {
+                    tenantId,
+                    provider,
+                },
+            },
+            data: {
+                settings: updatedSettings,
+            },
+        });
+
+        return { success: true, config: updatedSettings.config };
+    }
+
+    /**
+     * Trigger manual sync
+     * @param module - For Zoho: 'leads', 'contacts', or 'both'
+     */
+    async syncNow(tenantId: string, provider: string, userId: string, since?: Date, module?: string) {
+        const integration = await this.prisma.integration.findUnique({
+            where: {
+                tenantId_provider: {
+                    tenantId,
+                    provider,
+                },
+            },
+        });
+
+        if (!integration) {
+            throw new NotFoundException(`Integration ${provider} not found`);
+        }
+
+        // Check for auth_required status - admin must reconnect
+        if (integration.status === 'auth_required') {
+            throw new BadRequestException(
+                `Cannot sync: Zoho authentication expired. Please reconnect the integration to resume syncing.`
+            );
         }
 
         if (integration.status !== 'connected') {
@@ -227,6 +283,7 @@ export class IntegrationsService {
                 tenantId,
                 provider,
                 since: since?.toISOString(),
+                module: module || 'leads', // Default to 'leads' for backwards compatibility
             },
             {
                 attempts: 5,
@@ -382,7 +439,7 @@ export class IntegrationsService {
     }
 
     /**
-     * Get sync metrics for an integration
+     * Get sync metrics for an integration from real sync log data
      */
     async getMetrics(tenantId: string, provider: string) {
         const integration = await this.getIntegration(tenantId, provider);
@@ -390,18 +447,90 @@ export class IntegrationsService {
             return null;
         }
 
-        // Return computed metrics - in production would aggregate from sync history
+        // Get metrics from last 7 days
+        const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+
+        // Get sync counts by status
+        const statusCounts = await this.prisma.integrationSyncLog.groupBy({
+            by: ['status'],
+            where: {
+                tenantId,
+                provider,
+                createdAt: { gte: since },
+            },
+            _count: true,
+        });
+
+        let totalSyncs = 0, successfulSyncs = 0, failedSyncs = 0, queuedJobs = 0;
+        for (const row of statusCounts) {
+            totalSyncs += row._count;
+            if (row.status === 'SUCCESS') successfulSyncs = row._count;
+            if (row.status === 'FAILED') failedSyncs = row._count;
+            if (row.status === 'PENDING' || row.status === 'IN_PROGRESS') {
+                queuedJobs += row._count;
+            }
+        }
+
+        // Calculate average latency from completed syncs
+        const completedSyncs = await this.prisma.integrationSyncLog.findMany({
+            where: {
+                tenantId,
+                provider,
+                status: 'SUCCESS',
+                createdAt: { gte: since },
+                completedAt: { not: null },
+            },
+            select: {
+                createdAt: true,
+                completedAt: true,
+            },
+            take: 100,
+        });
+
+        let avgLatencyMs = 0;
+        if (completedSyncs.length > 0) {
+            const totalLatency = completedSyncs.reduce((sum, s) => {
+                return sum + (s.completedAt!.getTime() - s.createdAt.getTime());
+            }, 0);
+            avgLatencyMs = Math.round(totalLatency / completedSyncs.length);
+        }
+
+        // Count total records processed (unique entities)
+        const recordsProcessed = await this.prisma.integrationSyncLog.count({
+            where: {
+                tenantId,
+                provider,
+                status: 'SUCCESS',
+                createdAt: { gte: since },
+            },
+        });
+
+        // Get last error if any
+        const lastError = await this.prisma.integrationSyncLog.findFirst({
+            where: {
+                tenantId,
+                provider,
+                status: 'FAILED',
+            },
+            orderBy: { createdAt: 'desc' },
+            select: { errorMessage: true },
+        });
+
+        const successRate = totalSyncs > 0
+            ? Math.round((successfulSyncs / totalSyncs) * 1000) / 10
+            : 100;
+
         return {
             integrationId: integration.id,
             period: 'Last 7 days',
-            totalSyncs: 168,
-            successfulSyncs: 162,
-            failedSyncs: 6,
-            successRate: 96.4,
-            avgLatencyMs: 245,
-            recordsProcessed: 1847,
-            queuedJobs: 3,
-            lastError: integration.status === 'error' ? 'Rate limit exceeded (2 hours ago)' : null,
+            totalSyncs,
+            successfulSyncs,
+            failedSyncs,
+            successRate,
+            avgLatencyMs,
+            recordsProcessed,
+            queuedJobs,
+            lastError: lastError?.errorMessage || null,
         };
     }
 

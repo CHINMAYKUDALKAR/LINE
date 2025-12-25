@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { HelpCircle, ArrowLeftRight, ArrowLeft, ArrowRight, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import * as integrationsApi from '@/lib/api/integrations';
 
 interface SyncConfigPanelProps {
   integration: Integration;
@@ -43,15 +44,22 @@ export function SyncConfigPanel({ integration, onSave }: SyncConfigPanelProps) {
     conflictResolution: 'latest_wins' as ConflictResolution,
     enableWebhooks: false,
     webhookUrl: '',
+    zohoModule: 'leads' as 'leads' | 'contacts' | 'both',
   });
   const [isSaving, setIsSaving] = useState(false);
 
   const handleSave = async () => {
     setIsSaving(true);
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    onSave(config);
-    toast.success('Sync configuration saved');
-    setIsSaving(false);
+    try {
+      await integrationsApi.updateConfig(integration.provider, config);
+      onSave(config);
+      toast.success('Sync configuration saved');
+    } catch (error) {
+      toast.error('Failed to save configuration');
+      console.error('Save config failed:', error);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -60,6 +68,55 @@ export function SyncConfigPanel({ integration, onSave }: SyncConfigPanelProps) {
         <h3 className="font-semibold text-foreground">Sync Configuration</h3>
         <p className="text-sm text-muted-foreground">Configure how data is synchronized</p>
       </div>
+
+      {/* Zoho Module Selector - Only show for Zoho */}
+      {integration.provider === 'zoho' && (
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <Label>Sync Module</Label>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <HelpCircle className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+              </TooltipTrigger>
+              <TooltipContent className="max-w-xs">
+                <p>Choose which Zoho CRM module to sync as candidates. Select "Both" to import Leads and Contacts together.</p>
+              </TooltipContent>
+            </Tooltip>
+          </div>
+          <div className="grid grid-cols-3 gap-3">
+            <button
+              onClick={() => setConfig({ ...config, zohoModule: 'leads' })}
+              className={`p-4 rounded-lg border text-left transition-all ${(config.zohoModule || 'leads') === 'leads'
+                ? 'border-primary bg-primary/5 text-primary'
+                : 'border-border hover:border-primary/50'
+                }`}
+            >
+              <span className="text-base font-semibold block">Leads</span>
+              <span className="text-xs text-muted-foreground">Prospects</span>
+            </button>
+            <button
+              onClick={() => setConfig({ ...config, zohoModule: 'contacts' })}
+              className={`p-4 rounded-lg border text-left transition-all ${config.zohoModule === 'contacts'
+                ? 'border-primary bg-primary/5 text-primary'
+                : 'border-border hover:border-primary/50'
+                }`}
+            >
+              <span className="text-base font-semibold block">Contacts</span>
+              <span className="text-xs text-muted-foreground">Established</span>
+            </button>
+            <button
+              onClick={() => setConfig({ ...config, zohoModule: 'both' })}
+              className={`p-4 rounded-lg border text-left transition-all ${config.zohoModule === 'both'
+                ? 'border-primary bg-primary/5 text-primary'
+                : 'border-border hover:border-primary/50'
+                }`}
+            >
+              <span className="text-base font-semibold block">Both</span>
+              <span className="text-xs text-muted-foreground">All records</span>
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Sync Direction */}
       <div className="space-y-3">
@@ -81,11 +138,10 @@ export function SyncConfigPanel({ integration, onSave }: SyncConfigPanelProps) {
               <button
                 key={opt.value}
                 onClick={() => setConfig({ ...config, syncDirection: opt.value })}
-                className={`p-3 rounded-lg border text-center transition-all ${
-                  config.syncDirection === opt.value
-                    ? 'border-primary bg-primary/5 text-primary'
-                    : 'border-border hover:border-primary/50'
-                }`}
+                className={`p-3 rounded-lg border text-center transition-all ${config.syncDirection === opt.value
+                  ? 'border-primary bg-primary/5 text-primary'
+                  : 'border-border hover:border-primary/50'
+                  }`}
               >
                 <Icon className="h-5 w-5 mx-auto mb-1" />
                 <span className="text-sm font-medium">{opt.label}</span>

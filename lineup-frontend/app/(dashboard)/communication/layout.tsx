@@ -33,7 +33,7 @@ export default function CommunicationLayout({ children }: { children: ReactNode 
         <div className="min-h-screen bg-slate-50">
             {/* Sub-navigation */}
             <div className="bg-white border-b border-slate-200 sticky top-0 z-30">
-                <div className="max-w-7xl mx-auto px-4 md:px-8">
+                <div className="px-4 md:px-8">
                     <nav
                         className="flex items-center gap-2 py-2 overflow-x-auto w-full [&::-webkit-scrollbar]:hidden"
                         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}

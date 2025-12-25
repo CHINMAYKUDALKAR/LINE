@@ -1,106 +1,103 @@
-import { usePathname } from 'next/navigation';
+'use client';
+
 import Link from 'next/link';
-import {
-  LayoutDashboard, Video, Calendar, Users, BarChart3, MessageSquare,
-  UserCog, Settings, Plug, Activity, Trash2, LucideIcon
-} from 'lucide-react';
-import { motion } from 'framer-motion';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { Badge } from '@/components/ui/badge';
-import { NavItem } from '@/types/navigation';
 import { cn } from '@/lib/utils';
+import { Badge } from '@/components/ui/badge';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { LucideIcon } from 'lucide-react';
 
-const iconMap: Record<string, LucideIcon> = {
-  LayoutDashboard,
-  Video,
-  Calendar,
-  Users,
-  BarChart3,
-  MessageSquare,
-  UserCog,
-  Settings,
-  Plug,
-  Activity,
-  Trash2,
-};
-
-interface SidebarNavItemProps {
-  item: NavItem;
-  collapsed: boolean;
+interface NavItem {
+    name: string;
+    href: string;
+    icon: LucideIcon;
+    badge?: number;
 }
 
-export function SidebarNavItem({ item, collapsed }: SidebarNavItemProps) {
-  const pathname = usePathname();
-  const Icon = iconMap[item.icon] || LayoutDashboard;
+interface SidebarNavItemProps {
+    item: NavItem;
+    collapsed: boolean;
+    isActive: boolean;
+}
 
-  const isActive =
-    item.path === '/'
-      ? pathname === '/' || pathname === '/dashboard'
-      : pathname === item.path || pathname?.startsWith(`${item.path}/`);
+export function SidebarNavItem({ item, collapsed, isActive }: SidebarNavItemProps) {
+    const Icon = item.icon;
 
-  const linkContent = (
-    <Link
-      href={item.path}
-      className={cn(
-        'group flex items-center gap-3 px-3 py-2.5 mx-2 rounded-xl transition-all duration-300 ease-out',
-        isActive
-          ? 'bg-primary/10 text-primary font-semibold shadow-sm translate-x-1'
-          : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100/80 dark:hover:text-slate-200 dark:hover:bg-slate-800/50',
-        collapsed ? 'justify-center px-0 mx-0 w-12 h-12 rounded-2xl mx-auto' : ''
-      )}
-    >
-      <Icon
-        className={cn(
-          'w-5 h-5 flex-shrink-0 transition-all duration-300',
-          isActive ? 'text-primary scale-110' : 'text-slate-400 group-hover:text-slate-600 dark:text-slate-500 dark:group-hover:text-slate-300',
-          collapsed && isActive && 'scale-125'
-        )}
-        strokeWidth={isActive ? 2 : 1.75}
-      />
-      {!collapsed && (
-        <motion.div
-          initial={{ opacity: 0, x: -5 }}
-          animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: -5 }}
-          transition={{ duration: 0.2 }}
-          className="flex-1 overflow-hidden"
-        >
-          <span className={cn(
-            'text-[14px] font-medium whitespace-nowrap block',
-            isActive ? 'text-primary' : ''
-          )}>
-            {item.title}
-          </span>
-        </motion.div>
-      )}
-      {!collapsed && item.badge && item.badge > 0 && (
-        <Badge
-          variant="secondary"
-          className="h-5 min-w-5 px-1.5 text-[10px] bg-primary/10 text-primary rounded-full"
-        >
-          {item.badge}
-        </Badge>
-      )}
-    </Link>
-  );
+    // Collapsed state - icon only with indicator
+    if (collapsed) {
+        return (
+            <Tooltip delayDuration={0}>
+                <TooltipTrigger asChild>
+                    <Link
+                        href={item.href}
+                        className={cn(
+                            'relative flex items-center justify-center w-10 h-10 mx-auto rounded-xl transition-all duration-200',
+                            isActive
+                                ? 'bg-blue-100 text-blue-600 shadow-md scale-110'
+                                : 'text-slate-500 hover:bg-slate-100 hover:text-slate-700 hover:scale-105'
+                        )}
+                    >
+                        {/* Active indicator dot */}
+                        {isActive && (
+                            <span className="absolute -left-1 w-1.5 h-6 bg-blue-500 rounded-full" />
+                        )}
+                        <Icon className={cn('h-5 w-5', isActive && 'h-[22px] w-[22px]')} />
 
-  if (collapsed) {
+                        {/* Badge indicator for collapsed */}
+                        {item.badge !== undefined && item.badge > 0 && (
+                            <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                                {item.badge > 9 ? '9+' : item.badge}
+                            </span>
+                        )}
+                    </Link>
+                </TooltipTrigger>
+                <TooltipContent
+                    side="right"
+                    sideOffset={12}
+                    className={cn(
+                        'flex items-center gap-2 px-3 py-2 font-medium',
+                        isActive && 'bg-blue-600 text-white'
+                    )}
+                >
+                    {item.name}
+                    {item.badge !== undefined && item.badge > 0 && (
+                        <Badge
+                            variant={isActive ? "outline" : "secondary"}
+                            className={cn(
+                                "h-5 min-w-[20px] px-1.5 text-xs",
+                                isActive && "border-white/50 text-white"
+                            )}
+                        >
+                            {item.badge}
+                        </Badge>
+                    )}
+                </TooltipContent>
+            </Tooltip>
+        );
+    }
+
+    // Expanded state
     return (
-      <Tooltip delayDuration={0}>
-        <TooltipTrigger asChild>
-          {linkContent}
-        </TooltipTrigger>
-        <TooltipContent side="right" className="flex items-center gap-2">
-          {item.title}
-          {item.badge && item.badge > 0 && (
-            <Badge variant="secondary" className="h-5 px-1.5 text-xs">
-              {item.badge}
-            </Badge>
-          )}
-        </TooltipContent>
-      </Tooltip>
+        <Link
+            href={item.href}
+            className={cn(
+                'flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200',
+                isActive
+                    ? 'bg-blue-50 text-blue-600 font-semibold text-base scale-[1.02] shadow-sm border-l-4 border-blue-500 ml-0 pl-2.5'
+                    : 'text-slate-600 text-sm font-medium hover:bg-slate-100 hover:text-slate-900'
+            )}
+        >
+            <Icon
+                className={cn(
+                    'h-5 w-5 flex-shrink-0 transition-all',
+                    isActive ? 'text-blue-600 h-[22px] w-[22px]' : 'text-slate-400'
+                )}
+            />
+            <span className="flex-1">{item.name}</span>
+            {item.badge !== undefined && item.badge > 0 && (
+                <Badge variant="secondary" className="h-5 min-w-[20px] px-1.5 text-xs">
+                    {item.badge}
+                </Badge>
+            )}
+        </Link>
     );
-  }
-
-  return linkContent;
 }

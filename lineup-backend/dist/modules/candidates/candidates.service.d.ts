@@ -17,86 +17,86 @@ export declare class CandidatesService {
     private integrationEvents;
     constructor(prisma: PrismaService, storageService: StorageService, importQueue: Queue, eventEmitter: EventEmitter2, recycleBinService: RecycleBinService, integrationEvents: IntegrationEventsService);
     create(tenantId: string, userId: string, dto: CreateCandidateDto): Promise<{
-        name: string;
         id: string;
+        name: string;
         email: string | null;
-        createdAt: Date;
-        updatedAt: Date;
-        tags: string[];
-        tenantId: string;
-        deletedAt: Date | null;
         phone: string | null;
         roleTitle: string | null;
         stage: string;
         source: string | null;
         resumeUrl: string | null;
         notes: string | null;
+        tags: string[];
         createdById: string | null;
         externalId: string | null;
         externalSource: string | null;
         rawExternalData: import("@prisma/client/runtime/library").JsonValue | null;
         overallScore: number | null;
         lastFeedbackAt: Date | null;
+        createdAt: Date;
+        updatedAt: Date;
+        deletedAt: Date | null;
+        tenantId: string;
     }>;
     update(tenantId: string, userId: string | undefined, id: string, dto: UpdateCandidateDto): Promise<{
-        name: string;
         id: string;
+        name: string;
         email: string | null;
-        createdAt: Date;
-        updatedAt: Date;
-        tags: string[];
-        tenantId: string;
-        deletedAt: Date | null;
         phone: string | null;
         roleTitle: string | null;
         stage: string;
         source: string | null;
         resumeUrl: string | null;
         notes: string | null;
+        tags: string[];
         createdById: string | null;
         externalId: string | null;
         externalSource: string | null;
         rawExternalData: import("@prisma/client/runtime/library").JsonValue | null;
         overallScore: number | null;
         lastFeedbackAt: Date | null;
+        createdAt: Date;
+        updatedAt: Date;
+        deletedAt: Date | null;
+        tenantId: string;
     }>;
     get(tenantId: string, id: string): Promise<{
-        name: string;
         id: string;
+        name: string;
         email: string | null;
-        createdAt: Date;
-        updatedAt: Date;
-        tags: string[];
-        tenantId: string;
-        deletedAt: Date | null;
         phone: string | null;
         roleTitle: string | null;
         stage: string;
         source: string | null;
         resumeUrl: string | null;
         notes: string | null;
+        tags: string[];
         createdById: string | null;
         externalId: string | null;
         externalSource: string | null;
         rawExternalData: import("@prisma/client/runtime/library").JsonValue | null;
         overallScore: number | null;
         lastFeedbackAt: Date | null;
+        createdAt: Date;
+        updatedAt: Date;
+        deletedAt: Date | null;
+        tenantId: string;
     }>;
     list(tenantId: string, dto: ListCandidatesDto): Promise<{
         data: {
             hasActiveInterview: boolean;
             activeInterviewId: string | undefined;
             activeInterviewDate: Date | undefined;
-            name: string;
             id: string;
+            name: string;
             email: string | null;
-            createdAt: Date;
-            updatedAt: Date;
             phone: string | null;
             roleTitle: string | null;
             stage: string;
             source: string | null;
             createdById: string | null;
+            createdAt: Date;
+            updatedAt: Date;
         }[];
         meta: {
             total: number;
@@ -154,26 +154,26 @@ export declare class CandidatesService {
             id: string;
             createdAt: Date;
             updatedAt: Date;
-            metadata: import("@prisma/client/runtime/library").JsonValue;
             filename: string;
             mimeType: string | null;
             size: number | null;
+            metadata: import("@prisma/client/runtime/library").JsonValue;
         }[];
     }>;
     listNotes(tenantId: string, candidateId: string, page?: number, perPage?: number): Promise<{
         data: {
             author: {
-                name: string | null;
                 id: string;
+                name: string | null;
                 email: string;
             };
             id: string;
             createdAt: Date;
             updatedAt: Date;
             tenantId: string;
-            content: string;
             candidateId: string;
             authorId: string;
+            content: string;
         }[];
         meta: {
             total: number;
@@ -185,26 +185,26 @@ export declare class CandidatesService {
     private sanitizeContent;
     addNote(tenantId: string, candidateId: string, userId: string, content: string): Promise<{
         author: {
-            name: string | null;
             id: string;
+            name: string | null;
             email: string;
         };
         id: string;
         createdAt: Date;
         updatedAt: Date;
         tenantId: string;
-        content: string;
         candidateId: string;
         authorId: string;
+        content: string;
     }>;
     updateNote(tenantId: string, noteId: string, userId: string, userRole: string, content: string): Promise<{
         id: string;
         createdAt: Date;
         updatedAt: Date;
         tenantId: string;
-        content: string;
         candidateId: string;
         authorId: string;
+        content: string;
     }>;
     deleteNote(tenantId: string, noteId: string, userId: string, userRole: string): Promise<{
         success: boolean;
@@ -225,26 +225,26 @@ export declare class CandidatesService {
         roleTitle?: string;
         stage?: string;
     }): Promise<{
-        name: string;
         id: string;
+        name: string;
         email: string | null;
-        createdAt: Date;
-        updatedAt: Date;
-        tags: string[];
-        tenantId: string;
-        deletedAt: Date | null;
         phone: string | null;
         roleTitle: string | null;
         stage: string;
         source: string | null;
         resumeUrl: string | null;
         notes: string | null;
+        tags: string[];
         createdById: string | null;
         externalId: string | null;
         externalSource: string | null;
         rawExternalData: import("@prisma/client/runtime/library").JsonValue | null;
         overallScore: number | null;
         lastFeedbackAt: Date | null;
+        createdAt: Date;
+        updatedAt: Date;
+        deletedAt: Date | null;
+        tenantId: string;
     }>;
     private parseSort;
 }
