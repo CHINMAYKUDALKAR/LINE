@@ -1,6 +1,17 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, BadRequestException, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../../../common/prisma.service';
+import axios from 'axios';
+
+/**
+ * Custom error for authentication failures that require admin re-login
+ */
+export class SalesforceAuthRequiredError extends Error {
+    constructor(message: string = 'Salesforce authentication required') {
+        super(message);
+        this.name = 'SalesforceAuthRequiredError';
+    }
+}
 
 /**
  * Salesforce OAuth Service
@@ -9,7 +20,6 @@ import { PrismaService } from '../../../../common/prisma.service';
  * Required environment variables:
  * - SALESFORCE_CLIENT_ID
  * - SALESFORCE_CLIENT_SECRET
- * - SALESFORCE_REDIRECT_URI
  */
 @Injectable()
 export class SalesforceOAuthService {
@@ -21,128 +31,220 @@ export class SalesforceOAuthService {
         private prisma: PrismaService,
     ) { }
 
+    private get clientId(): string {
+        return this.configService.get<string>('SALESFORCE_CLIENT_ID') || '';
+    }
+
+    private get clientSecret(): string {
+        return this.configService.get<string>('SALESFORCE_CLIENT_SECRET') || '';
+    }
+
+    /**
+     * Check if an error is an authentication error that requires re-login
+     */
+    isAuthError(error: any): boolean {
+        if (error?.response?.status === 401) return true;
+        if (error?.response?.status === 403) return true;
+
+        const sfError = error?.response?.data?.[0]?.errorCode || error?.response?.data?.error;
+        const authErrors = [
+            'INVALID_SESSION_ID',
+            'INVALID_AUTH_HEADER',
+            'INVALID_GRANT',
+            'invalid_grant',
+            'Session expired or invalid',
+        ];
+        if (sfError && authErrors.some(e => sfError.includes(e))) return true;
+
+        const message = error?.message?.toLowerCase() || '';
+        if (message.includes('invalid session') || message.includes('session expired')) return true;
+
+        return false;
+    }
+
+    /**
+     * Mark integration as requiring authentication
+     */
+    async markAuthRequired(tenantId: string, reason: string): Promise<void> {
+        this.logger.warn(`Marking Salesforce integration as auth_required for tenant ${tenantId}: ${reason}`);
+
+        await this.prisma.integration.updateMany({
+            where: { tenantId, provider: 'salesforce' },
+            data: {
+                status: 'auth_required',
+                lastError: reason,
+            },
+        });
+    }
+
+    /**
+     * Check if integration requires re-authentication
+     */
+    async isAuthRequired(tenantId: string): Promise<boolean> {
+        const integration = await this.prisma.integration.findFirst({
+            where: { tenantId, provider: 'salesforce' },
+            select: { status: true },
+        });
+        return integration?.status === 'auth_required';
+    }
+
     /**
      * Get OAuth authorization URL
      */
-    async getAuthUrl(tenantId: string): Promise<string> {
-        const clientId = this.configService.get<string>('SALESFORCE_CLIENT_ID');
-        const redirectUri = this.configService.get<string>('SALESFORCE_REDIRECT_URI');
-
-        const state = Buffer.from(JSON.stringify({
-            tenantId,
-            timestamp: Date.now(),
-            nonce: Math.random().toString(36).substring(7),
-        })).toString('base64url');
-
-        const params = new URLSearchParams({
-            response_type: 'code',
-            client_id: clientId || '',
-            redirect_uri: redirectUri || '',
-            state,
-            scope: 'api refresh_token',
-        });
-
-        return `${this.loginUrl}/services/oauth2/authorize?${params.toString()}`;
+    getAuthUrl(tenantId: string, redirectUri: string): string {
+        const scopes = 'api refresh_token offline_access';
+        return `${this.loginUrl}/services/oauth2/authorize?response_type=code&client_id=${this.clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(scopes)}&state=${tenantId}`;
     }
 
     /**
      * Exchange authorization code for tokens
      */
-    async exchangeCode(tenantId: string, code: string): Promise<void> {
-        const clientId = this.configService.get<string>('SALESFORCE_CLIENT_ID');
-        const clientSecret = this.configService.get<string>('SALESFORCE_CLIENT_SECRET');
-        const redirectUri = this.configService.get<string>('SALESFORCE_REDIRECT_URI');
+    async exchangeCode(tenantId: string, code: string, redirectUri: string): Promise<{ success: boolean; instanceUrl: string }> {
+        const params = new URLSearchParams();
+        params.append('grant_type', 'authorization_code');
+        params.append('code', code);
+        params.append('client_id', this.clientId);
+        params.append('client_secret', this.clientSecret);
+        params.append('redirect_uri', redirectUri);
 
-        this.logger.log(`Exchanging code for Salesforce tokens for tenant ${tenantId}`);
+        try {
+            const res = await axios.post(`${this.loginUrl}/services/oauth2/token`, params, {
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            });
 
-        // TODO: Implement actual token exchange when API keys are provided
-        // const response = await fetch(`${this.loginUrl}/services/oauth2/token`, {
-        //     method: 'POST',
-        //     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        //     body: new URLSearchParams({
-        //         grant_type: 'authorization_code',
-        //         client_id: clientId,
-        //         client_secret: clientSecret,
-        //         redirect_uri: redirectUri,
-        //         code,
-        //     }),
-        // });
+            if (!res.data.access_token) {
+                throw new BadRequestException('Invalid authorization code');
+            }
 
-        // Store tokens in integration record
-        await this.prisma.integration.upsert({
-            where: {
-                tenantId_provider: { tenantId, provider: 'salesforce' },
-            },
-            create: {
-                tenantId,
-                provider: 'salesforce',
-                status: 'connected',
-                tokens: {
-                    // Placeholder - will be replaced with actual tokens
-                    access_token: 'placeholder',
-                    refresh_token: 'placeholder',
-                    instance_url: 'https://na1.salesforce.com',
-                    expires_at: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
+            await this.prisma.integration.upsert({
+                where: { tenantId_provider: { tenantId, provider: 'salesforce' } },
+                create: {
+                    tenantId,
+                    provider: 'salesforce',
+                    tokens: {
+                        access_token: res.data.access_token,
+                        refresh_token: res.data.refresh_token,
+                        token_type: res.data.token_type,
+                        issued_at: res.data.issued_at,
+                    },
+                    instanceUrl: res.data.instance_url,
+                    status: 'connected',
+                    lastError: null,
                 },
-            },
-            update: {
-                status: 'connected',
-                tokens: {
-                    access_token: 'placeholder',
-                    refresh_token: 'placeholder',
-                    instance_url: 'https://na1.salesforce.com',
-                    expires_at: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
+                update: {
+                    tokens: {
+                        access_token: res.data.access_token,
+                        refresh_token: res.data.refresh_token,
+                        token_type: res.data.token_type,
+                        issued_at: res.data.issued_at,
+                    },
+                    instanceUrl: res.data.instance_url,
+                    status: 'connected',
+                    lastError: null,
                 },
-            },
-        });
+            });
+
+            this.logger.log(`Salesforce OAuth tokens exchanged successfully for tenant ${tenantId}`);
+            return { success: true, instanceUrl: res.data.instance_url };
+        } catch (error: any) {
+            this.logger.error(`Failed to exchange Salesforce auth code: ${error.message}`);
+            throw new BadRequestException(`Failed to exchange auth code: ${error.response?.data?.error_description || error.message}`);
+        }
     }
 
     /**
-     * Refresh access tokens
+     * Refresh access token
      */
-    async refreshTokens(tenantId: string): Promise<void> {
-        this.logger.log(`Refreshing Salesforce tokens for tenant ${tenantId}`);
+    async refreshToken(tenantId: string): Promise<string> {
+        if (await this.isAuthRequired(tenantId)) {
+            throw new SalesforceAuthRequiredError('Salesforce re-authentication required. Admin must reconnect.');
+        }
 
-        // TODO: Implement actual token refresh when API keys are provided
-        // Get current tokens, refresh using refresh_token, update database
+        const integration = await this.prisma.integration.findFirst({
+            where: { tenantId, provider: 'salesforce' },
+        });
+
+        const tokens = integration?.tokens as any;
+        if (!integration || !tokens?.refresh_token) {
+            throw new BadRequestException('No Salesforce integration found');
+        }
+
+        const params = new URLSearchParams();
+        params.append('grant_type', 'refresh_token');
+        params.append('refresh_token', tokens.refresh_token);
+        params.append('client_id', this.clientId);
+        params.append('client_secret', this.clientSecret);
+
+        try {
+            const res = await axios.post(`${this.loginUrl}/services/oauth2/token`, params, {
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            });
+
+            const newTokens = {
+                ...tokens,
+                access_token: res.data.access_token,
+                issued_at: res.data.issued_at,
+            };
+
+            await this.prisma.integration.update({
+                where: { id: integration.id },
+                data: {
+                    tokens: newTokens,
+                    instanceUrl: res.data.instance_url || integration.instanceUrl,
+                    status: 'connected',
+                    lastError: null,
+                },
+            });
+
+            return res.data.access_token;
+        } catch (error: any) {
+            if (this.isAuthError(error)) {
+                const reason = 'Salesforce OAuth token expired or revoked. Admin must reconnect.';
+                await this.markAuthRequired(tenantId, reason);
+                throw new SalesforceAuthRequiredError(reason);
+            }
+
+            this.logger.error(`Failed to refresh Salesforce token: ${error.message}`);
+            throw error;
+        }
     }
 
     /**
-     * Get current access token
+     * Get access token (refresh if needed)
      */
-    async getAccessToken(tenantId: string): Promise<string> {
-        const integration = await this.prisma.integration.findUnique({
-            where: {
-                tenantId_provider: { tenantId, provider: 'salesforce' },
-            },
+    async getAccessToken(tenantId: string): Promise<{ accessToken: string; instanceUrl: string }> {
+        if (await this.isAuthRequired(tenantId)) {
+            throw new SalesforceAuthRequiredError('Salesforce re-authentication required. Admin must reconnect.');
+        }
+
+        const integration = await this.prisma.integration.findFirst({
+            where: { tenantId, provider: 'salesforce' },
         });
 
-        if (!integration?.tokens) {
-            throw new Error('Salesforce not connected');
+        if (!integration || !integration.tokens || !integration.instanceUrl) {
+            throw new BadRequestException('Salesforce integration not configured');
         }
 
-        const tokens = integration.tokens as { access_token: string; expires_at: string };
+        const tokens = integration.tokens as any;
+        const accessToken = tokens?.access_token;
 
-        // Check if token is expired and refresh if needed
-        if (new Date(tokens.expires_at) < new Date()) {
-            await this.refreshTokens(tenantId);
-            return this.getAccessToken(tenantId);
+        if (!accessToken) {
+            throw new BadRequestException('Salesforce access token not found');
         }
 
-        return tokens.access_token;
+        return {
+            accessToken,
+            instanceUrl: integration.instanceUrl,
+        };
     }
 
     /**
      * Get instance URL for API calls
      */
     async getInstanceUrl(tenantId: string): Promise<string> {
-        const integration = await this.prisma.integration.findUnique({
-            where: {
-                tenantId_provider: { tenantId, provider: 'salesforce' },
-            },
+        const integration = await this.prisma.integration.findFirst({
+            where: { tenantId, provider: 'salesforce' },
         });
-
-        const tokens = integration?.tokens as { instance_url?: string } | null;
-        return tokens?.instance_url || 'https://na1.salesforce.com';
+        return integration?.instanceUrl || 'https://login.salesforce.com';
     }
 }

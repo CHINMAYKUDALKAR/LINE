@@ -27,7 +27,219 @@ export class HubspotSyncHandler {
     ) { }
 
     // ============================================
-    // Candidate Event Handlers
+    // Inbound Sync (HubSpot → Lineup)
+    // ============================================
+
+    /**
+     * Main sync entry point for inbound imports
+     * Called by SyncProcessor for scheduled/manual imports
+     */
+    async syncAll(tenantId: string, module: string = 'contacts'): Promise<{
+        contacts?: { imported: number; updated: number; errors: number };
+    }> {
+        this.logger.log(`Starting HubSpot sync for tenant ${tenantId}, module: ${module}`);
+
+        // HubSpot only has Contacts (no separate Leads like Salesforce/Zoho)
+        const contactsResult = await this.syncContacts(tenantId);
+
+        this.logger.log(`HubSpot sync completed for tenant ${tenantId}`);
+        this.logger.log('Object:', { contacts: contactsResult });
+
+        return { contacts: contactsResult };
+    }
+
+    /**
+     * Sync HubSpot Contacts to Candidates
+     */
+    async syncContacts(tenantId: string): Promise<{
+        imported: number;
+        updated: number;
+        errors: number;
+        module: string;
+    }> {
+        // Get last sync time for incremental sync
+        const integration = await this.prisma.integration.findFirst({
+            where: { tenantId, provider: 'hubspot', status: 'CONNECTED' },
+        });
+
+        const lastSync = integration?.lastSyncedAt || undefined;
+
+        // Fetch contacts from HubSpot
+        const contacts = await this.apiService.getContacts(tenantId, lastSync);
+        this.logger.log(`Fetched ${contacts.length} contacts from HubSpot`);
+
+        let imported = 0;
+        let updated = 0;
+        let errors = 0;
+
+        for (const contact of contacts) {
+            try {
+                // Skip contacts without email (can't deduplicate)
+                if (!contact.email) {
+                    this.logger.warn(`Skipping HubSpot contact ${contact.id} - no email`);
+                    continue;
+                }
+
+                // Normalize name
+                const fullName = [contact.firstName, contact.lastName]
+                    .filter(Boolean)
+                    .join(' ')
+                    .trim() || contact.email.split('@')[0];
+
+                // Check for existing candidate by email (deduplication)
+                const existingCandidate = await this.prisma.candidate.findFirst({
+                    where: {
+                        tenantId,
+                        email: contact.email.toLowerCase(),
+                        deletedAt: null,
+                    },
+                });
+
+                if (existingCandidate) {
+                    // Update existing candidate
+                    await this.prisma.candidate.update({
+                        where: { id: existingCandidate.id },
+                        data: {
+                            name: fullName,
+                            phone: contact.phone || existingCandidate.phone,
+                            roleTitle: contact.jobTitle || existingCandidate.roleTitle,
+                            externalId: contact.id,
+                            source: existingCandidate.source?.includes('HUBSPOT')
+                                ? existingCandidate.source
+                                : 'HUBSPOT_CONTACT',
+                            rawExternalData: contact as any,
+                            updatedAt: new Date(),
+                        },
+                    });
+
+                    // Fetch and store deal context (non-blocking)
+                    await this.syncDealContextForCandidate(tenantId, existingCandidate.id, contact.id);
+
+                    updated++;
+                    this.logger.debug(`Updated candidate ${existingCandidate.id} from HubSpot contact ${contact.id}`);
+                } else {
+                    // Create new candidate
+                    const newCandidate = await this.prisma.candidate.create({
+                        data: {
+                            tenantId,
+                            name: fullName,
+                            email: contact.email.toLowerCase(),
+                            phone: contact.phone,
+                            roleTitle: contact.jobTitle,
+                            stage: 'applied',
+                            source: 'HUBSPOT_CONTACT',
+                            externalId: contact.id,
+                            rawExternalData: contact as any,
+                            tags: [],
+                        },
+                    });
+
+                    // Store mapping for outbound sync
+                    await this.storeMapping(tenantId, 'candidate', newCandidate.id, contact.id);
+
+                    // Fetch and store deal context (non-blocking)
+                    await this.syncDealContextForCandidate(tenantId, newCandidate.id, contact.id);
+
+                    imported++;
+                    this.logger.debug(`Created candidate ${newCandidate.id} from HubSpot contact ${contact.id}`);
+                }
+            } catch (error) {
+                errors++;
+                this.logger.error(`Failed to sync HubSpot contact ${contact.id}: ${error}`);
+            }
+        }
+
+        // Update last sync time
+        if (integration) {
+            await this.prisma.integration.update({
+                where: { id: integration.id },
+                data: { lastSyncedAt: new Date() },
+            });
+        }
+
+        this.logger.log(`Contacts sync: ${imported} imported, ${updated} updated, ${errors} errors`);
+        return { imported, updated, errors, module: 'contacts' };
+    }
+
+    /**
+     * Fetch and store deal context for a candidate (non-blocking, failures don't stop import)
+     * Deals provide hiring context only - read-only, not managed in Lineup
+     */
+    private async syncDealContextForCandidate(
+        tenantId: string,
+        candidateId: string,
+        hubspotContactId: string,
+    ): Promise<void> {
+        try {
+            const deals = await this.apiService.getDealsForContact(tenantId, hubspotContactId);
+
+            if (deals.length === 0) {
+                return;
+            }
+
+            this.logger.debug(`Found ${deals.length} deals for contact ${hubspotContactId}`);
+
+            for (const deal of deals) {
+                try {
+                    // Upsert OpportunityContext
+                    const opportunityContext = await this.prisma.opportunityContext.upsert({
+                        where: {
+                            tenantId_provider_externalId: {
+                                tenantId,
+                                provider: 'hubspot',
+                                externalId: deal.id,
+                            },
+                        },
+                        create: {
+                            tenantId,
+                            provider: 'hubspot',
+                            externalId: deal.id,
+                            name: deal.name,
+                            stageName: deal.stageName,
+                            amount: deal.amount,
+                            closeDate: deal.closeDate,
+                            rawData: deal as any,
+                        },
+                        update: {
+                            name: deal.name,
+                            stageName: deal.stageName,
+                            amount: deal.amount,
+                            closeDate: deal.closeDate,
+                            rawData: deal as any,
+                            updatedAt: new Date(),
+                        },
+                    });
+
+                    // Link candidate to deal (upsert to avoid duplicates)
+                    await this.prisma.candidateOpportunity.upsert({
+                        where: {
+                            candidateId_opportunityContextId: {
+                                candidateId,
+                                opportunityContextId: opportunityContext.id,
+                            },
+                        },
+                        create: {
+                            candidateId,
+                            opportunityContextId: opportunityContext.id,
+                            associationType: 'related',
+                        },
+                        update: {}, // No-op if exists
+                    });
+
+                    this.logger.debug(`Linked candidate ${candidateId} to deal ${deal.name}`);
+                } catch (dealError) {
+                    // Log but don't fail - deal context is non-blocking
+                    this.logger.warn(`Failed to store deal context for deal ${deal.id}: ${dealError}`);
+                }
+            }
+        } catch (error) {
+            // Log but don't fail candidate import - deal context is optional
+            this.logger.warn(`Failed to fetch deals for contact ${hubspotContactId}: ${error}`);
+        }
+    }
+
+    // ============================================
+    // Candidate Event Handlers (Outbound)
     // ============================================
 
     /**

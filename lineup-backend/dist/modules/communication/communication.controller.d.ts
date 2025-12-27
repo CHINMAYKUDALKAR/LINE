@@ -23,8 +23,8 @@ export declare class CommunicationController {
             sms: number;
         };
         recentActivity: {
-            id: string;
             subject: string | null;
+            id: string;
             createdAt: Date;
             status: import("@prisma/client").$Enums.MessageStatus;
             channel: import("@prisma/client").$Enums.Channel;
@@ -33,9 +33,9 @@ export declare class CommunicationController {
     }>;
     listMessages(req: any, filters: MessageFilterDto): Promise<{
         items: {
-            id: string;
             subject: string | null;
             body: string;
+            id: string;
             createdAt: Date;
             updatedAt: Date;
             metadata: import("@prisma/client/runtime/library").JsonValue | null;
@@ -61,9 +61,9 @@ export declare class CommunicationController {
         totalPages: number;
     }>;
     getMessage(req: any, id: string): Promise<{
-        id: string;
         subject: string | null;
         body: string;
+        id: string;
         createdAt: Date;
         updatedAt: Date;
         metadata: import("@prisma/client/runtime/library").JsonValue | null;
@@ -84,9 +84,9 @@ export declare class CommunicationController {
         failedAt: Date | null;
     }>;
     sendMessage(req: any, dto: SendMessageDto): Promise<{
-        id: string;
         subject: string | null;
         body: string;
+        id: string;
         createdAt: Date;
         updatedAt: Date;
         metadata: import("@prisma/client/runtime/library").JsonValue | null;
@@ -107,7 +107,6 @@ export declare class CommunicationController {
         failedAt: Date | null;
     }>;
     scheduleMessage(req: any, dto: ScheduleMessageDto): Promise<{
-        jobId: string | null;
         id: string;
         createdAt: Date;
         updatedAt: Date;
@@ -115,6 +114,7 @@ export declare class CommunicationController {
         status: import("@prisma/client").$Enums.ScheduleStatus;
         createdById: string | null;
         payload: import("@prisma/client/runtime/library").JsonValue;
+        jobId: string | null;
         channel: import("@prisma/client").$Enums.Channel;
         recipientType: import("@prisma/client").$Enums.RecipientType;
         recipientId: string;
@@ -122,7 +122,6 @@ export declare class CommunicationController {
         scheduledFor: Date;
     }>;
     cancelScheduled(req: any, id: string): Promise<{
-        jobId: string | null;
         id: string;
         createdAt: Date;
         updatedAt: Date;
@@ -130,6 +129,7 @@ export declare class CommunicationController {
         status: import("@prisma/client").$Enums.ScheduleStatus;
         createdById: string | null;
         payload: import("@prisma/client/runtime/library").JsonValue;
+        jobId: string | null;
         channel: import("@prisma/client").$Enums.Channel;
         recipientType: import("@prisma/client").$Enums.RecipientType;
         recipientId: string;
@@ -141,7 +141,6 @@ export declare class CommunicationController {
         messageId: string;
     }>;
     getUpcomingScheduled(req: any, limit?: number): Promise<{
-        jobId: string | null;
         id: string;
         createdAt: Date;
         updatedAt: Date;
@@ -149,6 +148,7 @@ export declare class CommunicationController {
         status: import("@prisma/client").$Enums.ScheduleStatus;
         createdById: string | null;
         payload: import("@prisma/client/runtime/library").JsonValue;
+        jobId: string | null;
         channel: import("@prisma/client").$Enums.Channel;
         recipientType: import("@prisma/client").$Enums.RecipientType;
         recipientId: string;
@@ -156,16 +156,16 @@ export declare class CommunicationController {
         scheduledFor: Date;
     }[]>;
     listTemplates(req: any, channel?: Channel, category?: TemplateCategory): Promise<{
-        isActive: boolean;
-        name: string;
-        id: string;
         subject: string | null;
         body: string;
+        id: string;
+        name: string;
         createdAt: Date;
         updatedAt: Date;
         version: number;
         tenantId: string;
         createdById: string | null;
+        isActive: boolean;
         channel: import("@prisma/client").$Enums.Channel;
         category: import("@prisma/client").$Enums.TemplateCategory;
         variables: string[];
@@ -190,80 +190,80 @@ export declare class CommunicationController {
         }[];
     };
     getTemplate(req: any, id: string): Promise<{
-        isActive: boolean;
-        name: string;
-        id: string;
         subject: string | null;
         body: string;
+        id: string;
+        name: string;
         createdAt: Date;
         updatedAt: Date;
         version: number;
         tenantId: string;
         createdById: string | null;
+        isActive: boolean;
         channel: import("@prisma/client").$Enums.Channel;
         category: import("@prisma/client").$Enums.TemplateCategory;
         variables: string[];
         isSystem: boolean;
     }>;
     createTemplate(req: any, dto: CreateTemplateDto): Promise<{
-        isActive: boolean;
-        name: string;
-        id: string;
         subject: string | null;
         body: string;
+        id: string;
+        name: string;
         createdAt: Date;
         updatedAt: Date;
         version: number;
         tenantId: string;
         createdById: string | null;
+        isActive: boolean;
         channel: import("@prisma/client").$Enums.Channel;
         category: import("@prisma/client").$Enums.TemplateCategory;
         variables: string[];
         isSystem: boolean;
     }>;
     updateTemplate(req: any, id: string, dto: UpdateTemplateDto): Promise<{
-        isActive: boolean;
-        name: string;
-        id: string;
         subject: string | null;
         body: string;
+        id: string;
+        name: string;
         createdAt: Date;
         updatedAt: Date;
         version: number;
         tenantId: string;
         createdById: string | null;
+        isActive: boolean;
         channel: import("@prisma/client").$Enums.Channel;
         category: import("@prisma/client").$Enums.TemplateCategory;
         variables: string[];
         isSystem: boolean;
     }>;
     getTemplateVersions(req: any, id: string): Promise<{
-        isActive: boolean;
-        name: string;
-        id: string;
         subject: string | null;
         body: string;
+        id: string;
+        name: string;
         createdAt: Date;
         updatedAt: Date;
         version: number;
         tenantId: string;
         createdById: string | null;
+        isActive: boolean;
         channel: import("@prisma/client").$Enums.Channel;
         category: import("@prisma/client").$Enums.TemplateCategory;
         variables: string[];
         isSystem: boolean;
     }[]>;
     deleteTemplate(req: any, id: string): Promise<{
-        isActive: boolean;
-        name: string;
-        id: string;
         subject: string | null;
         body: string;
+        id: string;
+        name: string;
         createdAt: Date;
         updatedAt: Date;
         version: number;
         tenantId: string;
         createdById: string | null;
+        isActive: boolean;
         channel: import("@prisma/client").$Enums.Channel;
         category: import("@prisma/client").$Enums.TemplateCategory;
         variables: string[];
@@ -274,16 +274,16 @@ export declare class CommunicationController {
         body: string;
     }>;
     duplicateTemplate(req: any, id: string, newName: string): Promise<{
-        isActive: boolean;
-        name: string;
-        id: string;
         subject: string | null;
         body: string;
+        id: string;
+        name: string;
         createdAt: Date;
         updatedAt: Date;
         version: number;
         tenantId: string;
         createdById: string | null;
+        isActive: boolean;
         channel: import("@prisma/client").$Enums.Channel;
         category: import("@prisma/client").$Enums.TemplateCategory;
         variables: string[];
@@ -291,30 +291,30 @@ export declare class CommunicationController {
     }>;
     listAutomations(req: any): Promise<({
         template: {
-            isActive: boolean;
-            name: string;
-            id: string;
             subject: string | null;
             body: string;
+            id: string;
+            name: string;
             createdAt: Date;
             updatedAt: Date;
             version: number;
             tenantId: string;
             createdById: string | null;
+            isActive: boolean;
             channel: import("@prisma/client").$Enums.Channel;
             category: import("@prisma/client").$Enums.TemplateCategory;
             variables: string[];
             isSystem: boolean;
         } | null;
     } & {
-        delay: number;
-        isActive: boolean;
-        name: string;
         id: string;
+        name: string;
         createdAt: Date;
         updatedAt: Date;
         tenantId: string;
         createdById: string | null;
+        delay: number;
+        isActive: boolean;
         channel: import("@prisma/client").$Enums.Channel | null;
         templateId: string | null;
         trigger: import("@prisma/client").$Enums.AutomationTrigger;
@@ -352,30 +352,30 @@ export declare class CommunicationController {
     })[];
     getAutomation(req: any, id: string): Promise<{
         template: {
-            isActive: boolean;
-            name: string;
-            id: string;
             subject: string | null;
             body: string;
+            id: string;
+            name: string;
             createdAt: Date;
             updatedAt: Date;
             version: number;
             tenantId: string;
             createdById: string | null;
+            isActive: boolean;
             channel: import("@prisma/client").$Enums.Channel;
             category: import("@prisma/client").$Enums.TemplateCategory;
             variables: string[];
             isSystem: boolean;
         } | null;
     } & {
-        delay: number;
-        isActive: boolean;
-        name: string;
         id: string;
+        name: string;
         createdAt: Date;
         updatedAt: Date;
         tenantId: string;
         createdById: string | null;
+        delay: number;
+        isActive: boolean;
         channel: import("@prisma/client").$Enums.Channel | null;
         templateId: string | null;
         trigger: import("@prisma/client").$Enums.AutomationTrigger;
@@ -385,30 +385,30 @@ export declare class CommunicationController {
     }>;
     createAutomation(req: any, dto: CreateAutomationDto): Promise<{
         template: {
-            isActive: boolean;
-            name: string;
-            id: string;
             subject: string | null;
             body: string;
+            id: string;
+            name: string;
             createdAt: Date;
             updatedAt: Date;
             version: number;
             tenantId: string;
             createdById: string | null;
+            isActive: boolean;
             channel: import("@prisma/client").$Enums.Channel;
             category: import("@prisma/client").$Enums.TemplateCategory;
             variables: string[];
             isSystem: boolean;
         } | null;
     } & {
-        delay: number;
-        isActive: boolean;
-        name: string;
         id: string;
+        name: string;
         createdAt: Date;
         updatedAt: Date;
         tenantId: string;
         createdById: string | null;
+        delay: number;
+        isActive: boolean;
         channel: import("@prisma/client").$Enums.Channel | null;
         templateId: string | null;
         trigger: import("@prisma/client").$Enums.AutomationTrigger;
@@ -418,30 +418,30 @@ export declare class CommunicationController {
     }>;
     updateAutomation(req: any, id: string, dto: UpdateAutomationDto): Promise<{
         template: {
-            isActive: boolean;
-            name: string;
-            id: string;
             subject: string | null;
             body: string;
+            id: string;
+            name: string;
             createdAt: Date;
             updatedAt: Date;
             version: number;
             tenantId: string;
             createdById: string | null;
+            isActive: boolean;
             channel: import("@prisma/client").$Enums.Channel;
             category: import("@prisma/client").$Enums.TemplateCategory;
             variables: string[];
             isSystem: boolean;
         } | null;
     } & {
-        delay: number;
-        isActive: boolean;
-        name: string;
         id: string;
+        name: string;
         createdAt: Date;
         updatedAt: Date;
         tenantId: string;
         createdById: string | null;
+        delay: number;
+        isActive: boolean;
         channel: import("@prisma/client").$Enums.Channel | null;
         templateId: string | null;
         trigger: import("@prisma/client").$Enums.AutomationTrigger;
@@ -450,14 +450,14 @@ export declare class CommunicationController {
         actionData: import("@prisma/client/runtime/library").JsonValue | null;
     }>;
     deleteAutomation(req: any, id: string): Promise<{
-        delay: number;
-        isActive: boolean;
-        name: string;
         id: string;
+        name: string;
         createdAt: Date;
         updatedAt: Date;
         tenantId: string;
         createdById: string | null;
+        delay: number;
+        isActive: boolean;
         channel: import("@prisma/client").$Enums.Channel | null;
         templateId: string | null;
         trigger: import("@prisma/client").$Enums.AutomationTrigger;
@@ -467,30 +467,30 @@ export declare class CommunicationController {
     }>;
     toggleAutomation(req: any, id: string): Promise<{
         template: {
-            isActive: boolean;
-            name: string;
-            id: string;
             subject: string | null;
             body: string;
+            id: string;
+            name: string;
             createdAt: Date;
             updatedAt: Date;
             version: number;
             tenantId: string;
             createdById: string | null;
+            isActive: boolean;
             channel: import("@prisma/client").$Enums.Channel;
             category: import("@prisma/client").$Enums.TemplateCategory;
             variables: string[];
             isSystem: boolean;
         } | null;
     } & {
-        delay: number;
-        isActive: boolean;
-        name: string;
         id: string;
+        name: string;
         createdAt: Date;
         updatedAt: Date;
         tenantId: string;
         createdById: string | null;
+        delay: number;
+        isActive: boolean;
         channel: import("@prisma/client").$Enums.Channel | null;
         templateId: string | null;
         trigger: import("@prisma/client").$Enums.AutomationTrigger;
@@ -500,32 +500,31 @@ export declare class CommunicationController {
     }>;
     listChannels(req: any): Promise<{
         credentials: Record<string, any>;
-        isActive: boolean;
         id: string;
         settings: import("@prisma/client/runtime/library").JsonValue | null;
         createdAt: Date;
         updatedAt: Date;
         tenantId: string;
         provider: string;
+        isActive: boolean;
         channel: import("@prisma/client").$Enums.Channel;
         isVerified: boolean;
         lastTestedAt: Date | null;
     }[]>;
     getChannel(req: any, channel: Channel): Promise<{
         credentials: Record<string, any>;
-        isActive: boolean;
         id: string;
         settings: import("@prisma/client/runtime/library").JsonValue | null;
         createdAt: Date;
         updatedAt: Date;
         tenantId: string;
         provider: string;
+        isActive: boolean;
         channel: import("@prisma/client").$Enums.Channel;
         isVerified: boolean;
         lastTestedAt: Date | null;
     }>;
     updateChannel(req: any, dto: ChannelConfigDto): Promise<{
-        isActive: boolean;
         id: string;
         settings: import("@prisma/client/runtime/library").JsonValue | null;
         createdAt: Date;
@@ -533,6 +532,7 @@ export declare class CommunicationController {
         credentials: import("@prisma/client/runtime/library").JsonValue;
         tenantId: string;
         provider: string;
+        isActive: boolean;
         channel: import("@prisma/client").$Enums.Channel;
         isVerified: boolean;
         lastTestedAt: Date | null;
@@ -542,7 +542,6 @@ export declare class CommunicationController {
         message: string;
     }>;
     deleteChannel(req: any, channel: Channel): Promise<{
-        isActive: boolean;
         id: string;
         settings: import("@prisma/client/runtime/library").JsonValue | null;
         createdAt: Date;
@@ -550,6 +549,7 @@ export declare class CommunicationController {
         credentials: import("@prisma/client/runtime/library").JsonValue;
         tenantId: string;
         provider: string;
+        isActive: boolean;
         channel: import("@prisma/client").$Enums.Channel;
         isVerified: boolean;
         lastTestedAt: Date | null;

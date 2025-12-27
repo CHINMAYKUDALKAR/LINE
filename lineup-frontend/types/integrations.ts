@@ -10,15 +10,19 @@ export type IntegrationProvider =
   | 'outlook_calendar'
   | 'custom';
 
-export type IntegrationStatus = 'connected' | 'disconnected' | 'error' | 'syncing' | 'pending_auth';
+export type IntegrationStatus = 'connected' | 'disconnected' | 'error' | 'syncing' | 'pending_auth' | 'auth_required';
 
 export type AuthType = 'oauth2' | 'api_key' | 'basic';
 
-export type SyncDirection = 'inbound' | 'outbound' | 'bidirectional';
+export type SyncDirection = 'inbound' | 'outbound' | 'bidirectional'; // Deprecated - kept for backward compatibility
 
-export type SyncCadence = 'realtime' | '15min' | '1hour' | '6hours' | 'daily' | 'manual';
+export type SyncCadence = 'realtime' | '15min' | '1hour' | '6hours' | 'daily' | 'manual'; // Deprecated
 
-export type ConflictResolution = 'source_wins' | 'target_wins' | 'latest_wins' | 'manual';
+export type ConflictResolution = 'source_wins' | 'target_wins' | 'latest_wins' | 'manual'; // Deprecated
+
+// New import-focused types
+export type ImportMode = 'manual' | 'scheduled';
+export type ImportFrequency = 'hourly' | 'daily';
 
 export interface Integration {
   id: string;
@@ -37,12 +41,23 @@ export interface Integration {
 }
 
 export interface IntegrationConfig {
-  syncDirection: SyncDirection;
-  syncCadence: SyncCadence;
-  conflictResolution: ConflictResolution;
-  enableWebhooks: boolean;
+  // Import scope - which CRM records to import as candidates
+  zohoModule?: 'leads' | 'contacts' | 'both';
+  salesforceModule?: 'leads' | 'contacts' | 'all';
+
+  // Import mode - how imports are triggered
+  importMode?: ImportMode;
+  importFrequency?: ImportFrequency;
+
+  // Optional: send interview events back to CRM (as activity notes, not record updates)
+  sendInterviewEvents?: boolean;
+
+  // Deprecated fields - kept for backward compatibility, ignored by new UI
+  syncDirection?: SyncDirection;
+  syncCadence?: SyncCadence;
+  conflictResolution?: ConflictResolution;
+  enableWebhooks?: boolean;
   webhookUrl?: string;
-  zohoModule?: 'leads' | 'contacts' | 'both'; // For Zoho: which module(s) to sync as candidates
 }
 
 export interface FieldMapping {

@@ -18,7 +18,7 @@ exports.ConnectDto = ConnectDto;
 __decorate([
     (0, class_validator_1.IsString)(),
     (0, class_validator_1.IsNotEmpty)(),
-    (0, class_validator_1.IsIn)(['zoho', 'google_calendar', 'outlook_calendar']),
+    (0, class_validator_1.IsIn)(['zoho', 'salesforce', 'hubspot', 'workday', 'lever', 'greenhouse', 'bamboohr', 'google_calendar', 'outlook_calendar']),
     __metadata("design:type", String)
 ], ConnectDto.prototype, "provider", void 0);
 //# sourceMappingURL=connect.dto.js.map

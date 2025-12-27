@@ -25,6 +25,7 @@ export declare class CandidatesService {
         stage: string;
         source: string | null;
         resumeUrl: string | null;
+        photoUrl: string | null;
         notes: string | null;
         tags: string[];
         createdById: string | null;
@@ -47,6 +48,7 @@ export declare class CandidatesService {
         stage: string;
         source: string | null;
         resumeUrl: string | null;
+        photoUrl: string | null;
         notes: string | null;
         tags: string[];
         createdById: string | null;
@@ -61,6 +63,50 @@ export declare class CandidatesService {
         tenantId: string;
     }>;
     get(tenantId: string, id: string): Promise<{
+        opportunityLinks: ({
+            opportunityContext: {
+                id: string;
+                name: string;
+                externalId: string;
+                createdAt: Date;
+                updatedAt: Date;
+                tenantId: string;
+                provider: string;
+                stageName: string | null;
+                accountId: string | null;
+                accountName: string | null;
+                ownerId: string | null;
+                ownerName: string | null;
+                amount: number | null;
+                closeDate: Date | null;
+                probability: number | null;
+                rawData: import("@prisma/client/runtime/library").JsonValue | null;
+            };
+        } & {
+            id: string;
+            createdAt: Date;
+            candidateId: string;
+            opportunityContextId: string;
+            associationType: string | null;
+        })[];
+        externalFeedback: {
+            id: string;
+            externalId: string;
+            overallScore: string | null;
+            createdAt: Date;
+            updatedAt: Date;
+            tenantId: string;
+            interviewDate: Date | null;
+            candidateId: string;
+            provider: string;
+            rawData: import("@prisma/client/runtime/library").JsonValue | null;
+            interviewerName: string | null;
+            interviewType: string | null;
+            scorecard: import("@prisma/client/runtime/library").JsonValue | null;
+            comments: string | null;
+            recommendation: string | null;
+        }[];
+    } & {
         id: string;
         name: string;
         email: string | null;
@@ -69,6 +115,7 @@ export declare class CandidatesService {
         stage: string;
         source: string | null;
         resumeUrl: string | null;
+        photoUrl: string | null;
         notes: string | null;
         tags: string[];
         createdById: string | null;
@@ -116,6 +163,16 @@ export declare class CandidatesService {
     attachResume(tenantId: string, userId: string, candidateId: string, fileId: string, s3Key: string, mimeType?: string, size?: number): Promise<{
         success: boolean;
         fileId: string;
+    }>;
+    generatePhotoUploadUrl(tenantId: string, userId: string, candidateId: string, filename: string): Promise<{
+        fileId: string;
+        uploadUrl: string;
+        s3Key: string;
+    }>;
+    attachPhoto(tenantId: string, userId: string, candidateId: string, fileId: string, s3Key: string): Promise<{
+        success: boolean;
+        fileId: string;
+        photoUrl: string;
     }>;
     bulkImport(tenantId: string, userId: string, dto: BulkImportDto): Promise<{
         message: string;
@@ -233,6 +290,7 @@ export declare class CandidatesService {
         stage: string;
         source: string | null;
         resumeUrl: string | null;
+        photoUrl: string | null;
         notes: string | null;
         tags: string[];
         createdById: string | null;

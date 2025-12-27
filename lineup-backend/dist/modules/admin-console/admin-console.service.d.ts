@@ -15,9 +15,9 @@ export declare class AdminConsoleService implements OnModuleDestroy {
         status: string;
     }>;
     listTenants(): Promise<{
-        name: string;
         id: string;
         domain: string | null;
+        name: string;
         domainVerified: boolean;
         settings: import("@prisma/client/runtime/library").JsonValue | null;
         brandingLogoUrl: string | null;
@@ -71,9 +71,9 @@ export declare class AdminConsoleService implements OnModuleDestroy {
             candidates: number;
             interviews: number;
         } | undefined;
-        name?: string | undefined;
         id?: string | undefined;
         domain?: string | null | undefined;
+        name?: string | undefined;
         domainVerified?: boolean | undefined;
         settings?: import("@prisma/client/runtime/library").JsonValue | undefined;
         brandingLogoUrl?: string | null | undefined;
@@ -84,10 +84,10 @@ export declare class AdminConsoleService implements OnModuleDestroy {
         updatedAt?: Date | undefined;
     }>;
     listTenantUsers(tenantId: string): Promise<{
-        name: string | null;
         id: string;
-        email: string;
+        name: string | null;
         createdAt: Date;
+        email: string;
         role: import("@prisma/client").$Enums.Role;
         status: import("@prisma/client").$Enums.UserStatus;
         lastLogin: Date | null;
@@ -99,8 +99,8 @@ export declare class AdminConsoleService implements OnModuleDestroy {
     }>;
     listAllIntegrations(): Promise<({
         tenant: {
-            name: string;
             id: string;
+            name: string;
         };
     } & {
         id: string;
@@ -111,6 +111,7 @@ export declare class AdminConsoleService implements OnModuleDestroy {
         status: string | null;
         provider: string;
         tokens: import("@prisma/client/runtime/library").JsonValue | null;
+        instanceUrl: string | null;
         lastSyncedAt: Date | null;
         lastError: string | null;
     })[]>;

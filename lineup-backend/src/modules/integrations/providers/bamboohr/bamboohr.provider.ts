@@ -1,108 +1,96 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../../../common/prisma.service';
 import { IntegrationProvider } from '../../types/provider.interface';
 import { ProviderCapabilities, StandardCandidate, SyncResult } from '../../types/standard-entities';
+import { BambooHROAuthService } from './bamboohr.oauth';
+import { BambooHRApiService } from './bamboohr.api';
+import { BambooHRHandoffHandler } from './bamboohr.handoff-handler';
+import { SyncLogService } from '../../services/sync-log.service';
 
 /**
  * BambooHR Integration Provider
  * Supports: Employee record creation, offer acceptance workflows
  * 
- * Required environment variables:
- * - BAMBOOHR_API_KEY
- * - BAMBOOHR_SUBDOMAIN (company subdomain)
+ * Uses OAuth 2.0 authentication
  */
 @Injectable()
 export class BambooHRProvider implements IntegrationProvider {
     private readonly logger = new Logger(BambooHRProvider.name);
 
     constructor(
-        private configService: ConfigService,
         private prisma: PrismaService,
+        private oauthService: BambooHROAuthService,
+        private apiService: BambooHRApiService,
+        private handoffHandler: BambooHRHandoffHandler,
+        private syncLogService: SyncLogService,
     ) { }
-
-    private getBaseUrl(subdomain: string): string {
-        return `https://api.bamboohr.com/api/gateway.php/${subdomain}/v1`;
-    }
 
     getCapabilities(): ProviderCapabilities {
         return {
             candidateSync: 'write', // Create employees from hired candidates
-            jobSync: 'read', // Can pull job openings
+            jobSync: 'none',
             interviewSync: 'none',
             supportsWebhooks: true,
         };
     }
 
     async getAuthUrl(tenantId: string, state?: string): Promise<string> {
-        // BambooHR uses API Key authentication
-        this.logger.log(`BambooHR uses API key auth for tenant ${tenantId}`);
-        return `/integrations/bamboohr/configure?tenantId=${tenantId}`;
+        // BambooHR OAuth requires company domain - if not provided, redirect to domain input
+        return this.oauthService.getAuthUrl(tenantId);
     }
 
-    async exchangeCode(tenantId: string, code: string): Promise<void> {
-        // 'code' contains API key and subdomain as JSON
-        this.logger.log(`Storing BambooHR credentials for tenant ${tenantId}`);
-
-        let credentials: { apiKey: string; subdomain: string };
-        try {
-            credentials = JSON.parse(code);
-        } catch {
-            credentials = { apiKey: code, subdomain: 'unknown' };
+    async exchangeCode(tenantId: string, code: string, companyDomain?: string): Promise<void> {
+        if (!companyDomain) {
+            throw new Error('Company domain is required for BambooHR');
         }
-
-        await this.prisma.integration.upsert({
-            where: { tenantId_provider: { tenantId, provider: 'bamboohr' } },
-            create: {
-                tenantId,
-                provider: 'bamboohr',
-                status: 'connected',
-                tokens: {
-                    api_key: credentials.apiKey,
-                    subdomain: credentials.subdomain,
-                },
-            },
-            update: {
-                status: 'connected',
-                tokens: {
-                    api_key: credentials.apiKey,
-                    subdomain: credentials.subdomain,
-                },
-            },
-        });
+        await this.oauthService.exchangeCode(tenantId, code, companyDomain);
     }
 
     async refreshTokens(tenantId: string): Promise<void> {
-        // API keys don't expire
-        this.logger.log(`BambooHR uses API key auth (no refresh) for tenant ${tenantId}`);
+        await this.oauthService.refreshTokens(tenantId);
+    }
+
+    /**
+     * Sync candidate - triggers employee creation when stage is 'hired'
+     */
+    async syncCandidate(
+        tenantId: string,
+        candidateId: string,
+        action: 'created' | 'updated' | 'stage_changed',
+        data?: { newStage?: string }
+    ): Promise<void> {
+        this.logger.log(`BambooHR syncCandidate called: action=${action}, candidateId=${candidateId}, newStage=${data?.newStage}`);
+
+        // Only create employee when stage changes to 'hired'
+        if (action === 'stage_changed' && data?.newStage?.toLowerCase() === 'hired') {
+            this.logger.log(`Candidate ${candidateId} marked as hired - creating employee in BambooHR`);
+            await this.handoffHandler.handleCandidateHired(tenantId, candidateId);
+        } else {
+            this.logger.log(`BambooHR skipping - action is ${action}, stage is ${data?.newStage} (need 'stage_changed' and 'hired')`);
+        }
     }
 
     /**
      * Create employee record from hired candidate
      */
     async pushCandidate(tenantId: string, candidate: StandardCandidate): Promise<SyncResult> {
-        this.logger.log(`Creating employee in BambooHR for tenant ${tenantId}`);
-
-        // TODO: POST /employees - Create employee record
-        // This is typically used when a candidate is hired
-
-        const [firstName, ...lastNameParts] = candidate.name.split(' ');
-
-        // BambooHR required fields: firstName, lastName
-        // Optional: workEmail, hireDate, department, jobTitle
-
-        return { success: true, externalId: `bhr-emp-${Date.now()}` };
+        if (!candidate.internalId) {
+            return { success: false, error: 'Candidate internalId required' };
+        }
+        const result = await this.handoffHandler.handleCandidateHired(tenantId, candidate.internalId);
+        return {
+            success: result.success,
+            externalId: result.employeeId,
+            error: result.error,
+        };
     }
 
     /**
-     * Pull employees from BambooHR (for sync)
+     * Pull employees from BambooHR - NOT SUPPORTED
+     * Lineup doesn't manage employees
      */
     async pullCandidates(tenantId: string, since?: Date): Promise<StandardCandidate[]> {
-        this.logger.log(`Pulling employees from BambooHR for tenant ${tenantId}`);
-
-        // TODO: GET /employees/directory
-        // Map to StandardCandidate format
-
+        this.logger.log(`BambooHR pull not supported - Lineup doesn't manage employees`);
         return [];
     }
 
@@ -115,10 +103,15 @@ export class BambooHRProvider implements IntegrationProvider {
         jobTitle?: string;
         salary?: number;
     }): Promise<SyncResult> {
-        this.logger.log(`Processing offer acceptance for candidate ${candidateId}`);
-
-        // TODO: Create employee with hire date and department info
-        return { success: true, externalId: `bhr-emp-${Date.now()}` };
+        const result = await this.handoffHandler.handleOfferAccepted(tenantId, candidateId, {
+            startDate: offerData.startDate,
+            department: offerData.department,
+        });
+        return {
+            success: result.success,
+            externalId: result.employeeId,
+            error: result.error,
+        };
     }
 
     async handleWebhook(tenantId: string, event: any): Promise<void> {

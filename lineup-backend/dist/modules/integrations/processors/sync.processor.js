@@ -18,18 +18,33 @@ const provider_factory_1 = require("../provider.factory");
 const audit_service_1 = require("../../audit/audit.service");
 const standard_entities_1 = require("../types/standard-entities");
 const zoho_sync_service_1 = require("../zoho/zoho.sync.service");
+const salesforce_sync_handler_1 = require("../providers/salesforce/salesforce.sync-handler");
+const hubspot_sync_handler_1 = require("../providers/hubspot/hubspot.sync-handler");
+const workday_sync_handler_1 = require("../providers/workday/workday.sync-handler");
+const lever_sync_handler_1 = require("../providers/lever/lever.sync-handler");
+const greenhouse_sync_handler_1 = require("../providers/greenhouse/greenhouse.sync-handler");
 let SyncProcessor = SyncProcessor_1 = class SyncProcessor extends bullmq_1.WorkerHost {
     prisma;
     providerFactory;
     auditService;
     zohoSyncService;
+    salesforceSyncHandler;
+    hubspotSyncHandler;
+    workdaySyncHandler;
+    leverSyncHandler;
+    greenhouseSyncHandler;
     logger = new common_1.Logger(SyncProcessor_1.name);
-    constructor(prisma, providerFactory, auditService, zohoSyncService) {
+    constructor(prisma, providerFactory, auditService, zohoSyncService, salesforceSyncHandler, hubspotSyncHandler, workdaySyncHandler, leverSyncHandler, greenhouseSyncHandler) {
         super();
         this.prisma = prisma;
         this.providerFactory = providerFactory;
         this.auditService = auditService;
         this.zohoSyncService = zohoSyncService;
+        this.salesforceSyncHandler = salesforceSyncHandler;
+        this.hubspotSyncHandler = hubspotSyncHandler;
+        this.workdaySyncHandler = workdaySyncHandler;
+        this.leverSyncHandler = leverSyncHandler;
+        this.greenhouseSyncHandler = greenhouseSyncHandler;
     }
     async process(job) {
         if (job.name === 'integration-event') {
@@ -178,6 +193,82 @@ let SyncProcessor = SyncProcessor_1 = class SyncProcessor extends bullmq_1.Worke
                 });
                 return { success: true, ...result };
             }
+            if (provider === 'salesforce') {
+                const module = data.module || 'all';
+                this.logger.log(`Using SalesforceSyncHandler for inbound sync (module: ${module})`);
+                const result = await this.salesforceSyncHandler.syncAll(tenantId, module);
+                await this.auditService.log({
+                    tenantId,
+                    userId: null,
+                    action: 'integration.sync.completed',
+                    metadata: {
+                        provider,
+                        ...result,
+                        triggeredBy,
+                    },
+                });
+                return { success: true, ...result };
+            }
+            if (provider === 'hubspot') {
+                this.logger.log(`Using HubspotSyncHandler for inbound sync`);
+                const result = await this.hubspotSyncHandler.syncAll(tenantId);
+                await this.auditService.log({
+                    tenantId,
+                    userId: null,
+                    action: 'integration.sync.completed',
+                    metadata: {
+                        provider,
+                        ...result,
+                        triggeredBy,
+                    },
+                });
+                return { success: true, ...result };
+            }
+            if (provider === 'workday') {
+                this.logger.log(`Using WorkdaySyncHandler for inbound sync`);
+                const result = await this.workdaySyncHandler.syncAll(tenantId);
+                await this.auditService.log({
+                    tenantId,
+                    userId: null,
+                    action: 'integration.sync.completed',
+                    metadata: {
+                        provider,
+                        ...result,
+                        triggeredBy,
+                    },
+                });
+                return { success: true, ...result };
+            }
+            if (provider === 'lever') {
+                this.logger.log(`Using LeverSyncHandler for inbound sync`);
+                const result = await this.leverSyncHandler.syncAll(tenantId);
+                await this.auditService.log({
+                    tenantId,
+                    userId: null,
+                    action: 'integration.sync.completed',
+                    metadata: {
+                        provider,
+                        ...result,
+                        triggeredBy,
+                    },
+                });
+                return { success: true, ...result };
+            }
+            if (provider === 'greenhouse') {
+                this.logger.log(`Using GreenhouseSyncHandler for inbound sync`);
+                const result = await this.greenhouseSyncHandler.syncAll(tenantId);
+                await this.auditService.log({
+                    tenantId,
+                    userId: null,
+                    action: 'integration.sync.completed',
+                    metadata: {
+                        provider,
+                        ...result,
+                        triggeredBy,
+                    },
+                });
+                return { success: true, ...result };
+            }
             if (providerInstance.pullCandidates) {
                 const sinceDate = since ? new Date(since) : undefined;
                 const candidates = await providerInstance.pullCandidates(tenantId, sinceDate);
@@ -310,6 +401,11 @@ exports.SyncProcessor = SyncProcessor = SyncProcessor_1 = __decorate([
     __metadata("design:paramtypes", [prisma_service_1.PrismaService,
         provider_factory_1.ProviderFactory,
         audit_service_1.AuditService,
-        zoho_sync_service_1.ZohoSyncService])
+        zoho_sync_service_1.ZohoSyncService,
+        salesforce_sync_handler_1.SalesforceSyncHandler,
+        hubspot_sync_handler_1.HubspotSyncHandler,
+        workday_sync_handler_1.WorkdaySyncHandler,
+        lever_sync_handler_1.LeverSyncHandler,
+        greenhouse_sync_handler_1.GreenhouseSyncHandler])
 ], SyncProcessor);
 //# sourceMappingURL=sync.processor.js.map

@@ -24,10 +24,10 @@ export declare class SettingsController {
         key: string;
     }>;
     listApiKeys(req: any): Promise<{
-        name: string;
         id: string;
-        active: boolean;
+        name: string;
         createdAt: Date;
+        active: boolean;
         scopes: string[];
         lastUsed: Date | null;
     }[]>;

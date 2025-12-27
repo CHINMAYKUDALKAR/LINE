@@ -18,12 +18,17 @@ interface CandidateFiltersProps {
 
 const stageOptions = [
   { value: 'all', label: 'All Stages' },
+  { value: 'applied', label: 'Applied' },
   { value: 'received', label: 'Received' },
   { value: 'screening', label: 'Screening' },
+  { value: 'interview', label: 'Interview' },
   { value: 'interview-1', label: 'Interview 1' },
   { value: 'interview-2', label: 'Interview 2' },
+  { value: 'technical', label: 'Technical' },
   { value: 'hr-round', label: 'HR Round' },
   { value: 'offer', label: 'Offer' },
+  { value: 'hired', label: 'Hired' },
+  { value: 'rejected', label: 'Rejected' },
 ];
 
 const experienceOptions = [
@@ -40,6 +45,18 @@ const sourceOptions = [
   { value: 'ZOHO_LEAD', label: 'Zoho Lead', group: 'Zoho CRM' },
   { value: 'ZOHO_CONTACT', label: 'Zoho Contact', group: 'Zoho CRM' },
   { value: 'ZOHO_CRM', label: 'Zoho CRM (All)', group: 'Zoho CRM' },
+  // Salesforce sources
+  { value: 'SALESFORCE_LEAD', label: 'Salesforce Lead', group: 'Salesforce' },
+  { value: 'SALESFORCE_CONTACT', label: 'Salesforce Contact', group: 'Salesforce' },
+  { value: 'SALESFORCE', label: 'Salesforce (All)', group: 'Salesforce' },
+  // HubSpot sources
+  { value: 'HUBSPOT_CONTACT', label: 'HubSpot Contact', group: 'HubSpot' },
+  // Workday sources
+  { value: 'WORKDAY_APPLICANT', label: 'Workday Applicant', group: 'Workday' },
+  // Lever sources
+  { value: 'LEVER_CANDIDATE', label: 'Lever Candidate', group: 'Lever' },
+  // Greenhouse sources
+  { value: 'GREENHOUSE_CANDIDATE', label: 'Greenhouse Candidate', group: 'Greenhouse' },
   // Other sources
   { value: 'LinkedIn', label: 'LinkedIn', group: 'Other' },
   { value: 'Indeed', label: 'Indeed', group: 'Other' },
@@ -194,7 +211,7 @@ export function CandidateFilters({ filters, onFiltersChange }: CandidateFiltersP
         </div>
 
         {/* Role Filter - Advanced */}
-        <div className="relative flex-1 max-w-xs">
+        <div className="w-full sm:w-48">
           <Input
             placeholder="Filter by role..."
             value={filters.role || ''}
@@ -204,7 +221,7 @@ export function CandidateFilters({ filters, onFiltersChange }: CandidateFiltersP
         </div>
 
         {/* Filter Dropdowns */}
-        <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2 w-full">
+        <div className="flex flex-wrap items-center gap-2">
           <Select
             value={filters.stage}
             onValueChange={(value) =>
@@ -258,7 +275,7 @@ export function CandidateFilters({ filters, onFiltersChange }: CandidateFiltersP
           </Select>
 
           <Select value={getExperienceValue()} onValueChange={handleExperienceChange}>
-            <SelectTrigger className="w-full sm:w-[140px] bg-background">
+            <SelectTrigger className="w-full sm:w-[160px] bg-background">
               <SelectValue placeholder="Experience" />
             </SelectTrigger>
             <SelectContent className="bg-popover">

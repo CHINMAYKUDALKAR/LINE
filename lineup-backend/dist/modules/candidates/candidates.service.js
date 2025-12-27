@@ -85,7 +85,19 @@ let CandidatesService = class CandidatesService {
         return updated;
     }
     async get(tenantId, id) {
-        const candidate = await this.prisma.candidate.findUnique({ where: { id } });
+        const candidate = await this.prisma.candidate.findUnique({
+            where: { id },
+            include: {
+                opportunityLinks: {
+                    include: {
+                        opportunityContext: true,
+                    },
+                },
+                externalFeedback: {
+                    orderBy: { interviewDate: 'desc' },
+                },
+            },
+        });
         if (!candidate || candidate.tenantId !== tenantId) {
             throw new common_1.NotFoundException('Candidate not found');
         }
@@ -93,16 +105,19 @@ let CandidatesService = class CandidatesService {
     }
     async list(tenantId, dto) {
         const page = Number(dto.page) || 1;
-        const perPage = Math.min(Number(dto.perPage) || 20, 100);
+        const perPage = Math.min(Number(dto.perPage) || 20, 10000);
         const where = {
             tenantId,
             deletedAt: null
         };
         if (dto.stage)
-            where.stage = dto.stage;
+            where.stage = { equals: dto.stage, mode: 'insensitive' };
         if (dto.source) {
             if (dto.source === 'ZOHO_CRM') {
                 where.source = { in: ['ZOHO_CRM', 'ZOHO_LEAD', 'ZOHO_CONTACT'] };
+            }
+            else if (dto.source === 'SALESFORCE') {
+                where.source = { in: ['SALESFORCE', 'SALESFORCE_LEAD', 'SALESFORCE_CONTACT'] };
             }
             else {
                 where.source = dto.source;
@@ -132,7 +147,7 @@ let CandidatesService = class CandidatesService {
                 where,
                 skip: (page - 1) * perPage,
                 take: perPage,
-                orderBy: dto.sort ? this.parseSort(dto.sort) : { createdAt: 'desc' },
+                orderBy: dto.sort ? this.parseSort(dto.sort) : { createdAt: 'asc' },
                 select: {
                     id: true,
                     name: true,
@@ -207,6 +222,31 @@ let CandidatesService = class CandidatesService {
             data: { tenantId, userId, action: 'CANDIDATE_RESUME_ATTACH', metadata: { candidateId, fileId, s3Key } }
         });
         return { success: true, fileId };
+    }
+    async generatePhotoUploadUrl(tenantId, userId, candidateId, filename) {
+        await this.get(tenantId, candidateId);
+        const result = await this.storageService.generateUploadUrl(tenantId, userId, {
+            filename,
+            linkedType: 'candidate',
+            linkedId: candidateId,
+        });
+        return result;
+    }
+    async attachPhoto(tenantId, userId, candidateId, fileId, s3Key) {
+        await this.get(tenantId, candidateId);
+        await this.storageService.attachFile(tenantId, userId, {
+            fileId,
+            s3Key,
+            mimeType: 'image/jpeg',
+        });
+        await this.prisma.candidate.update({
+            where: { id: candidateId },
+            data: { photoUrl: s3Key }
+        });
+        await this.prisma.auditLog.create({
+            data: { tenantId, userId, action: 'CANDIDATE_PHOTO_ATTACH', metadata: { candidateId, fileId, s3Key } }
+        });
+        return { success: true, fileId, photoUrl: s3Key };
     }
     async bulkImport(tenantId, userId, dto) {
         await this.importQueue.add('import', {

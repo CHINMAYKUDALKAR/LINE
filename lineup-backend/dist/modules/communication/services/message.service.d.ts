@@ -10,9 +10,9 @@ export declare class MessageService {
     private determineQueue;
     findAll(tenantId: string, filters: MessageFilterDto): Promise<{
         items: {
-            id: string;
             subject: string | null;
             body: string;
+            id: string;
             createdAt: Date;
             updatedAt: Date;
             metadata: import("@prisma/client/runtime/library").JsonValue | null;
@@ -38,9 +38,9 @@ export declare class MessageService {
         totalPages: number;
     }>;
     findOne(tenantId: string, id: string): Promise<{
-        id: string;
         subject: string | null;
         body: string;
+        id: string;
         createdAt: Date;
         updatedAt: Date;
         metadata: import("@prisma/client/runtime/library").JsonValue | null;
@@ -61,9 +61,9 @@ export declare class MessageService {
         failedAt: Date | null;
     }>;
     send(tenantId: string, dto: SendMessageDto, userId?: string): Promise<{
-        id: string;
         subject: string | null;
         body: string;
+        id: string;
         createdAt: Date;
         updatedAt: Date;
         metadata: import("@prisma/client/runtime/library").JsonValue | null;
@@ -84,7 +84,6 @@ export declare class MessageService {
         failedAt: Date | null;
     }>;
     schedule(tenantId: string, dto: ScheduleMessageDto, userId?: string): Promise<{
-        jobId: string | null;
         id: string;
         createdAt: Date;
         updatedAt: Date;
@@ -92,6 +91,7 @@ export declare class MessageService {
         status: import("@prisma/client").$Enums.ScheduleStatus;
         createdById: string | null;
         payload: import("@prisma/client/runtime/library").JsonValue;
+        jobId: string | null;
         channel: import("@prisma/client").$Enums.Channel;
         recipientType: import("@prisma/client").$Enums.RecipientType;
         recipientId: string;
@@ -99,7 +99,6 @@ export declare class MessageService {
         scheduledFor: Date;
     }>;
     cancelScheduled(tenantId: string, id: string): Promise<{
-        jobId: string | null;
         id: string;
         createdAt: Date;
         updatedAt: Date;
@@ -107,6 +106,7 @@ export declare class MessageService {
         status: import("@prisma/client").$Enums.ScheduleStatus;
         createdById: string | null;
         payload: import("@prisma/client/runtime/library").JsonValue;
+        jobId: string | null;
         channel: import("@prisma/client").$Enums.Channel;
         recipientType: import("@prisma/client").$Enums.RecipientType;
         recipientId: string;
@@ -133,8 +133,8 @@ export declare class MessageService {
             sms: number;
         };
         recentActivity: {
-            id: string;
             subject: string | null;
+            id: string;
             createdAt: Date;
             status: import("@prisma/client").$Enums.MessageStatus;
             channel: import("@prisma/client").$Enums.Channel;

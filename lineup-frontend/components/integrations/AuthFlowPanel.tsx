@@ -20,9 +20,12 @@ interface AuthFlowPanelProps {
 export function AuthFlowPanel({ integration, onAuthComplete, onCancel }: AuthFlowPanelProps) {
   const [apiKey, setApiKey] = useState('');
   const [apiSecret, setApiSecret] = useState('');
+  const [subdomain, setSubdomain] = useState('');
   const [showSecret, setShowSecret] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const isBambooHR = integration.provider === 'bamboohr';
 
   const handleOAuth = async () => {
     setIsLoading(true);
@@ -52,6 +55,12 @@ export function AuthFlowPanel({ integration, onAuthComplete, onCancel }: AuthFlo
   const handleApiKeyAuth = async () => {
     if (!apiKey.trim()) {
       setError('API Key is required');
+      return;
+    }
+
+    // BambooHR requires subdomain
+    if (isBambooHR && !subdomain.trim()) {
+      setError('Company subdomain is required');
       return;
     }
 
@@ -154,6 +163,30 @@ export function AuthFlowPanel({ integration, onAuthComplete, onCancel }: AuthFlo
               onChange={(e) => setApiKey(e.target.value)}
             />
           </div>
+
+          {/* BambooHR Subdomain field */}
+          {isBambooHR && (
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <Label htmlFor="subdomain">Company Subdomain</Label>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <HelpCircle className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-xs">
+                    <p>Your subdomain is the company name in your BambooHR URL: https://[subdomain].bamboohr.com</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+              <Input
+                id="subdomain"
+                type="text"
+                placeholder="e.g., acme"
+                value={subdomain}
+                onChange={(e) => setSubdomain(e.target.value)}
+              />
+            </div>
+          )}
 
           {integration.provider !== 'bamboohr' && (
             <div className="space-y-2">

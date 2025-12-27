@@ -43,6 +43,9 @@ import { GreenhouseAuthService } from './providers/greenhouse/greenhouse.auth';
 import { GreenhouseApiService } from './providers/greenhouse/greenhouse.api';
 import { GreenhouseSyncHandler } from './providers/greenhouse/greenhouse.sync-handler';
 import { BambooHRProvider } from './providers/bamboohr/bamboohr.provider';
+import { BambooHROAuthService } from './providers/bamboohr/bamboohr.oauth';
+import { BambooHRApiService } from './providers/bamboohr/bamboohr.api';
+import { BambooHRHandoffHandler } from './providers/bamboohr/bamboohr.handoff-handler';
 
 /**
  * Provider Factory
@@ -83,6 +86,10 @@ export class ProviderFactory {
         private greenhouseAuth: GreenhouseAuthService,
         private greenhouseApi: GreenhouseApiService,
         private greenhouseSync: GreenhouseSyncHandler,
+        // BambooHR
+        private bamboohrOAuth: BambooHROAuthService,
+        private bamboohrApi: BambooHRApiService,
+        private bamboohrHandoff: BambooHRHandoffHandler,
     ) { }
 
     /**
@@ -151,7 +158,13 @@ export class ProviderFactory {
                 );
 
             case 'bamboohr':
-                return new BambooHRProvider(this.configService, this.prisma);
+                return new BambooHRProvider(
+                    this.prisma,
+                    this.bamboohrOAuth,
+                    this.bamboohrApi,
+                    this.bamboohrHandoff,
+                    this.syncLogService,
+                );
 
             default:
                 throw new Error(`Unknown provider: ${provider}`);
@@ -165,7 +178,7 @@ export class ProviderFactory {
         return [
             // CRM
             { name: 'zoho', category: 'CRM', status: 'ready' },
-            { name: 'salesforce', category: 'CRM', status: 'skeleton' },
+            { name: 'salesforce', category: 'CRM', status: 'ready' },
             { name: 'hubspot', category: 'CRM', status: 'ready' },
 
             // ATS
@@ -174,7 +187,7 @@ export class ProviderFactory {
             { name: 'workday', category: 'ATS', status: 'ready' },
 
             // HRIS
-            { name: 'bamboohr', category: 'HRIS', status: 'skeleton' },
+            { name: 'bamboohr', category: 'HRIS', status: 'ready' },
 
             // Calendar
             { name: 'google_calendar', category: 'Calendar', status: 'ready' },

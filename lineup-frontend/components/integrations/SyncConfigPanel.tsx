@@ -1,12 +1,11 @@
 import { useState } from 'react';
-import { Integration, SyncDirection, SyncCadence, ConflictResolution } from '@/types/integrations';
+import { Integration } from '@/types/integrations';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { HelpCircle, ArrowLeftRight, ArrowLeft, ArrowRight, Loader2 } from 'lucide-react';
+import { HelpCircle, Loader2, Download, Calendar } from 'lucide-react';
 import { toast } from 'sonner';
 import * as integrationsApi from '@/lib/api/integrations';
 
@@ -15,36 +14,19 @@ interface SyncConfigPanelProps {
   onSave: (config: Integration['config']) => void;
 }
 
-const directionOptions: { value: SyncDirection; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
-  { value: 'inbound', label: 'Inbound Only', icon: ArrowLeft },
-  { value: 'outbound', label: 'Outbound Only', icon: ArrowRight },
-  { value: 'bidirectional', label: 'Bidirectional', icon: ArrowLeftRight },
-];
-
-const cadenceOptions: { value: SyncCadence; label: string }[] = [
-  { value: 'realtime', label: 'Real-time (webhooks)' },
-  { value: '15min', label: 'Every 15 minutes' },
-  { value: '1hour', label: 'Every hour' },
-  { value: '6hours', label: 'Every 6 hours' },
-  { value: 'daily', label: 'Daily' },
-  { value: 'manual', label: 'Manual only' },
-];
-
-const conflictOptions: { value: ConflictResolution; label: string; description: string }[] = [
-  { value: 'source_wins', label: 'Source Wins', description: 'Data from source system always takes precedence' },
-  { value: 'target_wins', label: 'Target Wins', description: 'Existing data in target system is preserved' },
-  { value: 'latest_wins', label: 'Latest Wins', description: 'Most recently updated record takes precedence' },
-  { value: 'manual', label: 'Manual Review', description: 'Flag conflicts for manual resolution' },
-];
+type ImportMode = 'manual' | 'scheduled';
+type ImportFrequency = 'hourly' | 'daily';
 
 export function SyncConfigPanel({ integration, onSave }: SyncConfigPanelProps) {
-  const [config, setConfig] = useState(integration.config || {
-    syncDirection: 'inbound' as SyncDirection,
-    syncCadence: '1hour' as SyncCadence,
-    conflictResolution: 'latest_wins' as ConflictResolution,
-    enableWebhooks: false,
-    webhookUrl: '',
-    zohoModule: 'leads' as 'leads' | 'contacts' | 'both',
+  const [config, setConfig] = useState({
+    // Import scope (which CRM records to import)
+    zohoModule: (integration.config?.zohoModule || 'leads') as 'leads' | 'contacts' | 'both',
+    salesforceModule: (integration.config?.salesforceModule || 'all') as 'leads' | 'contacts' | 'all',
+    // Import mode
+    importMode: (integration.config?.importMode || 'manual') as ImportMode,
+    importFrequency: (integration.config?.importFrequency || 'daily') as ImportFrequency,
+    // Optional: Send interview events back to CRM (activity notes only)
+    sendInterviewEvents: integration.config?.sendInterviewEvents || false,
   });
   const [isSaving, setIsSaving] = useState(false);
 
@@ -53,46 +35,56 @@ export function SyncConfigPanel({ integration, onSave }: SyncConfigPanelProps) {
     try {
       await integrationsApi.updateConfig(integration.provider, config);
       onSave(config);
-      toast.success('Sync configuration saved');
+      toast.success('Import settings saved');
     } catch (error) {
-      toast.error('Failed to save configuration');
+      toast.error('Failed to save settings');
       console.error('Save config failed:', error);
     } finally {
       setIsSaving(false);
     }
   };
 
+  const isZoho = integration.provider === 'zoho';
+  const isSalesforce = integration.provider === 'salesforce';
+  const isHubspot = integration.provider === 'hubspot';
+  const isWorkday = integration.provider === 'workday';
+  const isLever = integration.provider === 'lever';
+  const isGreenhouse = integration.provider === 'greenhouse';
+  const isBambooHR = integration.provider === 'bamboohr';
+  const isCRM = isZoho || isSalesforce || isHubspot || isWorkday || isLever || isGreenhouse;
+  const isHRIS = isBambooHR;
+
   return (
     <div className="space-y-6">
       <div>
-        <h3 className="font-semibold text-foreground">Sync Configuration</h3>
-        <p className="text-sm text-muted-foreground">Configure how data is synchronized</p>
+        <h3 className="font-semibold text-foreground">Import Settings</h3>
+        <p className="text-sm text-muted-foreground">Configure how candidates are imported from your CRM</p>
       </div>
 
-      {/* Zoho Module Selector - Only show for Zoho */}
-      {integration.provider === 'zoho' && (
+      {/* Import Candidates From - Zoho */}
+      {isZoho && (
         <div className="space-y-3">
           <div className="flex items-center gap-2">
-            <Label>Sync Module</Label>
+            <Label>Import Candidates From</Label>
             <Tooltip>
               <TooltipTrigger asChild>
                 <HelpCircle className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
               </TooltipTrigger>
               <TooltipContent className="max-w-xs">
-                <p>Choose which Zoho CRM module to sync as candidates. Select "Both" to import Leads and Contacts together.</p>
+                <p>Select which CRM records should be imported into Lineup as candidates.</p>
               </TooltipContent>
             </Tooltip>
           </div>
           <div className="grid grid-cols-3 gap-3">
             <button
               onClick={() => setConfig({ ...config, zohoModule: 'leads' })}
-              className={`p-4 rounded-lg border text-left transition-all ${(config.zohoModule || 'leads') === 'leads'
+              className={`p-4 rounded-lg border text-left transition-all ${config.zohoModule === 'leads'
                 ? 'border-primary bg-primary/5 text-primary'
                 : 'border-border hover:border-primary/50'
                 }`}
             >
               <span className="text-base font-semibold block">Leads</span>
-              <span className="text-xs text-muted-foreground">Prospects</span>
+              <span className="text-xs text-muted-foreground">Prospects & applicants</span>
             </button>
             <button
               onClick={() => setConfig({ ...config, zohoModule: 'contacts' })}
@@ -102,7 +94,7 @@ export function SyncConfigPanel({ integration, onSave }: SyncConfigPanelProps) {
                 }`}
             >
               <span className="text-base font-semibold block">Contacts</span>
-              <span className="text-xs text-muted-foreground">Established</span>
+              <span className="text-xs text-muted-foreground">Existing people</span>
             </button>
             <button
               onClick={() => setConfig({ ...config, zohoModule: 'both' })}
@@ -111,143 +103,297 @@ export function SyncConfigPanel({ integration, onSave }: SyncConfigPanelProps) {
                 : 'border-border hover:border-primary/50'
                 }`}
             >
-              <span className="text-base font-semibold block">Both</span>
-              <span className="text-xs text-muted-foreground">All records</span>
+              <span className="text-base font-semibold block">Leads + Contacts</span>
+              <span className="text-xs text-muted-foreground">Import all</span>
             </button>
           </div>
         </div>
       )}
 
-      {/* Sync Direction */}
-      <div className="space-y-3">
-        <div className="flex items-center gap-2">
-          <Label>Sync Direction</Label>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <HelpCircle className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
-            </TooltipTrigger>
-            <TooltipContent className="max-w-xs">
-              <p>Inbound: Import data from external system. Outbound: Export data to external system. Bidirectional: Sync both ways.</p>
-            </TooltipContent>
-          </Tooltip>
-        </div>
-        <div className="grid grid-cols-3 gap-3">
-          {directionOptions.map((opt) => {
-            const Icon = opt.icon;
-            return (
-              <button
-                key={opt.value}
-                onClick={() => setConfig({ ...config, syncDirection: opt.value })}
-                className={`p-3 rounded-lg border text-center transition-all ${config.syncDirection === opt.value
-                  ? 'border-primary bg-primary/5 text-primary'
-                  : 'border-border hover:border-primary/50'
-                  }`}
-              >
-                <Icon className="h-5 w-5 mx-auto mb-1" />
-                <span className="text-sm font-medium">{opt.label}</span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Sync Cadence */}
-      <div className="space-y-2">
-        <div className="flex items-center gap-2">
-          <Label>Sync Frequency</Label>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <HelpCircle className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
-            </TooltipTrigger>
-            <TooltipContent className="max-w-xs">
-              <p>How often to sync data. Real-time uses webhooks for instant updates.</p>
-            </TooltipContent>
-          </Tooltip>
-        </div>
-        <Select
-          value={config.syncCadence}
-          onValueChange={(v) => setConfig({ ...config, syncCadence: v as SyncCadence })}
-        >
-          <SelectTrigger>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {cadenceOptions.map((opt) => (
-              <SelectItem key={opt.value} value={opt.value}>
-                {opt.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      {/* Conflict Resolution */}
-      <div className="space-y-2">
-        <div className="flex items-center gap-2">
-          <Label>Conflict Resolution</Label>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <HelpCircle className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
-            </TooltipTrigger>
-            <TooltipContent className="max-w-xs">
-              <p>How to handle conflicts when the same record is modified in both systems.</p>
-            </TooltipContent>
-          </Tooltip>
-        </div>
-        <Select
-          value={config.conflictResolution}
-          onValueChange={(v) => setConfig({ ...config, conflictResolution: v as ConflictResolution })}
-        >
-          <SelectTrigger>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {conflictOptions.map((opt) => (
-              <SelectItem key={opt.value} value={opt.value}>
-                <div>
-                  <span>{opt.label}</span>
-                  <p className="text-xs text-muted-foreground">{opt.description}</p>
-                </div>
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      {/* Webhooks */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
+      {/* Import Candidates From - Salesforce */}
+      {isSalesforce && (
+        <div className="space-y-3">
           <div className="flex items-center gap-2">
-            <Label>Enable Webhooks</Label>
+            <Label>Import Candidates From</Label>
             <Tooltip>
               <TooltipTrigger asChild>
                 <HelpCircle className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
               </TooltipTrigger>
               <TooltipContent className="max-w-xs">
-                <p>Receive real-time notifications when data changes in the external system.</p>
+                <p>Select which Salesforce objects should be imported into Lineup as candidates.</p>
               </TooltipContent>
             </Tooltip>
           </div>
-          <Switch
-            checked={config.enableWebhooks}
-            onCheckedChange={(checked) => setConfig({ ...config, enableWebhooks: checked })}
-          />
-        </div>
-
-        {config.enableWebhooks && (
-          <div className="space-y-2">
-            <Label>Webhook URL</Label>
-            <Input
-              placeholder="https://api.yourapp.com/webhooks/integration"
-              value={config.webhookUrl || ''}
-              onChange={(e) => setConfig({ ...config, webhookUrl: e.target.value })}
-            />
-            <p className="text-xs text-muted-foreground">
-              The external system will send event notifications to this URL.
-            </p>
+          <div className="grid grid-cols-3 gap-3">
+            <button
+              onClick={() => setConfig({ ...config, salesforceModule: 'leads' })}
+              className={`p-4 rounded-lg border text-left transition-all ${config.salesforceModule === 'leads'
+                ? 'border-primary bg-primary/5 text-primary'
+                : 'border-border hover:border-primary/50'
+                }`}
+            >
+              <span className="text-base font-semibold block">Leads</span>
+              <span className="text-xs text-muted-foreground">Prospects & applicants</span>
+            </button>
+            <button
+              onClick={() => setConfig({ ...config, salesforceModule: 'contacts' })}
+              className={`p-4 rounded-lg border text-left transition-all ${config.salesforceModule === 'contacts'
+                ? 'border-primary bg-primary/5 text-primary'
+                : 'border-border hover:border-primary/50'
+                }`}
+            >
+              <span className="text-base font-semibold block">Contacts</span>
+              <span className="text-xs text-muted-foreground">Existing people</span>
+            </button>
+            <button
+              onClick={() => setConfig({ ...config, salesforceModule: 'all' })}
+              className={`p-4 rounded-lg border text-left transition-all ${config.salesforceModule === 'all'
+                ? 'border-primary bg-primary/5 text-primary'
+                : 'border-border hover:border-primary/50'
+                }`}
+            >
+              <span className="text-base font-semibold block">Leads + Contacts</span>
+              <span className="text-xs text-muted-foreground">Import all</span>
+            </button>
           </div>
-        )}
-      </div>
+        </div>
+      )}
+
+      {/* Import Candidates From - HubSpot (Contacts only) */}
+      {isHubspot && (
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <Label>Import Candidates From</Label>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <HelpCircle className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+              </TooltipTrigger>
+              <TooltipContent className="max-w-xs">
+                <p>HubSpot Contacts will be imported into Lineup as candidates.</p>
+              </TooltipContent>
+            </Tooltip>
+          </div>
+          <div className="p-4 rounded-lg border border-primary bg-primary/5 text-primary">
+            <span className="text-base font-semibold block">Contacts</span>
+            <span className="text-xs text-muted-foreground">HubSpot contacts become candidates in Lineup</span>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Note: HubSpot uses Contacts as the primary people object. All contacts are imported.
+          </p>
+        </div>
+      )}
+
+      {/* Import Candidates From - Workday */}
+      {isWorkday && (
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <Label>Import Candidates From</Label>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <HelpCircle className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+              </TooltipTrigger>
+              <TooltipContent className="max-w-xs">
+                <p>Workday Applicants are imported as candidates. Requisitions are stored as hiring context.</p>
+              </TooltipContent>
+            </Tooltip>
+          </div>
+          <div className="p-4 rounded-lg border border-primary bg-primary/5 text-primary">
+            <span className="text-base font-semibold block">Applicants</span>
+            <span className="text-xs text-muted-foreground">Workday applicants become candidates in Lineup</span>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Job Requisitions are imported as read-only hiring context, not as candidates.
+          </p>
+        </div>
+      )}
+
+      {/* Import Candidates From - Lever */}
+      {isLever && (
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <Label>Import Candidates From</Label>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <HelpCircle className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+              </TooltipTrigger>
+              <TooltipContent className="max-w-xs">
+                <p>Lever Candidates are imported. Job Postings are stored as hiring context.</p>
+              </TooltipContent>
+            </Tooltip>
+          </div>
+          <div className="p-4 rounded-lg border border-primary bg-primary/5 text-primary">
+            <span className="text-base font-semibold block">Candidates</span>
+            <span className="text-xs text-muted-foreground">Lever candidates become candidates in Lineup</span>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Job Postings are imported as read-only hiring context. Interview events can optionally be posted back to Lever.
+          </p>
+        </div>
+      )}
+
+      {/* Import Candidates From - Greenhouse */}
+      {isGreenhouse && (
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <Label>Import Candidates From</Label>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <HelpCircle className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+              </TooltipTrigger>
+              <TooltipContent className="max-w-xs">
+                <p>Greenhouse Candidates are imported. Job Requisitions are stored as hiring context. Historical feedback is imported as read-only reference.</p>
+              </TooltipContent>
+            </Tooltip>
+          </div>
+          <div className="p-4 rounded-lg border border-primary bg-primary/5 text-primary">
+            <span className="text-base font-semibold block">Candidates</span>
+            <span className="text-xs text-muted-foreground">Greenhouse candidates become candidates in Lineup</span>
+          </div>
+          <div className="p-4 rounded-lg border border-muted bg-muted/20">
+            <span className="text-base font-semibold block">Historical Feedback</span>
+            <span className="text-xs text-muted-foreground">Greenhouse interview scorecards imported as read-only reference</span>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Job Requisitions and interview feedback are imported as read-only context. Lineup feedback remains primary.
+          </p>
+        </div>
+      )}
+
+      {/* BambooHR Employee Creation Settings */}
+      {isHRIS && (
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <Label>Employee Handoff</Label>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <HelpCircle className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+              </TooltipTrigger>
+              <TooltipContent className="max-w-xs">
+                <p>When a candidate is hired, Lineup creates an employee record in BambooHR. This is a one-way handoff.</p>
+              </TooltipContent>
+            </Tooltip>
+          </div>
+
+          <div className="p-4 rounded-lg border border-primary bg-primary/5 text-primary">
+            <span className="text-base font-semibold block">Create Employee on Hire</span>
+            <span className="text-xs text-muted-foreground">When a candidate is marked as hired, an employee record is created in BambooHR</span>
+          </div>
+
+          <div className="p-3 rounded-lg border border-muted bg-muted/20">
+            <span className="text-sm font-medium block text-muted-foreground">Triggers:</span>
+            <ul className="text-xs text-muted-foreground mt-1 space-y-1">
+              <li>• Offer Accepted</li>
+              <li>• Mark as Hired (manual)</li>
+            </ul>
+          </div>
+
+          <p className="text-xs text-muted-foreground">
+            Employee records are created once. BambooHR manages employees after handoff.
+          </p>
+        </div>
+      )}
+
+      {/* Import Mode */}
+      {isCRM && (
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <Label>Import Mode</Label>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <HelpCircle className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+              </TooltipTrigger>
+              <TooltipContent className="max-w-xs">
+                <p>Controls how often Lineup pulls candidate data from your CRM.</p>
+              </TooltipContent>
+            </Tooltip>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              onClick={() => setConfig({ ...config, importMode: 'manual' })}
+              className={`p-4 rounded-lg border text-left transition-all ${config.importMode === 'manual'
+                ? 'border-primary bg-primary/5 text-primary'
+                : 'border-border hover:border-primary/50'
+                }`}
+            >
+              <div className="flex items-center gap-2 mb-1">
+                <Download className="h-4 w-4" />
+                <span className="text-base font-semibold">Manual Import</span>
+              </div>
+              <span className="text-xs text-muted-foreground">Import when you click "Sync Now"</span>
+            </button>
+            <button
+              onClick={() => setConfig({ ...config, importMode: 'scheduled' })}
+              className={`p-4 rounded-lg border text-left transition-all ${config.importMode === 'scheduled'
+                ? 'border-primary bg-primary/5 text-primary'
+                : 'border-border hover:border-primary/50'
+                }`}
+            >
+              <div className="flex items-center gap-2 mb-1">
+                <Calendar className="h-4 w-4" />
+                <span className="text-base font-semibold">Scheduled Import</span>
+              </div>
+              <span className="text-xs text-muted-foreground">Automatically import on a schedule</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Import Frequency - only shown when scheduled */}
+      {isCRM && config.importMode === 'scheduled' && (
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <Label>Import Frequency</Label>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <HelpCircle className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+              </TooltipTrigger>
+              <TooltipContent className="max-w-xs">
+                <p>How often to automatically import new candidates from your CRM.</p>
+              </TooltipContent>
+            </Tooltip>
+          </div>
+          <Select
+            value={config.importFrequency}
+            onValueChange={(v) => setConfig({ ...config, importFrequency: v as ImportFrequency })}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="hourly">Every hour</SelectItem>
+              <SelectItem value="daily">Once daily</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
+      {/* Optional: Interview Events (separate section) */}
+      {isCRM && (
+        <div className="space-y-3 pt-4 border-t border-border">
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <div className="flex items-center gap-2">
+                <Label>Send Interview Updates to CRM</Label>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <HelpCircle className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-xs">
+                    <p>Optionally send interview events (scheduled, completed) back to the CRM as activity notes. Candidate records are never modified.</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Posts interview events as notes — does not modify candidate data
+              </p>
+            </div>
+            <Switch
+              checked={config.sendInterviewEvents}
+              onCheckedChange={(checked) => setConfig({ ...config, sendInterviewEvents: checked })}
+            />
+          </div>
+        </div>
+      )}
 
       <div className="flex justify-end pt-4 border-t border-border">
         <Button onClick={handleSave} disabled={isSaving}>
@@ -257,7 +403,7 @@ export function SyncConfigPanel({ integration, onSave }: SyncConfigPanelProps) {
               Saving...
             </>
           ) : (
-            'Save Configuration'
+            'Save Settings'
           )}
         </Button>
       </div>

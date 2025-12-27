@@ -110,11 +110,29 @@ export class IntegrationsService {
             throw new BadRequestException(`Provider ${provider} is not supported`);
         }
 
-        // Parse and validate state
-        const { tenantId } = parseState(state);
+        // Parse and validate state - Salesforce uses raw tenantId, others use encoded state
+        let tenantId: string;
+        let companyDomain: string | undefined;
+
+        if (provider === 'salesforce') {
+            // Salesforce: state is raw tenantId
+            tenantId = state;
+        } else {
+            // Others: state is base64-encoded JSON
+            const parsed = parseState(state);
+            tenantId = parsed.tenantId;
+            // BambooHR includes companyDomain in state
+            companyDomain = parsed.companyDomain;
+        }
 
         const providerInstance = this.providerFactory.getProvider(provider);
-        await providerInstance.exchangeCode(tenantId, code);
+
+        // BambooHR needs companyDomain for token exchange
+        if (provider === 'bamboohr' && companyDomain) {
+            await providerInstance.exchangeCode(tenantId, code, companyDomain);
+        } else {
+            await providerInstance.exchangeCode(tenantId, code);
+        }
 
         // Create audit log
         await this.auditService.log({
@@ -276,6 +294,19 @@ export class IntegrationsService {
             this.syncRateLimiter.set(key, { count: 1, resetAt: now + 3600000 });
         }
 
+        // Determine module from passed parameter, config, or provider default
+        let syncModule = module;
+        if (!syncModule) {
+            const settings = integration.settings as any;
+            if (provider === 'salesforce') {
+                syncModule = settings?.config?.salesforceModule || 'all';
+            } else if (provider === 'zoho') {
+                syncModule = settings?.config?.zohoModule || 'leads';
+            } else {
+                syncModule = 'all';
+            }
+        }
+
         // Enqueue sync job
         await this.syncQueue.add(
             'sync',
@@ -283,7 +314,7 @@ export class IntegrationsService {
                 tenantId,
                 provider,
                 since: since?.toISOString(),
-                module: module || 'leads', // Default to 'leads' for backwards compatibility
+                module: syncModule,
             },
             {
                 attempts: 5,

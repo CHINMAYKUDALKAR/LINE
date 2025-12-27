@@ -13,7 +13,6 @@ export declare class StorageController {
     }>;
     attachFile(req: any, dto: AttachFileDto): Promise<{
         id: string;
-        key: string;
         createdAt: Date;
         updatedAt: Date;
         metadata: import("@prisma/client/runtime/library").JsonValue | null;
@@ -22,17 +21,17 @@ export declare class StorageController {
         status: string;
         filename: string;
         deletedAt: Date | null;
+        ownerId: string | null;
         linkedType: string | null;
         linkedId: string | null;
+        key: string;
         mimeType: string | null;
         size: number | null;
-        ownerId: string | null;
         scanStatus: string;
     }>;
     listFiles(req: any, dto: ListFilesDto): Promise<{
         data: {
             id: string;
-            key: string;
             createdAt: Date;
             updatedAt: Date;
             metadata: import("@prisma/client/runtime/library").JsonValue | null;
@@ -41,11 +40,12 @@ export declare class StorageController {
             status: string;
             filename: string;
             deletedAt: Date | null;
+            ownerId: string | null;
             linkedType: string | null;
             linkedId: string | null;
+            key: string;
             mimeType: string | null;
             size: number | null;
-            ownerId: string | null;
             scanStatus: string;
         }[];
         meta: {
@@ -57,7 +57,6 @@ export declare class StorageController {
     }>;
     getRecycleBin(req: any): Promise<{
         id: string;
-        key: string;
         createdAt: Date;
         updatedAt: Date;
         metadata: import("@prisma/client/runtime/library").JsonValue | null;
@@ -66,16 +65,16 @@ export declare class StorageController {
         status: string;
         filename: string;
         deletedAt: Date | null;
+        ownerId: string | null;
         linkedType: string | null;
         linkedId: string | null;
+        key: string;
         mimeType: string | null;
         size: number | null;
-        ownerId: string | null;
         scanStatus: string;
     }[]>;
     getFile(req: any, id: string): Promise<{
         id: string;
-        key: string;
         createdAt: Date;
         updatedAt: Date;
         metadata: import("@prisma/client/runtime/library").JsonValue | null;
@@ -84,11 +83,12 @@ export declare class StorageController {
         status: string;
         filename: string;
         deletedAt: Date | null;
+        ownerId: string | null;
         linkedType: string | null;
         linkedId: string | null;
+        key: string;
         mimeType: string | null;
         size: number | null;
-        ownerId: string | null;
         scanStatus: string;
     }>;
     downloadFile(req: any, id: string): Promise<{
@@ -97,7 +97,6 @@ export declare class StorageController {
     }>;
     listVersions(req: any, id: string): Promise<{
         id: string;
-        key: string;
         createdAt: Date;
         updatedAt: Date;
         metadata: import("@prisma/client/runtime/library").JsonValue | null;
@@ -106,16 +105,16 @@ export declare class StorageController {
         status: string;
         filename: string;
         deletedAt: Date | null;
+        ownerId: string | null;
         linkedType: string | null;
         linkedId: string | null;
+        key: string;
         mimeType: string | null;
         size: number | null;
-        ownerId: string | null;
         scanStatus: string;
     }[]>;
     updateMetadata(req: any, id: string, dto: UpdateFileMetadataDto): Promise<{
         id: string;
-        key: string;
         createdAt: Date;
         updatedAt: Date;
         metadata: import("@prisma/client/runtime/library").JsonValue | null;
@@ -124,11 +123,12 @@ export declare class StorageController {
         status: string;
         filename: string;
         deletedAt: Date | null;
+        ownerId: string | null;
         linkedType: string | null;
         linkedId: string | null;
+        key: string;
         mimeType: string | null;
         size: number | null;
-        ownerId: string | null;
         scanStatus: string;
     }>;
     deleteFile(req: any, id: string): Promise<{

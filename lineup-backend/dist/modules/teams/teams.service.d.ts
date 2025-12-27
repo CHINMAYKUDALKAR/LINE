@@ -7,8 +7,8 @@ export declare class TeamsService {
     private prisma;
     constructor(prisma: PrismaService);
     createTeam(tenantId: string, userId: string, dto: CreateTeamDto): Promise<{
-        name: string;
         id: string;
+        name: string;
         createdAt: Date;
         updatedAt: Date;
         tenantId: string;
@@ -19,8 +19,8 @@ export declare class TeamsService {
         data: {
             memberCount: number;
             _count: undefined;
-            name: string;
             id: string;
+            name: string;
             createdAt: Date;
             updatedAt: Date;
             tenantId: string;
@@ -37,8 +37,8 @@ export declare class TeamsService {
     getTeam(tenantId: string, teamId: string): Promise<{
         memberCount: number;
         _count: undefined;
-        name: string;
         id: string;
+        name: string;
         createdAt: Date;
         updatedAt: Date;
         tenantId: string;
@@ -46,8 +46,8 @@ export declare class TeamsService {
         leadId: string | null;
     }>;
     updateTeam(tenantId: string, userId: string, teamId: string, dto: UpdateTeamDto): Promise<{
-        name: string;
         id: string;
+        name: string;
         createdAt: Date;
         updatedAt: Date;
         tenantId: string;
@@ -76,8 +76,8 @@ export declare class TeamsService {
         teamRole: string | null;
         effectiveRole: import("@prisma/client").$Enums.Role;
         user: {
-            name: string | null;
             id: string;
+            name: string | null;
             email: string;
             role: import("@prisma/client").$Enums.Role;
             status: import("@prisma/client").$Enums.UserStatus;
@@ -85,8 +85,8 @@ export declare class TeamsService {
         createdAt: Date;
     }[]>;
     getAvailableInterviewers(tenantId: string, teamId: string, dateRange?: any): Promise<{
-        name: string | null;
         id: string;
+        name: string | null;
         email: string;
         role: import("@prisma/client").$Enums.Role;
         status: import("@prisma/client").$Enums.UserStatus;

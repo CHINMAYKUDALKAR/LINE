@@ -7,9 +7,9 @@ export declare class TenantsController {
     private svc;
     constructor(svc: TenantsService);
     create(req: any, dto: CreateTenantDto): Promise<{
-        name: string;
         id: string;
         domain: string | null;
+        name: string;
         domainVerified: boolean;
         settings: import("@prisma/client/runtime/library").JsonValue | null;
         brandingLogoUrl: string | null;
@@ -20,9 +20,9 @@ export declare class TenantsController {
         updatedAt: Date;
     }>;
     findAll(): Promise<{
-        name: string;
         id: string;
         domain: string | null;
+        name: string;
         domainVerified: boolean;
         settings: import("@prisma/client/runtime/library").JsonValue | null;
         brandingLogoUrl: string | null;
@@ -33,9 +33,9 @@ export declare class TenantsController {
         updatedAt: Date;
     }[]>;
     findOne(req: any, id: string): Promise<{
-        name: string;
         id: string;
         domain: string | null;
+        name: string;
         domainVerified: boolean;
         settings: import("@prisma/client/runtime/library").JsonValue | null;
         brandingLogoUrl: string | null;
@@ -46,9 +46,9 @@ export declare class TenantsController {
         updatedAt: Date;
     }>;
     update(req: any, id: string, dto: UpdateTenantDto): Promise<{
-        name: string;
         id: string;
         domain: string | null;
+        name: string;
         domainVerified: boolean;
         settings: import("@prisma/client/runtime/library").JsonValue | null;
         brandingLogoUrl: string | null;
@@ -79,8 +79,8 @@ export declare class TenantsController {
         trialEndsAt: Date | null;
     }[]>;
     getBranding(id: string): Promise<{
-        name: string;
         id: string;
+        name: string;
         brandingLogoUrl: string | null;
         brandingColors: import("@prisma/client/runtime/library").JsonValue;
     }>;
@@ -88,8 +88,8 @@ export declare class TenantsController {
         logoUrl?: string;
         colors?: Record<string, string>;
     }): Promise<{
-        name: string;
         id: string;
+        name: string;
         brandingLogoUrl: string | null;
         brandingColors: import("@prisma/client/runtime/library").JsonValue;
     }>;

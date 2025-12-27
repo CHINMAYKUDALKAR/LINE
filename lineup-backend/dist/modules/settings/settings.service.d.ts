@@ -23,10 +23,10 @@ export declare class SettingsService {
         key: string;
     }>;
     listApiKeys(tenantId: string): Promise<{
-        name: string;
         id: string;
-        active: boolean;
+        name: string;
         createdAt: Date;
+        active: boolean;
         scopes: string[];
         lastUsed: Date | null;
     }[]>;

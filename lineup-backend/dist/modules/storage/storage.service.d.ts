@@ -18,7 +18,6 @@ export declare class StorageService {
     }>;
     attachFile(tenantId: string, userId: string, dto: AttachFileDto): Promise<{
         id: string;
-        key: string;
         createdAt: Date;
         updatedAt: Date;
         metadata: import("@prisma/client/runtime/library").JsonValue | null;
@@ -27,17 +26,17 @@ export declare class StorageService {
         status: string;
         filename: string;
         deletedAt: Date | null;
+        ownerId: string | null;
         linkedType: string | null;
         linkedId: string | null;
+        key: string;
         mimeType: string | null;
         size: number | null;
-        ownerId: string | null;
         scanStatus: string;
     }>;
     listFiles(tenantId: string, dto: ListFilesDto): Promise<{
         data: {
             id: string;
-            key: string;
             createdAt: Date;
             updatedAt: Date;
             metadata: import("@prisma/client/runtime/library").JsonValue | null;
@@ -46,11 +45,12 @@ export declare class StorageService {
             status: string;
             filename: string;
             deletedAt: Date | null;
+            ownerId: string | null;
             linkedType: string | null;
             linkedId: string | null;
+            key: string;
             mimeType: string | null;
             size: number | null;
-            ownerId: string | null;
             scanStatus: string;
         }[];
         meta: {
@@ -62,7 +62,6 @@ export declare class StorageService {
     }>;
     getFile(tenantId: string, fileId: string): Promise<{
         id: string;
-        key: string;
         createdAt: Date;
         updatedAt: Date;
         metadata: import("@prisma/client/runtime/library").JsonValue | null;
@@ -71,11 +70,12 @@ export declare class StorageService {
         status: string;
         filename: string;
         deletedAt: Date | null;
+        ownerId: string | null;
         linkedType: string | null;
         linkedId: string | null;
+        key: string;
         mimeType: string | null;
         size: number | null;
-        ownerId: string | null;
         scanStatus: string;
     }>;
     streamFile(tenantId: string, fileId: string, user: any): Promise<{
@@ -85,7 +85,6 @@ export declare class StorageService {
     downloadFile(key: string): Promise<Buffer>;
     updateMetadata(tenantId: string, fileId: string, dto: UpdateFileMetadataDto): Promise<{
         id: string;
-        key: string;
         createdAt: Date;
         updatedAt: Date;
         metadata: import("@prisma/client/runtime/library").JsonValue | null;
@@ -94,11 +93,12 @@ export declare class StorageService {
         status: string;
         filename: string;
         deletedAt: Date | null;
+        ownerId: string | null;
         linkedType: string | null;
         linkedId: string | null;
+        key: string;
         mimeType: string | null;
         size: number | null;
-        ownerId: string | null;
         scanStatus: string;
     }>;
     softDelete(tenantId: string, userId: string, fileId: string): Promise<{
@@ -109,7 +109,6 @@ export declare class StorageService {
     }>;
     listVersions(tenantId: string, fileId: string): Promise<{
         id: string;
-        key: string;
         createdAt: Date;
         updatedAt: Date;
         metadata: import("@prisma/client/runtime/library").JsonValue | null;
@@ -118,16 +117,16 @@ export declare class StorageService {
         status: string;
         filename: string;
         deletedAt: Date | null;
+        ownerId: string | null;
         linkedType: string | null;
         linkedId: string | null;
+        key: string;
         mimeType: string | null;
         size: number | null;
-        ownerId: string | null;
         scanStatus: string;
     }[]>;
     getRecycleBin(tenantId: string, limit?: number): Promise<{
         id: string;
-        key: string;
         createdAt: Date;
         updatedAt: Date;
         metadata: import("@prisma/client/runtime/library").JsonValue | null;
@@ -136,11 +135,12 @@ export declare class StorageService {
         status: string;
         filename: string;
         deletedAt: Date | null;
+        ownerId: string | null;
         linkedType: string | null;
         linkedId: string | null;
+        key: string;
         mimeType: string | null;
         size: number | null;
-        ownerId: string | null;
         scanStatus: string;
     }[]>;
     private sanitizeFilename;

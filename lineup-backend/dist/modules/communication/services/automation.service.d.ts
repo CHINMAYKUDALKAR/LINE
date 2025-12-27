@@ -7,30 +7,30 @@ export declare class AutomationService {
     constructor(prisma: PrismaService);
     findAll(tenantId: string): Promise<({
         template: {
-            isActive: boolean;
-            name: string;
-            id: string;
             subject: string | null;
             body: string;
+            id: string;
+            name: string;
             createdAt: Date;
             updatedAt: Date;
             version: number;
             tenantId: string;
             createdById: string | null;
+            isActive: boolean;
             channel: import("@prisma/client").$Enums.Channel;
             category: import("@prisma/client").$Enums.TemplateCategory;
             variables: string[];
             isSystem: boolean;
         } | null;
     } & {
-        delay: number;
-        isActive: boolean;
-        name: string;
         id: string;
+        name: string;
         createdAt: Date;
         updatedAt: Date;
         tenantId: string;
         createdById: string | null;
+        delay: number;
+        isActive: boolean;
         channel: import("@prisma/client").$Enums.Channel | null;
         templateId: string | null;
         trigger: import("@prisma/client").$Enums.AutomationTrigger;
@@ -40,30 +40,30 @@ export declare class AutomationService {
     })[]>;
     findOne(tenantId: string, id: string): Promise<{
         template: {
-            isActive: boolean;
-            name: string;
-            id: string;
             subject: string | null;
             body: string;
+            id: string;
+            name: string;
             createdAt: Date;
             updatedAt: Date;
             version: number;
             tenantId: string;
             createdById: string | null;
+            isActive: boolean;
             channel: import("@prisma/client").$Enums.Channel;
             category: import("@prisma/client").$Enums.TemplateCategory;
             variables: string[];
             isSystem: boolean;
         } | null;
     } & {
-        delay: number;
-        isActive: boolean;
-        name: string;
         id: string;
+        name: string;
         createdAt: Date;
         updatedAt: Date;
         tenantId: string;
         createdById: string | null;
+        delay: number;
+        isActive: boolean;
         channel: import("@prisma/client").$Enums.Channel | null;
         templateId: string | null;
         trigger: import("@prisma/client").$Enums.AutomationTrigger;
@@ -73,30 +73,30 @@ export declare class AutomationService {
     }>;
     create(tenantId: string, dto: CreateAutomationDto, userId?: string): Promise<{
         template: {
-            isActive: boolean;
-            name: string;
-            id: string;
             subject: string | null;
             body: string;
+            id: string;
+            name: string;
             createdAt: Date;
             updatedAt: Date;
             version: number;
             tenantId: string;
             createdById: string | null;
+            isActive: boolean;
             channel: import("@prisma/client").$Enums.Channel;
             category: import("@prisma/client").$Enums.TemplateCategory;
             variables: string[];
             isSystem: boolean;
         } | null;
     } & {
-        delay: number;
-        isActive: boolean;
-        name: string;
         id: string;
+        name: string;
         createdAt: Date;
         updatedAt: Date;
         tenantId: string;
         createdById: string | null;
+        delay: number;
+        isActive: boolean;
         channel: import("@prisma/client").$Enums.Channel | null;
         templateId: string | null;
         trigger: import("@prisma/client").$Enums.AutomationTrigger;
@@ -106,30 +106,30 @@ export declare class AutomationService {
     }>;
     update(tenantId: string, id: string, dto: UpdateAutomationDto): Promise<{
         template: {
-            isActive: boolean;
-            name: string;
-            id: string;
             subject: string | null;
             body: string;
+            id: string;
+            name: string;
             createdAt: Date;
             updatedAt: Date;
             version: number;
             tenantId: string;
             createdById: string | null;
+            isActive: boolean;
             channel: import("@prisma/client").$Enums.Channel;
             category: import("@prisma/client").$Enums.TemplateCategory;
             variables: string[];
             isSystem: boolean;
         } | null;
     } & {
-        delay: number;
-        isActive: boolean;
-        name: string;
         id: string;
+        name: string;
         createdAt: Date;
         updatedAt: Date;
         tenantId: string;
         createdById: string | null;
+        delay: number;
+        isActive: boolean;
         channel: import("@prisma/client").$Enums.Channel | null;
         templateId: string | null;
         trigger: import("@prisma/client").$Enums.AutomationTrigger;
@@ -138,14 +138,14 @@ export declare class AutomationService {
         actionData: import("@prisma/client/runtime/library").JsonValue | null;
     }>;
     delete(tenantId: string, id: string): Promise<{
-        delay: number;
-        isActive: boolean;
-        name: string;
         id: string;
+        name: string;
         createdAt: Date;
         updatedAt: Date;
         tenantId: string;
         createdById: string | null;
+        delay: number;
+        isActive: boolean;
         channel: import("@prisma/client").$Enums.Channel | null;
         templateId: string | null;
         trigger: import("@prisma/client").$Enums.AutomationTrigger;
@@ -155,30 +155,30 @@ export declare class AutomationService {
     }>;
     toggle(tenantId: string, id: string): Promise<{
         template: {
-            isActive: boolean;
-            name: string;
-            id: string;
             subject: string | null;
             body: string;
+            id: string;
+            name: string;
             createdAt: Date;
             updatedAt: Date;
             version: number;
             tenantId: string;
             createdById: string | null;
+            isActive: boolean;
             channel: import("@prisma/client").$Enums.Channel;
             category: import("@prisma/client").$Enums.TemplateCategory;
             variables: string[];
             isSystem: boolean;
         } | null;
     } & {
-        delay: number;
-        isActive: boolean;
-        name: string;
         id: string;
+        name: string;
         createdAt: Date;
         updatedAt: Date;
         tenantId: string;
         createdById: string | null;
+        delay: number;
+        isActive: boolean;
         channel: import("@prisma/client").$Enums.Channel | null;
         templateId: string | null;
         trigger: import("@prisma/client").$Enums.AutomationTrigger;
@@ -188,30 +188,30 @@ export declare class AutomationService {
     }>;
     getActiveRulesForTrigger(tenantId: string, trigger: AutomationTrigger): Promise<({
         template: {
-            isActive: boolean;
-            name: string;
-            id: string;
             subject: string | null;
             body: string;
+            id: string;
+            name: string;
             createdAt: Date;
             updatedAt: Date;
             version: number;
             tenantId: string;
             createdById: string | null;
+            isActive: boolean;
             channel: import("@prisma/client").$Enums.Channel;
             category: import("@prisma/client").$Enums.TemplateCategory;
             variables: string[];
             isSystem: boolean;
         } | null;
     } & {
-        delay: number;
-        isActive: boolean;
-        name: string;
         id: string;
+        name: string;
         createdAt: Date;
         updatedAt: Date;
         tenantId: string;
         createdById: string | null;
+        delay: number;
+        isActive: boolean;
         channel: import("@prisma/client").$Enums.Channel | null;
         templateId: string | null;
         trigger: import("@prisma/client").$Enums.AutomationTrigger;

@@ -205,6 +205,83 @@ export function CandidateDetailSheet({
                                                 <p className="text-sm text-muted-foreground italic">No resume uploaded</p>
                                             )}
                                         </div>
+
+                                        {/* Hiring Context (Deals/Opportunities) */}
+                                        {(candidate as any).opportunityLinks && (candidate as any).opportunityLinks.length > 0 && (
+                                            <>
+                                                <Separator />
+                                                <div className="space-y-3">
+                                                    <h3 className="text-sm font-medium text-foreground">Hiring Context</h3>
+                                                    <p className="text-xs text-muted-foreground">Linked opportunities from connected CRMs (read-only)</p>
+                                                    <div className="space-y-3">
+                                                        {(candidate as any).opportunityLinks.map((link: any) => {
+                                                            const opp = link.opportunityContext;
+                                                            return (
+                                                                <div key={link.id} className="p-4 border rounded-lg bg-gradient-to-br from-muted/20 to-muted/5">
+                                                                    {/* Header */}
+                                                                    <div className="flex items-start justify-between mb-3">
+                                                                        <div className="flex items-center gap-2">
+                                                                            <div className="p-2 bg-primary/10 rounded-md">
+                                                                                <Briefcase className="h-4 w-4 text-primary" />
+                                                                            </div>
+                                                                            <div>
+                                                                                <span className="text-sm font-semibold text-foreground">
+                                                                                    {opp?.name || 'Unnamed Deal'}
+                                                                                </span>
+                                                                                {opp?.stageName && (
+                                                                                    <p className="text-xs text-muted-foreground">
+                                                                                        Stage: {opp.stageName}
+                                                                                    </p>
+                                                                                )}
+                                                                            </div>
+                                                                        </div>
+                                                                        <Badge variant="outline" className="text-xs shrink-0">
+                                                                            {opp?.provider === 'hubspot' ? 'HubSpot' : 'Salesforce'}
+                                                                        </Badge>
+                                                                    </div>
+
+                                                                    {/* Details Grid */}
+                                                                    <div className="grid grid-cols-2 gap-2 text-xs">
+                                                                        {opp?.accountName && (
+                                                                            <div className="flex items-center gap-1.5">
+                                                                                <span className="text-muted-foreground">Company:</span>
+                                                                                <span className="font-medium">{opp.accountName}</span>
+                                                                            </div>
+                                                                        )}
+                                                                        {opp?.amount && (
+                                                                            <div className="flex items-center gap-1.5">
+                                                                                <span className="text-muted-foreground">Value:</span>
+                                                                                <span className="font-medium text-green-600">${opp.amount.toLocaleString()}</span>
+                                                                            </div>
+                                                                        )}
+                                                                        {opp?.closeDate && (
+                                                                            <div className="flex items-center gap-1.5">
+                                                                                <span className="text-muted-foreground">Close Date:</span>
+                                                                                <span className="font-medium">
+                                                                                    {new Date(opp.closeDate).toLocaleDateString()}
+                                                                                </span>
+                                                                            </div>
+                                                                        )}
+                                                                        {opp?.ownerName && (
+                                                                            <div className="flex items-center gap-1.5">
+                                                                                <span className="text-muted-foreground">Owner:</span>
+                                                                                <span className="font-medium">{opp.ownerName}</span>
+                                                                            </div>
+                                                                        )}
+                                                                        {opp?.probability && (
+                                                                            <div className="flex items-center gap-1.5">
+                                                                                <span className="text-muted-foreground">Probability:</span>
+                                                                                <span className="font-medium">{opp.probability}%</span>
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                </div>
+                                            </>
+                                        )}
                                     </TabsContent>
 
                                     <TabsContent value="notes" className="mt-0">

@@ -28,14 +28,14 @@ export declare class ReportsService {
     private escapeCsvValue;
     private formatReportTitle;
     createScheduledReport(tenantId: string, userId: string, dto: CreateScheduledReportDto): Promise<{
-        isActive: boolean;
-        name: string | null;
         id: string;
+        name: string | null;
         createdAt: Date;
         updatedAt: Date;
         tenantId: string;
         time: string;
         createdById: string;
+        isActive: boolean;
         recipients: string[];
         reportType: string;
         frequency: string;
@@ -45,14 +45,14 @@ export declare class ReportsService {
         nextRunAt: Date | null;
     }>;
     listScheduledReports(tenantId: string): Promise<{
-        isActive: boolean;
-        name: string | null;
         id: string;
+        name: string | null;
         createdAt: Date;
         updatedAt: Date;
         tenantId: string;
         time: string;
         createdById: string;
+        isActive: boolean;
         recipients: string[];
         reportType: string;
         frequency: string;
@@ -62,14 +62,14 @@ export declare class ReportsService {
         nextRunAt: Date | null;
     }[]>;
     getScheduledReport(tenantId: string, id: string): Promise<{
-        isActive: boolean;
-        name: string | null;
         id: string;
+        name: string | null;
         createdAt: Date;
         updatedAt: Date;
         tenantId: string;
         time: string;
         createdById: string;
+        isActive: boolean;
         recipients: string[];
         reportType: string;
         frequency: string;
@@ -82,14 +82,14 @@ export declare class ReportsService {
         success: boolean;
     }>;
     toggleScheduledReport(tenantId: string, userId: string, id: string): Promise<{
-        isActive: boolean;
-        name: string | null;
         id: string;
+        name: string | null;
         createdAt: Date;
         updatedAt: Date;
         tenantId: string;
         time: string;
         createdById: string;
+        isActive: boolean;
         recipients: string[];
         reportType: string;
         frequency: string;

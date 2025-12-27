@@ -21,6 +21,7 @@ export declare class CandidatesController {
         stage: string;
         source: string | null;
         resumeUrl: string | null;
+        photoUrl: string | null;
         notes: string | null;
         tags: string[];
         createdById: string | null;
@@ -58,6 +59,50 @@ export declare class CandidatesController {
         };
     }>;
     get(req: any, id: string): Promise<{
+        opportunityLinks: ({
+            opportunityContext: {
+                id: string;
+                name: string;
+                externalId: string;
+                createdAt: Date;
+                updatedAt: Date;
+                tenantId: string;
+                provider: string;
+                stageName: string | null;
+                accountId: string | null;
+                accountName: string | null;
+                ownerId: string | null;
+                ownerName: string | null;
+                amount: number | null;
+                closeDate: Date | null;
+                probability: number | null;
+                rawData: import("@prisma/client/runtime/library").JsonValue | null;
+            };
+        } & {
+            id: string;
+            createdAt: Date;
+            candidateId: string;
+            opportunityContextId: string;
+            associationType: string | null;
+        })[];
+        externalFeedback: {
+            id: string;
+            externalId: string;
+            overallScore: string | null;
+            createdAt: Date;
+            updatedAt: Date;
+            tenantId: string;
+            interviewDate: Date | null;
+            candidateId: string;
+            provider: string;
+            rawData: import("@prisma/client/runtime/library").JsonValue | null;
+            interviewerName: string | null;
+            interviewType: string | null;
+            scorecard: import("@prisma/client/runtime/library").JsonValue | null;
+            comments: string | null;
+            recommendation: string | null;
+        }[];
+    } & {
         id: string;
         name: string;
         email: string | null;
@@ -66,6 +111,7 @@ export declare class CandidatesController {
         stage: string;
         source: string | null;
         resumeUrl: string | null;
+        photoUrl: string | null;
         notes: string | null;
         tags: string[];
         createdById: string | null;
@@ -88,6 +134,7 @@ export declare class CandidatesController {
         stage: string;
         source: string | null;
         resumeUrl: string | null;
+        photoUrl: string | null;
         notes: string | null;
         tags: string[];
         createdById: string | null;
@@ -132,6 +179,16 @@ export declare class CandidatesController {
         success: boolean;
         fileId: string;
     }>;
+    photoUploadUrl(req: any, id: string, filename: string): Promise<{
+        fileId: string;
+        uploadUrl: string;
+        s3Key: string;
+    }>;
+    attachPhoto(req: any, id: string, fileId: string, s3Key: string): Promise<{
+        success: boolean;
+        fileId: string;
+        photoUrl: string;
+    }>;
     bulkImport(req: any, body: any): Promise<{
         success: number;
         failed: number;
@@ -172,6 +229,7 @@ export declare class CandidatesController {
         stage: string;
         source: string | null;
         resumeUrl: string | null;
+        photoUrl: string | null;
         notes: string | null;
         tags: string[];
         createdById: string | null;

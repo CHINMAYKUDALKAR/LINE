@@ -156,6 +156,37 @@ export class CandidatesController {
         return this.svc.attachResume(req.user.tenantId, req.user.sub, id, fileId, s3Key, mimeType, size);
     }
 
+    // =====================================================
+    // CANDIDATE PHOTO
+    // =====================================================
+
+    @Post(':id/photo/upload-url')
+    @RateLimited(RateLimitProfile.WRITE)
+    @Roles('ADMIN', 'MANAGER', 'RECRUITER')
+    @ApiOperation({ summary: 'Get a presigned URL to upload candidate photo' })
+    @ApiParam({ name: 'id', description: 'Candidate ID' })
+    @ApiBody({ schema: { properties: { filename: { type: 'string' } } } })
+    @ApiResponse({ status: 200, description: 'Presigned upload URL' })
+    photoUploadUrl(@Req() req: any, @Param('id') id: string, @Body('filename') filename: string) {
+        return this.svc.generatePhotoUploadUrl(req.user.tenantId, req.user.sub, id, filename);
+    }
+
+    @Post(':id/photo/attach')
+    @RateLimited(RateLimitProfile.WRITE)
+    @Roles('ADMIN', 'MANAGER', 'RECRUITER')
+    @ApiOperation({ summary: 'Attach uploaded photo to candidate' })
+    @ApiParam({ name: 'id', description: 'Candidate ID' })
+    @ApiBody({ schema: { properties: { fileId: { type: 'string' }, s3Key: { type: 'string' } } } })
+    @ApiResponse({ status: 200, description: 'Photo attached to candidate' })
+    attachPhoto(
+        @Req() req: any,
+        @Param('id') id: string,
+        @Body('fileId') fileId: string,
+        @Body('s3Key') s3Key: string
+    ) {
+        return this.svc.attachPhoto(req.user.tenantId, req.user.sub, id, fileId, s3Key);
+    }
+
     @Post('bulk-import')
     @RateLimited(RateLimitProfile.BULK)
     @Roles('ADMIN', 'MANAGER')

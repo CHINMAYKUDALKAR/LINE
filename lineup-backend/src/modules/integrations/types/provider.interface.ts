@@ -23,8 +23,9 @@ export interface IntegrationProvider {
 
     /**
      * Exchange authorization code for access/refresh tokens
+     * @param companyDomain Optional company domain for providers like BambooHR
      */
-    exchangeCode(tenantId: string, code: string): Promise<void>;
+    exchangeCode(tenantId: string, code: string, companyDomain?: string): Promise<void>;
 
     /**
      * Refresh expired access tokens

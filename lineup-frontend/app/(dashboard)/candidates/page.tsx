@@ -11,6 +11,7 @@ import { SendMessageDialog, MessageChannel } from '@/components/candidates/SendM
 import { ScheduleInterviewModal } from '@/components/scheduling/ScheduleInterviewModal';
 import { AddCandidateModal } from '@/components/candidates/AddCandidateModal';
 import { UploadCandidatesModal } from '@/components/candidates/UploadCandidatesModal';
+import { ChangeStageModal } from '@/components/candidates/ChangeStageModal';
 import { CandidateListFilters, CandidateBulkAction, CandidateListItem } from '@/types/candidate-list';
 import { currentUserRole } from '@/lib/navigation-mock-data';
 import { toast } from '@/hooks/use-toast';
@@ -61,6 +62,10 @@ export default function Candidates() {
     const deleteCandidateMutation = useDeleteCandidate();
     const updateCandidateMutation = useUpdateCandidate();
 
+    // Change Stage modal state
+    const [stageModalOpen, setStageModalOpen] = useState(false);
+    const [stageModalCandidate, setStageModalCandidate] = useState<CandidateListItem | null>(null);
+
     // Message dialog state
     const [messageDialogOpen, setMessageDialogOpen] = useState(false);
     const [messageCandidate, setMessageCandidate] = useState<CandidateListItem | null>(null);
@@ -68,7 +73,7 @@ export default function Candidates() {
 
     // Pagination state
     const [page, setPage] = useState(1);
-    const perPage = 25;
+    const [perPage, setPerPage] = useState<number | 'all'>(25);
 
     // Bulk delete loading state (separate from deleteCandidateMutation)
     const [isBulkDeleting, setIsBulkDeleting] = useState(false);
@@ -88,10 +93,11 @@ export default function Candidates() {
     }, [queryClient]);
 
     // Use real API data with pagination
-    // Use real API data with pagination
+    // For board view, fetch all candidates; for list view, use pagination
+    const isShowingAll = view === 'board' || perPage === 'all';
     const { data: candidatesData, isLoading } = useCandidates({
-        page,
-        perPage,
+        page: isShowingAll ? 1 : page,
+        perPage: isShowingAll ? 10000 : perPage, // Fetch all for board view
         q: filters.search || undefined,
         role: filters.role || undefined,
         stage: filters.stage !== 'all' ? filters.stage : undefined,
@@ -117,6 +123,31 @@ export default function Candidates() {
         tenantId: string;
     }
 
+    // Normalize backend stage (uppercase like 'APPLIED') to frontend format ('applied')
+    const normalizeStage = (backendStage?: string): InterviewStage => {
+        if (!backendStage) return 'applied';
+        const stage = backendStage.toLowerCase().replace(/_/g, '-');
+        // Map common backend formats
+        const stageMap: Record<string, InterviewStage> = {
+            'applied': 'applied',
+            'screening': 'screening',
+            'phone-screen': 'screening',
+            'phone_screen': 'screening',
+            'interview': 'interview-1',
+            'interview-1': 'interview-1',
+            'interview_1': 'interview-1',
+            'interview-2': 'interview-2',
+            'interview_2': 'interview-2',
+            'hr-round': 'hr-round',
+            'hr_round': 'hr-round',
+            'hr': 'hr-round',
+            'offer': 'offer',
+            'hired': 'offer',
+            'rejected': 'applied', // fallback
+        };
+        return stageMap[stage] || 'applied';
+    };
+
     // Map API candidates to CandidateListItem format
     const candidates: CandidateListItem[] = useMemo(() => {
         if (!candidatesData?.data) return [];
@@ -126,7 +157,7 @@ export default function Candidates() {
             email: c.email || '',
             phone: c.phone || '',
             role: c.roleTitle || '',
-            stage: (c.stage || 'applied') as InterviewStage,
+            stage: normalizeStage(c.stage),
             source: c.source || 'Unknown',
             recruiterName: 'Unassigned',
             recruiterId: c.createdById || '',
@@ -159,10 +190,15 @@ export default function Candidates() {
     };
 
     const handleChangeStage = (candidate: CandidateListItem) => {
-        toast({
-            title: 'Change Stage',
-            description: `Change stage modal for ${candidate.name} would open here.`,
-        });
+        setStageModalCandidate(candidate);
+        setStageModalOpen(true);
+    };
+
+    const handleStageChangeConfirm = async (candidateId: string, newStage: string, note?: string) => {
+        await updateCandidateMutation.mutateAsync({ id: candidateId, data: { stage: newStage } });
+        // Note would be saved separately if needed
+        setStageModalOpen(false);
+        setStageModalCandidate(null);
     };
 
     const handleScheduleInterview = (candidate: CandidateListItem) => {
@@ -389,8 +425,33 @@ export default function Candidates() {
                         </div>
                     )}
 
-                    {candidatesData?.meta && candidatesData.meta.lastPage > 1 && (
-                        <div className="mt-4 flex justify-end">
+                    {/* Pagination Controls */}
+                    <div className="mt-4 flex items-center justify-between">
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <span>Show</span>
+                            <select
+                                value={perPage}
+                                onChange={(e) => {
+                                    const val = e.target.value;
+                                    setPerPage(val === 'all' ? 'all' : Number(val));
+                                    setPage(1);
+                                }}
+                                className="h-8 rounded-md border border-input bg-background px-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                            >
+                                <option value={25}>25</option>
+                                <option value={50}>50</option>
+                                <option value={100}>100</option>
+                                <option value="all">All</option>
+                            </select>
+                            <span>per page</span>
+                            {candidatesData?.meta && (
+                                <span className="ml-2">
+                                    ({candidatesData.meta.total} total)
+                                </span>
+                            )}
+                        </div>
+
+                        {candidatesData?.meta && candidatesData.meta.lastPage > 1 && perPage !== 'all' && (
                             <Pagination>
                                 <PaginationContent>
                                     <PaginationItem>
@@ -412,8 +473,8 @@ export default function Candidates() {
                                     </PaginationItem>
                                 </PaginationContent>
                             </Pagination>
-                        </div>
-                    )}
+                        )}
+                    </div>
 
                     <QuickActionsToolbar
                         selectedCount={selectedIds.length}
@@ -521,6 +582,18 @@ export default function Candidates() {
                         open={isUploadCandidatesOpen}
                         onOpenChange={setIsUploadCandidatesOpen}
                     />
+
+                    {/* Change Stage Modal */}
+                    {stageModalCandidate && (
+                        <ChangeStageModal
+                            open={stageModalOpen}
+                            onOpenChange={setStageModalOpen}
+                            candidateId={stageModalCandidate.id}
+                            candidateName={stageModalCandidate.name}
+                            currentStage={stageModalCandidate.stage}
+                            onStageChange={handleStageChangeConfirm}
+                        />
+                    )}
                 </motion.div>
             </motion.main>
         </div>

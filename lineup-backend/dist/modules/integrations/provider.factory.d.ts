@@ -23,6 +23,9 @@ import { LeverSyncHandler } from './providers/lever/lever.sync-handler';
 import { GreenhouseAuthService } from './providers/greenhouse/greenhouse.auth';
 import { GreenhouseApiService } from './providers/greenhouse/greenhouse.api';
 import { GreenhouseSyncHandler } from './providers/greenhouse/greenhouse.sync-handler';
+import { BambooHROAuthService } from './providers/bamboohr/bamboohr.oauth';
+import { BambooHRApiService } from './providers/bamboohr/bamboohr.api';
+import { BambooHRHandoffHandler } from './providers/bamboohr/bamboohr.handoff-handler';
 export declare class ProviderFactory {
     private prisma;
     private configService;
@@ -48,7 +51,10 @@ export declare class ProviderFactory {
     private greenhouseAuth;
     private greenhouseApi;
     private greenhouseSync;
-    constructor(prisma: PrismaService, configService: ConfigService, zohoOAuth: ZohoOAuthService, zohoApi: ZohoApiService, zohoSync: ZohoSyncHandler, googleOAuth: GoogleOAuthService, googleCalendar: GoogleCalendarApiService, outlookOAuth: OutlookOAuthService, outlookCalendar: OutlookCalendarApiService, salesforceOAuth: SalesforceOAuthService, salesforceApi: SalesforceApiService, hubspotOAuth: HubspotOAuthService, hubspotApi: HubspotApiService, hubspotSync: HubspotSyncHandler, syncLogService: SyncLogService, workdayAuth: WorkdayAuthService, workdayApi: WorkdayApiService, workdaySync: WorkdaySyncHandler, leverAuth: LeverAuthService, leverApi: LeverApiService, leverSync: LeverSyncHandler, greenhouseAuth: GreenhouseAuthService, greenhouseApi: GreenhouseApiService, greenhouseSync: GreenhouseSyncHandler);
+    private bamboohrOAuth;
+    private bamboohrApi;
+    private bamboohrHandoff;
+    constructor(prisma: PrismaService, configService: ConfigService, zohoOAuth: ZohoOAuthService, zohoApi: ZohoApiService, zohoSync: ZohoSyncHandler, googleOAuth: GoogleOAuthService, googleCalendar: GoogleCalendarApiService, outlookOAuth: OutlookOAuthService, outlookCalendar: OutlookCalendarApiService, salesforceOAuth: SalesforceOAuthService, salesforceApi: SalesforceApiService, hubspotOAuth: HubspotOAuthService, hubspotApi: HubspotApiService, hubspotSync: HubspotSyncHandler, syncLogService: SyncLogService, workdayAuth: WorkdayAuthService, workdayApi: WorkdayApiService, workdaySync: WorkdaySyncHandler, leverAuth: LeverAuthService, leverApi: LeverApiService, leverSync: LeverSyncHandler, greenhouseAuth: GreenhouseAuthService, greenhouseApi: GreenhouseApiService, greenhouseSync: GreenhouseSyncHandler, bamboohrOAuth: BambooHROAuthService, bamboohrApi: BambooHRApiService, bamboohrHandoff: BambooHRHandoffHandler);
     getProvider(provider: string): IntegrationProvider;
     getSupportedProviders(): {
         name: string;

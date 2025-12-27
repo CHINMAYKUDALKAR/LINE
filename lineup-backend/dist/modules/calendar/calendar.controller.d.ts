@@ -52,8 +52,8 @@ export declare class CalendarController {
             interviewId: string | null;
             startAt: Date;
             endAt: Date;
-            participants: import("@prisma/client/runtime/library").JsonValue;
             organizerId: string | null;
+            participants: import("@prisma/client/runtime/library").JsonValue;
         }[];
         total: number;
         page: number;
@@ -71,8 +71,8 @@ export declare class CalendarController {
         interviewId: string | null;
         startAt: Date;
         endAt: Date;
-        participants: import("@prisma/client/runtime/library").JsonValue;
         organizerId: string | null;
+        participants: import("@prisma/client/runtime/library").JsonValue;
     }>;
     createSlot(req: any, dto: CreateSlotDto): Promise<{
         id: string;
@@ -85,8 +85,8 @@ export declare class CalendarController {
         interviewId: string | null;
         startAt: Date;
         endAt: Date;
-        participants: import("@prisma/client/runtime/library").JsonValue;
         organizerId: string | null;
+        participants: import("@prisma/client/runtime/library").JsonValue;
     } | {
         warning: string;
         id: string;
@@ -99,8 +99,8 @@ export declare class CalendarController {
         interviewId: string | null;
         startAt: Date;
         endAt: Date;
-        participants: import("@prisma/client/runtime/library").JsonValue;
         organizerId: string | null;
+        participants: import("@prisma/client/runtime/library").JsonValue;
     }>;
     generateSlots(req: any, dto: GenerateSlotsDto): Promise<{
         created: {
@@ -114,8 +114,8 @@ export declare class CalendarController {
             interviewId: string | null;
             startAt: Date;
             endAt: Date;
-            participants: import("@prisma/client/runtime/library").JsonValue;
             organizerId: string | null;
+            participants: import("@prisma/client/runtime/library").JsonValue;
         }[];
         total: number;
         limited: boolean;
@@ -131,8 +131,8 @@ export declare class CalendarController {
         interviewId: string | null;
         startAt: Date;
         endAt: Date;
-        participants: import("@prisma/client/runtime/library").JsonValue;
         organizerId: string | null;
+        participants: import("@prisma/client/runtime/library").JsonValue;
     }>;
     rescheduleSlot(req: any, id: string, dto: RescheduleSlotDto): Promise<{
         id: string;
@@ -145,8 +145,8 @@ export declare class CalendarController {
         interviewId: string | null;
         startAt: Date;
         endAt: Date;
-        participants: import("@prisma/client/runtime/library").JsonValue;
         organizerId: string | null;
+        participants: import("@prisma/client/runtime/library").JsonValue;
     }>;
     cancelSlot(req: any, id: string): Promise<{
         id: string;
@@ -159,8 +159,8 @@ export declare class CalendarController {
         interviewId: string | null;
         startAt: Date;
         endAt: Date;
-        participants: import("@prisma/client/runtime/library").JsonValue;
         organizerId: string | null;
+        participants: import("@prisma/client/runtime/library").JsonValue;
     }>;
     getWorkingHours(req: any, userId?: string): Promise<{
         id: string;
@@ -193,8 +193,8 @@ export declare class CalendarController {
         userId: string;
         source: string;
         reason: string | null;
-        startAt: Date;
         sourceId: string | null;
+        startAt: Date;
         endAt: Date;
     }[]>;
     createBusyBlock(req: any, dto: CreateBusyBlockDto): Promise<{
@@ -206,8 +206,8 @@ export declare class CalendarController {
         userId: string;
         source: string;
         reason: string | null;
-        startAt: Date;
         sourceId: string | null;
+        startAt: Date;
         endAt: Date;
     }>;
     deleteBusyBlock(req: any, id: string): Promise<{
@@ -219,13 +219,13 @@ export declare class CalendarController {
         userId: string;
         source: string;
         reason: string | null;
-        startAt: Date;
         sourceId: string | null;
+        startAt: Date;
         endAt: Date;
     }>;
     getRules(req: any): Promise<{
-        name: string;
         id: string;
+        name: string;
         createdAt: Date;
         updatedAt: Date;
         tenantId: string;
@@ -238,8 +238,8 @@ export declare class CalendarController {
         allowOverlapping: boolean;
     }[]>;
     getRule(req: any, id: string): Promise<{
-        name: string;
         id: string;
+        name: string;
         createdAt: Date;
         updatedAt: Date;
         tenantId: string;
@@ -252,8 +252,8 @@ export declare class CalendarController {
         allowOverlapping: boolean;
     }>;
     createRule(req: any, dto: CreateSchedulingRuleDto): Promise<{
-        name: string;
         id: string;
+        name: string;
         createdAt: Date;
         updatedAt: Date;
         tenantId: string;
@@ -266,8 +266,8 @@ export declare class CalendarController {
         allowOverlapping: boolean;
     }>;
     updateRule(req: any, id: string, dto: UpdateSchedulingRuleDto): Promise<{
-        name: string;
         id: string;
+        name: string;
         createdAt: Date;
         updatedAt: Date;
         tenantId: string;
@@ -280,8 +280,8 @@ export declare class CalendarController {
         allowOverlapping: boolean;
     }>;
     deleteRule(req: any, id: string): Promise<{
-        name: string;
         id: string;
+        name: string;
         createdAt: Date;
         updatedAt: Date;
         tenantId: string;

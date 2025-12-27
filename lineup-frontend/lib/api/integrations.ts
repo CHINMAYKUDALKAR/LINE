@@ -325,5 +325,14 @@ export function getAvailableProviders() {
             icon: 'WD',
             color: 'bg-indigo-500',
         },
+        {
+            id: 'bamboohr',
+            name: 'BambooHR',
+            description: 'Create employee records when candidates are hired',
+            category: 'hris',
+            authType: 'oauth2' as const,
+            icon: 'BB',
+            color: 'bg-lime-600',
+        },
     ];
 }

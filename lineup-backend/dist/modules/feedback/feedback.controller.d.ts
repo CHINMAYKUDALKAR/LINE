@@ -8,21 +8,21 @@ export declare class FeedbackController {
         createdAt: Date;
         updatedAt: Date;
         tenantId: string;
-        comments: string | null;
         interviewId: string;
         interviewerId: string;
         rating: number;
         criteria: import("@prisma/client/runtime/library").JsonValue | null;
+        comments: string | null;
     }>;
     getForInterview(req: any, id: string): Promise<{
         id: string;
         createdAt: Date;
         updatedAt: Date;
         tenantId: string;
-        comments: string | null;
         interviewId: string;
         interviewerId: string;
         rating: number;
         criteria: import("@prisma/client/runtime/library").JsonValue | null;
+        comments: string | null;
     }[]>;
 }

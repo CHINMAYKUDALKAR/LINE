@@ -34,6 +34,7 @@ const outlook_api_1 = require("./providers/outlook-calendar/outlook.api");
 const salesforce_provider_1 = require("./providers/salesforce/salesforce.provider");
 const salesforce_oauth_1 = require("./providers/salesforce/salesforce.oauth");
 const salesforce_api_1 = require("./providers/salesforce/salesforce.api");
+const salesforce_sync_handler_1 = require("./providers/salesforce/salesforce.sync-handler");
 const hubspot_provider_1 = require("./providers/hubspot/hubspot.provider");
 const hubspot_oauth_1 = require("./providers/hubspot/hubspot.oauth");
 const hubspot_api_1 = require("./providers/hubspot/hubspot.api");
@@ -51,8 +52,12 @@ const greenhouse_auth_1 = require("./providers/greenhouse/greenhouse.auth");
 const greenhouse_api_1 = require("./providers/greenhouse/greenhouse.api");
 const greenhouse_sync_handler_1 = require("./providers/greenhouse/greenhouse.sync-handler");
 const bamboohr_provider_1 = require("./providers/bamboohr/bamboohr.provider");
+const bamboohr_oauth_1 = require("./providers/bamboohr/bamboohr.oauth");
+const bamboohr_api_1 = require("./providers/bamboohr/bamboohr.api");
+const bamboohr_handoff_handler_1 = require("./providers/bamboohr/bamboohr.handoff-handler");
 const sync_processor_1 = require("./processors/sync.processor");
 const dlq_processor_1 = require("./processors/dlq.processor");
+const scheduled_import_processor_1 = require("./processors/scheduled-import.processor");
 let IntegrationsModule = class IntegrationsModule {
 };
 exports.IntegrationsModule = IntegrationsModule;
@@ -85,6 +90,7 @@ exports.IntegrationsModule = IntegrationsModule = __decorate([
             salesforce_provider_1.SalesforceProvider,
             salesforce_oauth_1.SalesforceOAuthService,
             salesforce_api_1.SalesforceApiService,
+            salesforce_sync_handler_1.SalesforceSyncHandler,
             hubspot_provider_1.HubspotProvider,
             hubspot_oauth_1.HubspotOAuthService,
             hubspot_api_1.HubspotApiService,
@@ -102,8 +108,12 @@ exports.IntegrationsModule = IntegrationsModule = __decorate([
             greenhouse_api_1.GreenhouseApiService,
             greenhouse_sync_handler_1.GreenhouseSyncHandler,
             bamboohr_provider_1.BambooHRProvider,
+            bamboohr_oauth_1.BambooHROAuthService,
+            bamboohr_api_1.BambooHRApiService,
+            bamboohr_handoff_handler_1.BambooHRHandoffHandler,
             sync_processor_1.SyncProcessor,
             dlq_processor_1.DlqProcessor,
+            scheduled_import_processor_1.ScheduledImportProcessor,
         ],
         exports: [integrations_service_1.IntegrationsService, provider_factory_1.ProviderFactory, integration_events_service_1.IntegrationEventsService],
     })

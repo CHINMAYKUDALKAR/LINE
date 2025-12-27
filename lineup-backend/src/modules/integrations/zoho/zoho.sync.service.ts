@@ -72,7 +72,7 @@ export class ZohoSyncService {
                     const zohoId = rec.id;
                     const stage = this.mapZohoStatusToStage(rec.Lead_Status);
 
-                    // Try to find by externalId first (Zoho ID), then by email
+                    // Deduplication: Find by externalId → email → phone
                     let existing = await this.prisma.candidate.findFirst({
                         where: {
                             tenantId,
@@ -81,10 +81,21 @@ export class ZohoSyncService {
                         }
                     });
 
+                    // Fallback: find by email
                     if (!existing && mapped.email) {
                         existing = await this.prisma.candidate.findFirst({
-                            where: { tenantId, email: mapped.email }
+                            where: { tenantId, email: { equals: mapped.email, mode: 'insensitive' } }
                         });
+                    }
+
+                    // Fallback: find by phone (normalized, last 10 digits)
+                    if (!existing && mapped.phone) {
+                        const normalizedPhone = mapped.phone.replace(/\D/g, '');
+                        if (normalizedPhone.length >= 10) {
+                            existing = await this.prisma.candidate.findFirst({
+                                where: { tenantId, phone: { contains: normalizedPhone.slice(-10) } }
+                            });
+                        }
                     }
 
                     if (existing) {
@@ -180,7 +191,7 @@ export class ZohoSyncService {
                     const mapped = this.applyMapping(rec, mapping);
                     const zohoId = rec.id;
 
-                    // Try to find by externalId first (Zoho ID), then by email
+                    // Deduplication: Find by externalId → email → phone
                     let existing = await this.prisma.candidate.findFirst({
                         where: {
                             tenantId,
@@ -189,10 +200,21 @@ export class ZohoSyncService {
                         }
                     });
 
+                    // Fallback: find by email
                     if (!existing && mapped.email) {
                         existing = await this.prisma.candidate.findFirst({
-                            where: { tenantId, email: mapped.email }
+                            where: { tenantId, email: { equals: mapped.email, mode: 'insensitive' } }
                         });
+                    }
+
+                    // Fallback: find by phone (normalized, last 10 digits)
+                    if (!existing && mapped.phone) {
+                        const normalizedPhone = mapped.phone.replace(/\D/g, '');
+                        if (normalizedPhone.length >= 10) {
+                            existing = await this.prisma.candidate.findFirst({
+                                where: { tenantId, phone: { contains: normalizedPhone.slice(-10) } }
+                            });
+                        }
                     }
 
                     if (existing) {

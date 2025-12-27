@@ -99,6 +99,7 @@ export function AppSidebar({
             tenants={tenants}
             currentTenantId={currentTenantId}
             onTenantChange={onTenantChange}
+            collapsed={collapsed}
           />
         )}
       </div>

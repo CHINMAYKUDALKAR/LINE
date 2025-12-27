@@ -59,7 +59,7 @@ export class HubspotApiService {
                     company: contact.company || '',
                     jobtitle: contact.jobTitle || '',
                     hs_lead_status: contact.stage || 'NEW',
-                    leadsource: contact.source || 'Lineup',
+                    // Note: leadsource removed - not a default HubSpot property
                 },
             });
 
@@ -113,7 +113,7 @@ export class HubspotApiService {
     }
 
     /**
-     * Get contacts modified since a date
+     * Get contacts modified since a date (for incremental sync)
      */
     async getModifiedContacts(tenantId: string, since: Date): Promise<unknown[]> {
         return this.executeWithRetry(tenantId, async (client) => {
@@ -129,12 +129,109 @@ export class HubspotApiService {
                         ],
                     },
                 ],
-                properties: ['email', 'firstname', 'lastname', 'phone', 'jobtitle'],
+                properties: ['email', 'firstname', 'lastname', 'phone', 'jobtitle', 'company'],
                 limit: 100,
             });
 
             return response.data?.results || [];
         });
+    }
+
+    /**
+     * Get all contacts for inbound sync (with pagination)
+     * Fetches contacts created or modified since lastSync date
+     */
+    async getContacts(
+        tenantId: string,
+        lastSync?: Date,
+    ): Promise<{
+        id: string;
+        email: string;
+        firstName: string;
+        lastName: string;
+        phone?: string;
+        jobTitle?: string;
+        company?: string;
+        createdAt: Date;
+        updatedAt: Date;
+    }[]> {
+        const contacts: any[] = [];
+        let after: string | undefined;
+        const pageLimit = 100;
+        const maxPages = 50; // Safety limit: 5000 contacts max per sync
+        let pageCount = 0;
+
+        this.logger.log(`Fetching HubSpot contacts for tenant ${tenantId}${lastSync ? ` (since ${lastSync.toISOString()})` : ''}`);
+
+        try {
+            do {
+                pageCount++;
+                const result = await this.executeWithRetry(tenantId, async (client) => {
+                    // Build search request
+                    const searchBody: any = {
+                        properties: [
+                            'email',
+                            'firstname',
+                            'lastname',
+                            'phone',
+                            'jobtitle',
+                            'company',
+                            'createdate',
+                            'lastmodifieddate',
+                        ],
+                        limit: pageLimit,
+                        sorts: [{ propertyName: 'createdate', direction: 'ASCENDING' }],
+                    };
+
+                    // Add filter for incremental sync
+                    if (lastSync) {
+                        searchBody.filterGroups = [
+                            {
+                                filters: [
+                                    {
+                                        propertyName: 'lastmodifieddate',
+                                        operator: 'GTE',
+                                        value: lastSync.getTime().toString(),
+                                    },
+                                ],
+                            },
+                        ];
+                    }
+
+                    if (after) {
+                        searchBody.after = after;
+                    }
+
+                    const response = await client.post('/crm/v3/objects/contacts/search', searchBody);
+                    return response.data;
+                });
+
+                const pageContacts = result?.results || [];
+                contacts.push(...pageContacts);
+                after = result?.paging?.next?.after;
+
+                this.logger.debug(`Fetched page ${pageCount}: ${pageContacts.length} contacts (total: ${contacts.length})`);
+
+            } while (after && pageCount < maxPages);
+
+            this.logger.log(`Fetched ${contacts.length} contacts from HubSpot`);
+
+            // Map to normalized format
+            return contacts.map((c: any) => ({
+                id: c.id,
+                email: c.properties?.email || '',
+                firstName: c.properties?.firstname || '',
+                lastName: c.properties?.lastname || '',
+                phone: c.properties?.phone,
+                jobTitle: c.properties?.jobtitle,
+                company: c.properties?.company,
+                createdAt: new Date(c.properties?.createdate || c.createdAt),
+                updatedAt: new Date(c.properties?.lastmodifieddate || c.updatedAt),
+            }));
+        } catch (error) {
+            this.logger.error(`Failed to fetch HubSpot contacts: ${error}`);
+            throw error;
+        }
     }
 
     // ============================================
@@ -201,6 +298,55 @@ export class HubspotApiService {
                 {},
             );
             return true;
+        });
+    }
+
+    /**
+     * Get deals associated with a contact (for hiring context)
+     * Returns deals linked to a specific contact - read-only context
+     */
+    async getDealsForContact(
+        tenantId: string,
+        contactId: string,
+    ): Promise<{
+        id: string;
+        name: string;
+        stageName?: string;
+        amount?: number;
+        closeDate?: Date;
+        companyName?: string;
+        ownerName?: string;
+    }[]> {
+        return this.executeWithRetry(tenantId, async (client) => {
+            // Get associations first
+            const assocResponse = await client.get(
+                `/crm/v3/objects/contacts/${contactId}/associations/deals`,
+            );
+
+            const dealIds = assocResponse.data?.results?.map((r: any) => r.id) || [];
+            if (dealIds.length === 0) {
+                return [];
+            }
+
+            // Batch read deal details
+            const batchResponse = await client.post('/crm/v3/objects/deals/batch/read', {
+                inputs: dealIds.map((id: string) => ({ id })),
+                properties: [
+                    'dealname',
+                    'dealstage',
+                    'amount',
+                    'closedate',
+                    'hubspot_owner_id',
+                ],
+            });
+
+            return (batchResponse.data?.results || []).map((deal: any) => ({
+                id: deal.id,
+                name: deal.properties?.dealname || 'Unnamed Deal',
+                stageName: deal.properties?.dealstage,
+                amount: deal.properties?.amount ? parseFloat(deal.properties.amount) : undefined,
+                closeDate: deal.properties?.closedate ? new Date(deal.properties.closedate) : undefined,
+            }));
         });
     }
 

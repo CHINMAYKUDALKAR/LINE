@@ -5,6 +5,11 @@ import { ProviderFactory } from '../provider.factory';
 import { AuditService } from '../../audit/audit.service';
 import { IntegrationEventType, SyncEntityType } from '../types/standard-entities';
 import { ZohoSyncService } from '../zoho/zoho.sync.service';
+import { SalesforceSyncHandler } from '../providers/salesforce/salesforce.sync-handler';
+import { HubspotSyncHandler } from '../providers/hubspot/hubspot.sync-handler';
+import { WorkdaySyncHandler } from '../providers/workday/workday.sync-handler';
+import { LeverSyncHandler } from '../providers/lever/lever.sync-handler';
+import { GreenhouseSyncHandler } from '../providers/greenhouse/greenhouse.sync-handler';
 interface SyncJobData {
     tenantId: string;
     provider: string;
@@ -27,8 +32,13 @@ export declare class SyncProcessor extends WorkerHost {
     private providerFactory;
     private auditService;
     private zohoSyncService;
+    private salesforceSyncHandler;
+    private hubspotSyncHandler;
+    private workdaySyncHandler;
+    private leverSyncHandler;
+    private greenhouseSyncHandler;
     private readonly logger;
-    constructor(prisma: PrismaService, providerFactory: ProviderFactory, auditService: AuditService, zohoSyncService: ZohoSyncService);
+    constructor(prisma: PrismaService, providerFactory: ProviderFactory, auditService: AuditService, zohoSyncService: ZohoSyncService, salesforceSyncHandler: SalesforceSyncHandler, hubspotSyncHandler: HubspotSyncHandler, workdaySyncHandler: WorkdaySyncHandler, leverSyncHandler: LeverSyncHandler, greenhouseSyncHandler: GreenhouseSyncHandler);
     process(job: Job<SyncJobData | EventJobData>): Promise<any>;
     private processEventJob;
     private syncCandidateEvent;

@@ -6,6 +6,11 @@ import { ProviderFactory } from '../provider.factory';
 import { AuditService } from '../../audit/audit.service';
 import { IntegrationEventType, SyncEntityType } from '../types/standard-entities';
 import { ZohoSyncService } from '../zoho/zoho.sync.service';
+import { SalesforceSyncHandler } from '../providers/salesforce/salesforce.sync-handler';
+import { HubspotSyncHandler } from '../providers/hubspot/hubspot.sync-handler';
+import { WorkdaySyncHandler } from '../providers/workday/workday.sync-handler';
+import { LeverSyncHandler } from '../providers/lever/lever.sync-handler';
+import { GreenhouseSyncHandler } from '../providers/greenhouse/greenhouse.sync-handler';
 
 /**
  * Provider interface for sync operations
@@ -47,6 +52,11 @@ export class SyncProcessor extends WorkerHost {
         private providerFactory: ProviderFactory,
         private auditService: AuditService,
         private zohoSyncService: ZohoSyncService,
+        private salesforceSyncHandler: SalesforceSyncHandler,
+        private hubspotSyncHandler: HubspotSyncHandler,
+        private workdaySyncHandler: WorkdaySyncHandler,
+        private leverSyncHandler: LeverSyncHandler,
+        private greenhouseSyncHandler: GreenhouseSyncHandler,
     ) {
         super();
     }
@@ -274,7 +284,103 @@ export class SyncProcessor extends WorkerHost {
                 return { success: true, ...result };
             }
 
-            // Pull candidates from provider (inbound sync - for non-Zoho providers)
+            // Special handling for Salesforce - use dedicated SalesforceSyncHandler
+            if (provider === 'salesforce') {
+                const module = (data as any).module || 'all';
+                this.logger.log(`Using SalesforceSyncHandler for inbound sync (module: ${module})`);
+                const result = await this.salesforceSyncHandler.syncAll(tenantId, module);
+
+                await this.auditService.log({
+                    tenantId,
+                    userId: null,
+                    action: 'integration.sync.completed',
+                    metadata: {
+                        provider,
+                        ...result,
+                        triggeredBy,
+                    },
+                });
+
+                return { success: true, ...result };
+            }
+
+            // Special handling for HubSpot - use dedicated HubspotSyncHandler
+            if (provider === 'hubspot') {
+                this.logger.log(`Using HubspotSyncHandler for inbound sync`);
+                const result = await this.hubspotSyncHandler.syncAll(tenantId);
+
+                await this.auditService.log({
+                    tenantId,
+                    userId: null,
+                    action: 'integration.sync.completed',
+                    metadata: {
+                        provider,
+                        ...result,
+                        triggeredBy,
+                    },
+                });
+
+                return { success: true, ...result };
+            }
+
+            // Special handling for Workday - use dedicated WorkdaySyncHandler
+            if (provider === 'workday') {
+                this.logger.log(`Using WorkdaySyncHandler for inbound sync`);
+                const result = await this.workdaySyncHandler.syncAll(tenantId);
+
+                await this.auditService.log({
+                    tenantId,
+                    userId: null,
+                    action: 'integration.sync.completed',
+                    metadata: {
+                        provider,
+                        ...result,
+                        triggeredBy,
+                    },
+                });
+
+                return { success: true, ...result };
+            }
+
+            // Special handling for Lever - use dedicated LeverSyncHandler
+            if (provider === 'lever') {
+                this.logger.log(`Using LeverSyncHandler for inbound sync`);
+                const result = await this.leverSyncHandler.syncAll(tenantId);
+
+                await this.auditService.log({
+                    tenantId,
+                    userId: null,
+                    action: 'integration.sync.completed',
+                    metadata: {
+                        provider,
+                        ...result,
+                        triggeredBy,
+                    },
+                });
+
+                return { success: true, ...result };
+            }
+
+            // Special handling for Greenhouse - use dedicated GreenhouseSyncHandler
+            if (provider === 'greenhouse') {
+                this.logger.log(`Using GreenhouseSyncHandler for inbound sync`);
+                const result = await this.greenhouseSyncHandler.syncAll(tenantId);
+
+                await this.auditService.log({
+                    tenantId,
+                    userId: null,
+                    action: 'integration.sync.completed',
+                    metadata: {
+                        provider,
+                        ...result,
+                        triggeredBy,
+                    },
+                });
+
+                return { success: true, ...result };
+            }
+
+            // Pull candidates from provider (inbound sync - for non-Zoho/Salesforce/HubSpot/Workday/Lever/Greenhouse providers)
             if (providerInstance.pullCandidates) {
                 const sinceDate = since ? new Date(since) : undefined;
                 const candidates = await providerInstance.pullCandidates(

@@ -17,11 +17,11 @@ export declare class UsersController {
     }>;
     listUsers(req: any, dto: ListUsersDto): Promise<{
         data: {
-            name: string | null;
             id: string;
-            email: string;
+            name: string | null;
             createdAt: Date;
             updatedAt: Date;
+            email: string;
             role: import("@prisma/client").$Enums.Role;
             status: import("@prisma/client").$Enums.UserStatus;
             lastLogin: Date | null;
@@ -34,23 +34,23 @@ export declare class UsersController {
         };
     }>;
     getUser(req: any, id: string): Promise<{
-        name: string | null;
         id: string;
-        email: string;
+        name: string | null;
         createdAt: Date;
         updatedAt: Date;
+        email: string;
         role: import("@prisma/client").$Enums.Role;
         status: import("@prisma/client").$Enums.UserStatus;
         teamIds: string[];
         lastLogin: Date | null;
     }>;
     updateUser(req: any, id: string, dto: UpdateUserDto): Promise<{
-        name: string | null;
         id: string;
-        email: string;
+        name: string | null;
         createdAt: Date;
         updatedAt: Date;
         tenantId: string | null;
+        email: string;
         role: import("@prisma/client").$Enums.Role;
         status: import("@prisma/client").$Enums.UserStatus;
         password: string;

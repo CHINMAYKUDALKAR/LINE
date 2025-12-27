@@ -37,7 +37,7 @@ interface CandidateTableProps {
   onUpdateCandidate?: (id: string, updates: Partial<CandidateListItem>) => Promise<void>;
 }
 
-type SortField = 'name' | 'stage' | 'role' | 'recruiter' | 'lastActivity';
+type SortField = 'name' | 'stage' | 'role' | 'recruiter' | 'lastActivity' | 'dateAdded';
 type SortDirection = 'asc' | 'desc';
 
 // Stage options for EditableSelect
@@ -63,8 +63,8 @@ export function CandidateTable({
   onUpdateCandidate,
 }: CandidateTableProps) {
   const router = useRouter();
-  const [sortField, setSortField] = useState<SortField>('lastActivity');
-  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
+  const [sortField, setSortField] = useState<SortField>('dateAdded');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
 
   const allSelected = candidates.length > 0 && selectedIds.length === candidates.length;
   const someSelected = selectedIds.length > 0 && selectedIds.length < candidates.length;
@@ -111,6 +111,9 @@ export function CandidateTable({
         break;
       case 'lastActivity':
         comparison = new Date(a.lastActivity).getTime() - new Date(b.lastActivity).getTime();
+        break;
+      case 'dateAdded':
+        comparison = new Date(a.dateAdded).getTime() - new Date(b.dateAdded).getTime();
         break;
     }
     return sortDirection === 'asc' ? comparison : -comparison;
@@ -212,6 +215,7 @@ export function CandidateTable({
                   aria-label="Select all candidates"
                 />
               </TableHead>
+              <TableHead className="w-12 text-center">#</TableHead>
               <TableHead>
                 <button
                   onClick={() => handleSort('name')}
@@ -257,7 +261,7 @@ export function CandidateTable({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {sortedCandidates.map((candidate) => {
+            {sortedCandidates.map((candidate, index) => {
               const isSelected = selectedIds.includes(candidate.id);
               const stageColor = stageColors[candidate.stage] || stageColors.received;
 
@@ -276,6 +280,9 @@ export function CandidateTable({
                       onCheckedChange={() => handleSelectOne(candidate.id)}
                       aria-label={`Select ${candidate.name}`}
                     />
+                  </TableCell>
+                  <TableCell className="text-center text-sm text-muted-foreground font-mono">
+                    {index + 1}
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-3">

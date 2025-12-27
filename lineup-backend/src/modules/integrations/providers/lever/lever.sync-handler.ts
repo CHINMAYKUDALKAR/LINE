@@ -21,7 +21,221 @@ export class LeverSyncHandler {
     ) { }
 
     // ============================================
-    // Candidate Event Handlers
+    // Inbound Sync (Lever → Lineup)
+    // ============================================
+
+    /**
+     * Main entry point for full sync (called by sync processor)
+     */
+    async syncAll(tenantId: string, _module?: string): Promise<{
+        imported: number;
+        updated: number;
+        errors: number;
+        module: string;
+    }> {
+        this.logger.log(`Starting Lever inbound sync for tenant ${tenantId}`);
+
+        // Sync job postings first (as hiring context)
+        await this.syncJobPostings(tenantId);
+
+        // Then sync candidates
+        const result = await this.syncCandidates(tenantId);
+
+        return result;
+    }
+
+    /**
+     * Sync job postings as read-only hiring context
+     */
+    async syncJobPostings(tenantId: string): Promise<void> {
+        try {
+            const postings = await this.apiService.getJobPostings(tenantId);
+
+            for (const posting of postings) {
+                try {
+                    await this.prisma.opportunityContext.upsert({
+                        where: {
+                            tenantId_provider_externalId: {
+                                tenantId,
+                                provider: 'lever',
+                                externalId: posting.id,
+                            },
+                        },
+                        create: {
+                            tenantId,
+                            provider: 'lever',
+                            externalId: posting.id,
+                            name: posting.title,
+                            stageName: posting.state,
+                            accountName: posting.department,
+                            rawData: posting.rawData as any,
+                        },
+                        update: {
+                            name: posting.title,
+                            stageName: posting.state,
+                            accountName: posting.department,
+                            rawData: posting.rawData as any,
+                            updatedAt: new Date(),
+                        },
+                    });
+                } catch (err) {
+                    this.logger.warn(`Failed to sync job posting ${posting.id}: ${err}`);
+                }
+            }
+
+            this.logger.log(`Synced ${postings.length} Lever job postings`);
+        } catch (error) {
+            this.logger.error(`Failed to sync Lever job postings: ${error}`);
+        }
+    }
+
+    /**
+     * Sync candidates with deduplication
+     */
+    async syncCandidates(tenantId: string): Promise<{
+        imported: number;
+        updated: number;
+        errors: number;
+        module: string;
+    }> {
+        let imported = 0;
+        let updated = 0;
+        let errors = 0;
+
+        try {
+            const integration = await this.prisma.integration.findUnique({
+                where: { tenantId_provider: { tenantId, provider: 'lever' } },
+            });
+
+            const candidates = await this.apiService.getCandidates(tenantId);
+
+            for (const candidate of candidates) {
+                try {
+                    const email = candidate.email?.toLowerCase();
+                    const phone = candidate.phone;
+                    const name = candidate.name;
+
+                    if (!name) {
+                        errors++;
+                        continue;
+                    }
+
+                    // Deduplication: Check by email first, then phone
+                    let existingCandidate = null;
+                    if (email) {
+                        existingCandidate = await this.prisma.candidate.findFirst({
+                            where: { tenantId, email },
+                        });
+                    }
+                    if (!existingCandidate && phone) {
+                        existingCandidate = await this.prisma.candidate.findFirst({
+                            where: { tenantId, phone },
+                        });
+                    }
+
+                    if (existingCandidate) {
+                        await this.prisma.candidate.update({
+                            where: { id: existingCandidate.id },
+                            data: {
+                                name,
+                                phone: phone || existingCandidate.phone,
+                                roleTitle: candidate.jobTitle || existingCandidate.roleTitle,
+                                externalId: candidate.id,
+                                externalSource: 'LEVER',
+                                source: existingCandidate.source?.includes('LEVER')
+                                    ? existingCandidate.source
+                                    : 'LEVER_CANDIDATE',
+                                rawExternalData: candidate.rawData as any,
+                                updatedAt: new Date(),
+                            },
+                        });
+                        updated++;
+                    } else {
+                        const newCandidate = await this.prisma.candidate.create({
+                            data: {
+                                tenantId,
+                                name,
+                                email: email || null,
+                                phone: phone,
+                                roleTitle: candidate.jobTitle,
+                                stage: 'applied',
+                                source: 'LEVER_CANDIDATE',
+                                externalId: candidate.id,
+                                externalSource: 'LEVER',
+                                rawExternalData: candidate.rawData as any,
+                                tags: [],
+                            },
+                        });
+
+                        await this.storeMapping(tenantId, 'candidate', newCandidate.id, candidate.id);
+                        imported++;
+                    }
+
+                    // Link candidate to job postings (hiring context)
+                    if (candidate.postingIds && candidate.postingIds.length > 0) {
+                        for (const postingId of candidate.postingIds) {
+                            try {
+                                const opp = await this.prisma.opportunityContext.findUnique({
+                                    where: {
+                                        tenantId_provider_externalId: {
+                                            tenantId,
+                                            provider: 'lever',
+                                            externalId: postingId,
+                                        },
+                                    },
+                                });
+
+                                if (opp) {
+                                    const candidateToLink = existingCandidate ||
+                                        await this.prisma.candidate.findFirst({
+                                            where: { tenantId, externalId: candidate.id },
+                                        });
+
+                                    if (candidateToLink) {
+                                        await this.prisma.candidateOpportunity.upsert({
+                                            where: {
+                                                candidateId_opportunityContextId: {
+                                                    candidateId: candidateToLink.id,
+                                                    opportunityContextId: opp.id,
+                                                },
+                                            },
+                                            create: {
+                                                candidateId: candidateToLink.id,
+                                                opportunityContextId: opp.id,
+                                                associationType: 'applied',
+                                            },
+                                            update: {},
+                                        });
+                                    }
+                                }
+                            } catch (linkErr) {
+                                this.logger.warn(`Failed to link candidate to posting: ${linkErr}`);
+                            }
+                        }
+                    }
+                } catch (err) {
+                    errors++;
+                    this.logger.error(`Failed to sync Lever candidate ${candidate.id}: ${err}`);
+                }
+            }
+
+            if (integration) {
+                await this.prisma.integration.update({
+                    where: { id: integration.id },
+                    data: { lastSyncedAt: new Date() },
+                });
+            }
+
+            this.logger.log(`Lever sync: ${imported} imported, ${updated} updated, ${errors} errors`);
+        } catch (error) {
+            this.logger.error(`Failed to sync Lever candidates: ${error}`);
+        }
+
+        return { imported, updated, errors, module: 'candidates' };
+    }
+
+    // ============================================
+    // Candidate Event Handlers (Outbound)
     // ============================================
 
     async handleCandidateCreated(tenantId: string, candidateId: string): Promise<void> {

@@ -33,8 +33,8 @@ export declare class StageTransitionService {
     }>;
     getStageHistory(tenantId: string, candidateId: string): Promise<{
         actor: {
-            name: string | null;
             id: string;
+            name: string | null;
             email: string;
         } | null;
         id: string;
@@ -43,9 +43,9 @@ export declare class StageTransitionService {
         source: string;
         candidateId: string;
         newStage: string;
-        reason: string | null;
         previousStage: string;
         triggeredBy: string;
         actorId: string | null;
+        reason: string | null;
     }[]>;
 }

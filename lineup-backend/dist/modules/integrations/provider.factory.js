@@ -44,6 +44,9 @@ const greenhouse_auth_1 = require("./providers/greenhouse/greenhouse.auth");
 const greenhouse_api_1 = require("./providers/greenhouse/greenhouse.api");
 const greenhouse_sync_handler_1 = require("./providers/greenhouse/greenhouse.sync-handler");
 const bamboohr_provider_1 = require("./providers/bamboohr/bamboohr.provider");
+const bamboohr_oauth_1 = require("./providers/bamboohr/bamboohr.oauth");
+const bamboohr_api_1 = require("./providers/bamboohr/bamboohr.api");
+const bamboohr_handoff_handler_1 = require("./providers/bamboohr/bamboohr.handoff-handler");
 let ProviderFactory = class ProviderFactory {
     prisma;
     configService;
@@ -69,7 +72,10 @@ let ProviderFactory = class ProviderFactory {
     greenhouseAuth;
     greenhouseApi;
     greenhouseSync;
-    constructor(prisma, configService, zohoOAuth, zohoApi, zohoSync, googleOAuth, googleCalendar, outlookOAuth, outlookCalendar, salesforceOAuth, salesforceApi, hubspotOAuth, hubspotApi, hubspotSync, syncLogService, workdayAuth, workdayApi, workdaySync, leverAuth, leverApi, leverSync, greenhouseAuth, greenhouseApi, greenhouseSync) {
+    bamboohrOAuth;
+    bamboohrApi;
+    bamboohrHandoff;
+    constructor(prisma, configService, zohoOAuth, zohoApi, zohoSync, googleOAuth, googleCalendar, outlookOAuth, outlookCalendar, salesforceOAuth, salesforceApi, hubspotOAuth, hubspotApi, hubspotSync, syncLogService, workdayAuth, workdayApi, workdaySync, leverAuth, leverApi, leverSync, greenhouseAuth, greenhouseApi, greenhouseSync, bamboohrOAuth, bamboohrApi, bamboohrHandoff) {
         this.prisma = prisma;
         this.configService = configService;
         this.zohoOAuth = zohoOAuth;
@@ -94,6 +100,9 @@ let ProviderFactory = class ProviderFactory {
         this.greenhouseAuth = greenhouseAuth;
         this.greenhouseApi = greenhouseApi;
         this.greenhouseSync = greenhouseSync;
+        this.bamboohrOAuth = bamboohrOAuth;
+        this.bamboohrApi = bamboohrApi;
+        this.bamboohrHandoff = bamboohrHandoff;
     }
     getProvider(provider) {
         switch (provider) {
@@ -114,7 +123,7 @@ let ProviderFactory = class ProviderFactory {
             case 'greenhouse':
                 return new greenhouse_provider_1.GreenhouseProvider(this.prisma, this.greenhouseAuth, this.greenhouseApi, this.greenhouseSync, this.syncLogService);
             case 'bamboohr':
-                return new bamboohr_provider_1.BambooHRProvider(this.configService, this.prisma);
+                return new bamboohr_provider_1.BambooHRProvider(this.prisma, this.bamboohrOAuth, this.bamboohrApi, this.bamboohrHandoff, this.syncLogService);
             default:
                 throw new Error(`Unknown provider: ${provider}`);
         }
@@ -122,12 +131,12 @@ let ProviderFactory = class ProviderFactory {
     getSupportedProviders() {
         return [
             { name: 'zoho', category: 'CRM', status: 'ready' },
-            { name: 'salesforce', category: 'CRM', status: 'skeleton' },
+            { name: 'salesforce', category: 'CRM', status: 'ready' },
             { name: 'hubspot', category: 'CRM', status: 'ready' },
             { name: 'lever', category: 'ATS', status: 'ready' },
             { name: 'greenhouse', category: 'ATS', status: 'ready' },
             { name: 'workday', category: 'ATS', status: 'ready' },
-            { name: 'bamboohr', category: 'HRIS', status: 'skeleton' },
+            { name: 'bamboohr', category: 'HRIS', status: 'ready' },
             { name: 'google_calendar', category: 'Calendar', status: 'ready' },
             { name: 'outlook_calendar', category: 'Calendar', status: 'ready' },
         ];
@@ -165,6 +174,9 @@ exports.ProviderFactory = ProviderFactory = __decorate([
         lever_sync_handler_1.LeverSyncHandler,
         greenhouse_auth_1.GreenhouseAuthService,
         greenhouse_api_1.GreenhouseApiService,
-        greenhouse_sync_handler_1.GreenhouseSyncHandler])
+        greenhouse_sync_handler_1.GreenhouseSyncHandler,
+        bamboohr_oauth_1.BambooHROAuthService,
+        bamboohr_api_1.BambooHRApiService,
+        bamboohr_handoff_handler_1.BambooHRHandoffHandler])
 ], ProviderFactory);
 //# sourceMappingURL=provider.factory.js.map

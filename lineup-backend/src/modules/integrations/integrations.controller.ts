@@ -62,6 +62,41 @@ export class IntegrationsController {
         }
     }
 
+    /**
+     * Salesforce OAuth callback endpoint - PUBLIC (no auth required)
+     * Salesforce redirects here after user authentication
+     */
+    @Get('salesforce/callback')
+    @Public()
+    @ApiOperation({ summary: 'Handle Salesforce OAuth callback (public endpoint)' })
+    @ApiQuery({ name: 'code', description: 'Authorization code from Salesforce' })
+    @ApiQuery({ name: 'state', description: 'Tenant ID' })
+    @ApiResponse({ status: 302, description: 'Redirects to frontend after success' })
+    async salesforceCallback(
+        @Query('code') code: string,
+        @Query('state') tenantId: string,
+        @Query('error') error: string,
+        @Query('error_description') errorDescription: string,
+        @Res() res: any,
+    ) {
+        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+
+        if (error) {
+            return res.redirect(`${frontendUrl}/integrations?status=error&message=${encodeURIComponent(errorDescription || error)}`);
+        }
+
+        if (!code || !tenantId) {
+            return res.redirect(`${frontendUrl}/integrations?status=error&message=Missing authorization code or tenant ID`);
+        }
+
+        try {
+            const result = await this.integrationsService.callback('salesforce', code, tenantId, 'oauth-callback');
+            return res.redirect(`${frontendUrl}/integrations?status=success&provider=salesforce`);
+        } catch (err: any) {
+            console.error('Salesforce OAuth callback failed:', err.message);
+            return res.redirect(`${frontendUrl}/integrations?status=error&message=${encodeURIComponent(err.message)}`);
+        }
+    }
 
     @Get()
     @Roles(Role.ADMIN, Role.MANAGER)

@@ -6,45 +6,44 @@ export declare class ChannelService {
     constructor(prisma: PrismaService);
     findAll(tenantId: string): Promise<{
         credentials: Record<string, any>;
-        isActive: boolean;
         id: string;
         settings: import("@prisma/client/runtime/library").JsonValue | null;
         createdAt: Date;
         updatedAt: Date;
         tenantId: string;
         provider: string;
+        isActive: boolean;
         channel: import("@prisma/client").$Enums.Channel;
         isVerified: boolean;
         lastTestedAt: Date | null;
     }[]>;
     findOne(tenantId: string, channel: Channel): Promise<{
         credentials: Record<string, any>;
-        isActive: boolean;
         id: string;
         settings: import("@prisma/client/runtime/library").JsonValue | null;
         createdAt: Date;
         updatedAt: Date;
         tenantId: string;
         provider: string;
+        isActive: boolean;
         channel: import("@prisma/client").$Enums.Channel;
         isVerified: boolean;
         lastTestedAt: Date | null;
     }>;
     getConfigForSending(tenantId: string, channel: Channel): Promise<{
         credentials: any;
-        isActive: boolean;
         id: string;
         settings: import("@prisma/client/runtime/library").JsonValue | null;
         createdAt: Date;
         updatedAt: Date;
         tenantId: string;
         provider: string;
+        isActive: boolean;
         channel: import("@prisma/client").$Enums.Channel;
         isVerified: boolean;
         lastTestedAt: Date | null;
     } | null>;
     upsert(tenantId: string, dto: ChannelConfigDto): Promise<{
-        isActive: boolean;
         id: string;
         settings: import("@prisma/client/runtime/library").JsonValue | null;
         createdAt: Date;
@@ -52,6 +51,7 @@ export declare class ChannelService {
         credentials: import("@prisma/client/runtime/library").JsonValue;
         tenantId: string;
         provider: string;
+        isActive: boolean;
         channel: import("@prisma/client").$Enums.Channel;
         isVerified: boolean;
         lastTestedAt: Date | null;
@@ -61,7 +61,6 @@ export declare class ChannelService {
         message: string;
     }>;
     delete(tenantId: string, channel: Channel): Promise<{
-        isActive: boolean;
         id: string;
         settings: import("@prisma/client/runtime/library").JsonValue | null;
         createdAt: Date;
@@ -69,6 +68,7 @@ export declare class ChannelService {
         credentials: import("@prisma/client/runtime/library").JsonValue;
         tenantId: string;
         provider: string;
+        isActive: boolean;
         channel: import("@prisma/client").$Enums.Channel;
         isVerified: boolean;
         lastTestedAt: Date | null;

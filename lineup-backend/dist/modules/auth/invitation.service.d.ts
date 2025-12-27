@@ -20,8 +20,8 @@ export declare class InvitationService {
         role: import("@prisma/client").$Enums.Role;
         expiresAt: Date;
         tenant: {
-            name: string;
             id: string;
+            name: string;
             brandingLogoUrl: string | null;
             brandingColors: Prisma.JsonValue;
         };
@@ -29,9 +29,9 @@ export declare class InvitationService {
     verifyToken(token: string): Promise<string>;
     markInviteUsed(inviteId: string): Promise<{
         id: string;
-        email: string;
         createdAt: Date;
         tenantId: string;
+        email: string;
         role: import("@prisma/client").$Enums.Role;
         tokenHash: string;
         expiresAt: Date;
@@ -40,9 +40,9 @@ export declare class InvitationService {
     }>;
     listPendingInvites(tenantId: string): Promise<{
         id: string;
-        email: string;
         createdAt: Date;
         tenantId: string;
+        email: string;
         role: import("@prisma/client").$Enums.Role;
         tokenHash: string;
         expiresAt: Date;
@@ -51,9 +51,9 @@ export declare class InvitationService {
     }[]>;
     cancelInvite(tenantId: string, inviteId: string): Promise<{
         id: string;
-        email: string;
         createdAt: Date;
         tenantId: string;
+        email: string;
         role: import("@prisma/client").$Enums.Role;
         tokenHash: string;
         expiresAt: Date;

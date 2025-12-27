@@ -20,19 +20,19 @@ export declare class IntegrationsService {
         id: string;
         provider: string;
         status: string | null;
+        createdAt: Date;
         lastSyncedAt: Date | null;
         lastError: string | null;
-        createdAt: Date;
         updatedAt: Date;
     }[]>;
     getIntegration(tenantId: string, provider: string): Promise<{
         id: string;
         provider: string;
-        settings: import("@prisma/client/runtime/library").JsonValue;
         status: string | null;
+        createdAt: Date;
+        settings: import("@prisma/client/runtime/library").JsonValue;
         lastSyncedAt: Date | null;
         lastError: string | null;
-        createdAt: Date;
         updatedAt: Date;
     }>;
     connect(tenantId: string, provider: string, userId: string): Promise<{
@@ -124,15 +124,15 @@ export declare class IntegrationsService {
     }>;
     getSyncLogs(tenantId: string, provider: string, limit?: number, status?: string): Promise<{
         id: string;
-        status: import("@prisma/client").$Enums.SyncLogStatus;
-        createdAt: Date;
         eventType: string;
         direction: import("@prisma/client").$Enums.SyncDirection;
         entityType: string;
         entityId: string | null;
         externalId: string | null;
+        status: import("@prisma/client").$Enums.SyncLogStatus;
         errorMessage: string | null;
         retryCount: number;
+        createdAt: Date;
         completedAt: Date | null;
     }[]>;
     getFailureSummary(tenantId: string, provider: string): Promise<{

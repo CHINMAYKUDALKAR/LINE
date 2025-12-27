@@ -4,8 +4,8 @@ export declare class SchedulingRulesService {
     private prisma;
     constructor(prisma: PrismaService);
     getRules(tenantId: string): Promise<{
-        name: string;
         id: string;
+        name: string;
         createdAt: Date;
         updatedAt: Date;
         tenantId: string;
@@ -18,8 +18,8 @@ export declare class SchedulingRulesService {
         allowOverlapping: boolean;
     }[]>;
     getRule(tenantId: string, ruleId: string): Promise<{
-        name: string;
         id: string;
+        name: string;
         createdAt: Date;
         updatedAt: Date;
         tenantId: string;
@@ -32,8 +32,8 @@ export declare class SchedulingRulesService {
         allowOverlapping: boolean;
     }>;
     getDefaultRule(tenantId: string): Promise<{
-        name: string;
         id: string;
+        name: string;
         createdAt: Date;
         updatedAt: Date;
         tenantId: string;
@@ -46,8 +46,8 @@ export declare class SchedulingRulesService {
         allowOverlapping: boolean;
     }>;
     createRule(tenantId: string, userId: string, dto: CreateSchedulingRuleDto): Promise<{
-        name: string;
         id: string;
+        name: string;
         createdAt: Date;
         updatedAt: Date;
         tenantId: string;
@@ -60,8 +60,8 @@ export declare class SchedulingRulesService {
         allowOverlapping: boolean;
     }>;
     updateRule(tenantId: string, ruleId: string, dto: UpdateSchedulingRuleDto): Promise<{
-        name: string;
         id: string;
+        name: string;
         createdAt: Date;
         updatedAt: Date;
         tenantId: string;
@@ -74,8 +74,8 @@ export declare class SchedulingRulesService {
         allowOverlapping: boolean;
     }>;
     deleteRule(tenantId: string, ruleId: string): Promise<{
-        name: string;
         id: string;
+        name: string;
         createdAt: Date;
         updatedAt: Date;
         tenantId: string;

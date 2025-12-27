@@ -95,8 +95,8 @@ export declare class AuthController {
         role: import("@prisma/client").$Enums.Role;
         expiresAt: Date;
         tenant: {
-            name: string;
             id: string;
+            name: string;
             brandingLogoUrl: string | null;
             brandingColors: import("@prisma/client/runtime/library").JsonValue;
         };
@@ -126,9 +126,9 @@ export declare class AuthController {
     }>;
     listInvitations(req: any): Promise<{
         id: string;
-        email: string;
         createdAt: Date;
         tenantId: string;
+        email: string;
         role: import("@prisma/client").$Enums.Role;
         tokenHash: string;
         expiresAt: Date;

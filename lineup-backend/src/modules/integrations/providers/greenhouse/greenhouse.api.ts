@@ -138,6 +138,101 @@ export class GreenhouseApiService {
         });
     }
 
+    /**
+     * Get jobs with parsed data for inbound sync
+     */
+    async getJobsParsed(tenantId: string): Promise<{
+        id: string;
+        title: string;
+        department?: string;
+        location?: string;
+        status: string;
+        rawData: any;
+    }[]> {
+        return this.executeWithRetry(tenantId, async (client) => {
+            const response = await client.get('/jobs', {
+                params: { status: 'open' },
+            });
+            const jobs = response.data || [];
+
+            return jobs.map((job: any) => ({
+                id: job.id?.toString(),
+                title: job.name || 'Untitled',
+                department: job.departments?.[0]?.name,
+                location: job.offices?.[0]?.name,
+                status: job.status || 'open',
+                rawData: job,
+            }));
+        });
+    }
+
+    /**
+     * Get candidates for inbound sync
+     */
+    async getCandidates(tenantId: string, since?: Date): Promise<{
+        id: string;
+        firstName: string;
+        lastName: string;
+        email?: string;
+        phone?: string;
+        jobIds: string[];
+        rawData: any;
+    }[]> {
+        return this.executeWithRetry(tenantId, async (client) => {
+            const params: any = { per_page: 100 };
+            if (since) {
+                params.created_after = since.toISOString();
+            }
+
+            const response = await client.get('/candidates', { params });
+            const candidates = response.data || [];
+
+            return candidates.map((c: any) => ({
+                id: c.id?.toString(),
+                firstName: c.first_name || '',
+                lastName: c.last_name || '',
+                email: c.email_addresses?.[0]?.value,
+                phone: c.phone_numbers?.[0]?.value,
+                jobIds: (c.applications || []).map((app: any) => app.job_id?.toString()).filter(Boolean),
+                rawData: c,
+            }));
+        });
+    }
+
+    /**
+     * Get interview feedback/scorecards for a candidate (read-only)
+     */
+    async getFeedbackForCandidate(tenantId: string, candidateId: string): Promise<{
+        id: string;
+        interviewerName?: string;
+        interviewType?: string;
+        interviewDate?: Date;
+        overallScore?: string;
+        recommendation?: string;
+        comments?: string;
+        scorecard: any;
+        rawData: any;
+    }[]> {
+        return this.executeWithRetry(tenantId, async (client) => {
+            // Get scorecards for this candidate's applications
+            const response = await client.get(`/candidates/${candidateId}/scorecards`);
+            const scorecards = response.data || [];
+
+            return scorecards.map((sc: any) => ({
+                id: sc.id?.toString(),
+                interviewerName: sc.submitted_by?.name,
+                interviewType: sc.interview || 'Interview',
+                interviewDate: sc.submitted_at ? new Date(sc.submitted_at) : undefined,
+                overallScore: sc.overall_recommendation,
+                recommendation: sc.overall_recommendation,
+                comments: sc.attributes?.map((a: any) => a.notes || '').join('\n').trim() || undefined,
+                scorecard: sc.attributes,
+                rawData: sc,
+            }));
+        });
+    }
+
+
     // ============================================
     // Connection Test
     // ============================================

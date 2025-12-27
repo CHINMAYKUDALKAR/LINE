@@ -47,6 +47,23 @@ let IntegrationsController = class IntegrationsController {
             return res.redirect(`${frontendUrl}/integrations?status=error&message=${encodeURIComponent(error.message)}`);
         }
     }
+    async salesforceCallback(code, tenantId, error, errorDescription, res) {
+        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+        if (error) {
+            return res.redirect(`${frontendUrl}/integrations?status=error&message=${encodeURIComponent(errorDescription || error)}`);
+        }
+        if (!code || !tenantId) {
+            return res.redirect(`${frontendUrl}/integrations?status=error&message=Missing authorization code or tenant ID`);
+        }
+        try {
+            const result = await this.integrationsService.callback('salesforce', code, tenantId, 'oauth-callback');
+            return res.redirect(`${frontendUrl}/integrations?status=success&provider=salesforce`);
+        }
+        catch (err) {
+            console.error('Salesforce OAuth callback failed:', err.message);
+            return res.redirect(`${frontendUrl}/integrations?status=error&message=${encodeURIComponent(err.message)}`);
+        }
+    }
     async listIntegrations(req) {
         const tenantId = req.user.tenantId;
         return this.integrationsService.listIntegrations(tenantId);
@@ -132,6 +149,22 @@ __decorate([
     __metadata("design:paramtypes", [String, String, Object]),
     __metadata("design:returntype", Promise)
 ], IntegrationsController.prototype, "oauthCallback", null);
+__decorate([
+    (0, common_1.Get)('salesforce/callback'),
+    (0, public_decorator_1.Public)(),
+    (0, swagger_1.ApiOperation)({ summary: 'Handle Salesforce OAuth callback (public endpoint)' }),
+    (0, swagger_1.ApiQuery)({ name: 'code', description: 'Authorization code from Salesforce' }),
+    (0, swagger_1.ApiQuery)({ name: 'state', description: 'Tenant ID' }),
+    (0, swagger_1.ApiResponse)({ status: 302, description: 'Redirects to frontend after success' }),
+    __param(0, (0, common_1.Query)('code')),
+    __param(1, (0, common_1.Query)('state')),
+    __param(2, (0, common_1.Query)('error')),
+    __param(3, (0, common_1.Query)('error_description')),
+    __param(4, (0, common_1.Res)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, String, String, String, Object]),
+    __metadata("design:returntype", Promise)
+], IntegrationsController.prototype, "salesforceCallback", null);
 __decorate([
     (0, common_1.Get)(),
     (0, roles_decorator_1.Roles)(client_1.Role.ADMIN, client_1.Role.MANAGER),

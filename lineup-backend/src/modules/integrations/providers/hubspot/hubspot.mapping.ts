@@ -20,7 +20,7 @@ export const HUBSPOT_CONTACT_MAPPING = {
     // Optional fields
     phone: 'phone',
     roleTitle: 'jobtitle',
-    source: 'leadsource',
+    // Note: 'leadsource' removed - doesn't exist in default HubSpot
     stage: 'hs_lead_status',
 } as const;
 
@@ -36,6 +36,8 @@ export const HUBSPOT_DEAL_MAPPING = {
 
 /**
  * Map Lineup candidate stages to HubSpot lead statuses
+ * Valid HubSpot values: NEW, OPEN, IN_PROGRESS, OPEN_DEAL, UNQUALIFIED,
+ *                       ATTEMPTED_TO_CONTACT, CONNECTED, BAD_TIMING
  */
 export const LINEUP_STAGE_TO_HUBSPOT_STATUS: Record<string, string> = {
     // Initial stages
@@ -45,22 +47,22 @@ export const LINEUP_STAGE_TO_HUBSPOT_STATUS: Record<string, string> = {
 
     // Active stages
     'screening': 'OPEN',
-    'phone_screen': 'OPEN',
+    'phone_screen': 'ATTEMPTED_TO_CONTACT',
     'interview': 'IN_PROGRESS',
     'technical': 'IN_PROGRESS',
     'onsite': 'IN_PROGRESS',
 
     // Decision stages
-    'offer': 'QUALIFIED',
-    'offer_extended': 'QUALIFIED',
-    'negotiation': 'QUALIFIED',
+    'offer': 'OPEN_DEAL',
+    'offer_extended': 'OPEN_DEAL',
+    'negotiation': 'OPEN_DEAL',
 
     // Final stages
-    'hired': 'CUSTOMER',
-    'accepted': 'CUSTOMER',
+    'hired': 'CONNECTED',
+    'accepted': 'CONNECTED',
 
     // Negative outcomes
-    'rejected': 'BAD_TIMING',
+    'rejected': 'UNQUALIFIED',
     'declined': 'BAD_TIMING',
     'withdrawn': 'BAD_TIMING',
     'no_show': 'BAD_TIMING',
@@ -113,7 +115,7 @@ export function mapCandidateToContact(candidate: {
         email: candidate.email || '',
         phone: candidate.phone || '',
         jobtitle: candidate.roleTitle || '',
-        leadsource: candidate.source || 'Lineup',
+        // Note: leadsource removed - not a default HubSpot property
         hs_lead_status: candidate.stage ? mapStageToHubspotStatus(candidate.stage) : 'NEW',
     };
 }

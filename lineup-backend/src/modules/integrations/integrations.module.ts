@@ -38,6 +38,7 @@ import { OutlookCalendarApiService } from './providers/outlook-calendar/outlook.
 import { SalesforceProvider } from './providers/salesforce/salesforce.provider';
 import { SalesforceOAuthService } from './providers/salesforce/salesforce.oauth';
 import { SalesforceApiService } from './providers/salesforce/salesforce.api';
+import { SalesforceSyncHandler } from './providers/salesforce/salesforce.sync-handler';
 
 // HubSpot Provider
 import { HubspotProvider } from './providers/hubspot/hubspot.provider';
@@ -59,10 +60,14 @@ import { GreenhouseAuthService } from './providers/greenhouse/greenhouse.auth';
 import { GreenhouseApiService } from './providers/greenhouse/greenhouse.api';
 import { GreenhouseSyncHandler } from './providers/greenhouse/greenhouse.sync-handler';
 import { BambooHRProvider } from './providers/bamboohr/bamboohr.provider';
+import { BambooHROAuthService } from './providers/bamboohr/bamboohr.oauth';
+import { BambooHRApiService } from './providers/bamboohr/bamboohr.api';
+import { BambooHRHandoffHandler } from './providers/bamboohr/bamboohr.handoff-handler';
 
 // Processors
 import { SyncProcessor } from './processors/sync.processor';
 import { DlqProcessor } from './processors/dlq.processor';
+import { ScheduledImportProcessor } from './processors/scheduled-import.processor';
 
 @Module({
     imports: [
@@ -105,6 +110,7 @@ import { DlqProcessor } from './processors/dlq.processor';
         SalesforceProvider,
         SalesforceOAuthService,
         SalesforceApiService,
+        SalesforceSyncHandler,
 
         // HubSpot
         HubspotProvider,
@@ -132,10 +138,14 @@ import { DlqProcessor } from './processors/dlq.processor';
 
         // BambooHR
         BambooHRProvider,
+        BambooHROAuthService,
+        BambooHRApiService,
+        BambooHRHandoffHandler,
 
         // Processors
         SyncProcessor,
         DlqProcessor,
+        ScheduledImportProcessor,
     ],
     exports: [IntegrationsService, ProviderFactory, IntegrationEventsService],
 })

@@ -12,9 +12,9 @@ export declare class IdentityProviderController {
         enabled: boolean;
         createdById: string | null;
         redirectUri: string | null;
-        providerType: import("@prisma/client").$Enums.SSOProviderType;
         clientId: string | null;
         clientSecret: string | null;
+        providerType: import("@prisma/client").$Enums.SSOProviderType;
         domainRestriction: string | null;
         samlMetadataUrl: string | null;
         samlEntityId: string | null;
@@ -33,9 +33,9 @@ export declare class IdentityProviderController {
         enabled: boolean;
         createdById: string | null;
         redirectUri: string | null;
-        providerType: import("@prisma/client").$Enums.SSOProviderType;
         clientId: string | null;
         clientSecret: string | null;
+        providerType: import("@prisma/client").$Enums.SSOProviderType;
         domainRestriction: string | null;
         samlMetadataUrl: string | null;
         samlEntityId: string | null;
@@ -62,9 +62,9 @@ export declare class IdentityProviderController {
         enabled: boolean;
         createdById: string | null;
         redirectUri: string | null;
-        providerType: import("@prisma/client").$Enums.SSOProviderType;
         clientId: string | null;
         clientSecret: string | null;
+        providerType: import("@prisma/client").$Enums.SSOProviderType;
         domainRestriction: string | null;
         samlMetadataUrl: string | null;
         samlEntityId: string | null;

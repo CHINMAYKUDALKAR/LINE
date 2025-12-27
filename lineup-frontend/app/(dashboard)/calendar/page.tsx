@@ -378,9 +378,9 @@ export default function Calendar() {
     }
 
     return (
-        <div className="p-4 md:p-8 h-full flex flex-col">
+        <div className="p-2 md:p-4 h-[calc(100vh-80px)] flex flex-col overflow-hidden">
             <motion.div
-                className="flex flex-col h-full space-y-4"
+                className="flex flex-col flex-1 h-full space-y-2 overflow-hidden"
                 initial="initial"
                 animate="animate"
                 variants={staggerContainer}

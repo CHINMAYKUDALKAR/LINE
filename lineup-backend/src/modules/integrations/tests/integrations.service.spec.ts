@@ -3,6 +3,7 @@ import { IntegrationsService } from '../integrations.service';
 import { PrismaService } from '../../../common/prisma.service';
 import { ProviderFactory } from '../provider.factory';
 import { AuditService } from '../../audit/audit.service';
+import { ZohoApiService } from '../providers/zoho/zoho.api';
 import { Queue } from 'bullmq';
 
 describe('IntegrationsService', () => {
@@ -29,6 +30,12 @@ describe('IntegrationsService', () => {
         log: jest.fn(),
     };
 
+    const mockZohoApiService = {
+        getLeads: jest.fn(),
+        createLead: jest.fn(),
+        getDeals: jest.fn(),
+    };
+
     const mockQueue = {
         add: jest.fn(),
     } as unknown as Queue;
@@ -48,6 +55,10 @@ describe('IntegrationsService', () => {
                 {
                     provide: AuditService,
                     useValue: mockAuditService,
+                },
+                {
+                    provide: ZohoApiService,
+                    useValue: mockZohoApiService,
                 },
                 {
                     provide: 'BullQueue_integration-sync',

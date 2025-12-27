@@ -6,25 +6,26 @@ export declare class IntegrationsController {
     private integrationsService;
     constructor(integrationsService: IntegrationsService);
     oauthCallback(code: string, state: string, res: any): Promise<any>;
+    salesforceCallback(code: string, tenantId: string, error: string, errorDescription: string, res: any): Promise<any>;
     listIntegrations(req: any): Promise<{
         config: any;
         settings: undefined;
         id: string;
         provider: string;
         status: string | null;
+        createdAt: Date;
         lastSyncedAt: Date | null;
         lastError: string | null;
-        createdAt: Date;
         updatedAt: Date;
     }[]>;
     getIntegration(req: any, provider: string): Promise<{
         id: string;
         provider: string;
-        settings: import("@prisma/client/runtime/library").JsonValue;
         status: string | null;
+        createdAt: Date;
+        settings: import("@prisma/client/runtime/library").JsonValue;
         lastSyncedAt: Date | null;
         lastError: string | null;
-        createdAt: Date;
         updatedAt: Date;
     }>;
     connect(req: any, connectDto: ConnectDto): Promise<{
@@ -113,15 +114,15 @@ export declare class IntegrationsController {
     }>;
     getSyncLogs(req: any, provider: string, limit?: string, status?: string): Promise<{
         id: string;
-        status: import("@prisma/client").$Enums.SyncLogStatus;
-        createdAt: Date;
         eventType: string;
         direction: import("@prisma/client").$Enums.SyncDirection;
         entityType: string;
         entityId: string | null;
         externalId: string | null;
+        status: import("@prisma/client").$Enums.SyncLogStatus;
         errorMessage: string | null;
         retryCount: number;
+        createdAt: Date;
         completedAt: Date | null;
     }[]>;
     getFailureSummary(req: any, provider: string): Promise<{

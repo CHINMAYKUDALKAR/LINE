@@ -146,6 +146,70 @@ export class LeverApiService {
     }
 
     /**
+     * Get job postings with parsed data (alias for inbound sync)
+     */
+    async getJobPostings(tenantId: string): Promise<{
+        id: string;
+        title: string;
+        department?: string;
+        location?: string;
+        state: string;
+        rawData: any;
+    }[]> {
+        return this.executeWithRetry(tenantId, async (client) => {
+            const response = await client.get('/postings', {
+                params: { state: 'published' },
+            });
+            const postings = response.data?.data || [];
+
+            return postings.map((posting: any) => ({
+                id: posting.id,
+                title: posting.text || 'Untitled Position',
+                department: posting.categories?.department,
+                location: posting.categories?.location,
+                state: posting.state || 'published',
+                rawData: posting,
+            }));
+        });
+    }
+
+    /**
+     * Get candidates/opportunities
+     */
+    async getCandidates(tenantId: string, since?: Date): Promise<{
+        id: string;
+        name: string;
+        email?: string;
+        phone?: string;
+        jobTitle?: string;
+        postingIds: string[];
+        source?: string;
+        rawData: any;
+    }[]> {
+        return this.executeWithRetry(tenantId, async (client) => {
+            const params: any = { limit: 100 };
+            if (since) {
+                params.created_at_start = since.getTime();
+            }
+
+            const response = await client.get('/opportunities', { params });
+            const opportunities = response.data?.data || [];
+
+            return opportunities.map((opp: any) => ({
+                id: opp.id,
+                name: opp.name || 'Unknown',
+                email: opp.emails?.[0],
+                phone: opp.phones?.[0]?.value,
+                jobTitle: opp.headline,
+                postingIds: (opp.applications || []).map((app: any) => app.posting).filter(Boolean),
+                source: opp.origin || opp.sources?.[0],
+                rawData: opp,
+            }));
+        });
+    }
+
+
+    /**
      * Link opportunity to posting
      */
     async linkOpportunityToPosting(

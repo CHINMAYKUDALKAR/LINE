@@ -76,6 +76,12 @@ let CandidatesController = class CandidatesController {
     attachResume(req, id, fileId, s3Key, mimeType, size) {
         return this.svc.attachResume(req.user.tenantId, req.user.sub, id, fileId, s3Key, mimeType, size);
     }
+    photoUploadUrl(req, id, filename) {
+        return this.svc.generatePhotoUploadUrl(req.user.tenantId, req.user.sub, id, filename);
+    }
+    attachPhoto(req, id, fileId, s3Key) {
+        return this.svc.attachPhoto(req.user.tenantId, req.user.sub, id, fileId, s3Key);
+    }
     bulkImport(req, body) {
         if (body.rows && Array.isArray(body.rows)) {
             return this.svc.directBulkImport(req.user.tenantId, req.user.sub, body.rows);
@@ -252,6 +258,37 @@ __decorate([
     __metadata("design:paramtypes", [Object, String, String, String, String, Number]),
     __metadata("design:returntype", void 0)
 ], CandidatesController.prototype, "attachResume", null);
+__decorate([
+    (0, common_1.Post)(':id/photo/upload-url'),
+    (0, rate_limit_1.RateLimited)(rate_limit_1.RateLimitProfile.WRITE),
+    (0, roles_decorator_1.Roles)('ADMIN', 'MANAGER', 'RECRUITER'),
+    (0, swagger_1.ApiOperation)({ summary: 'Get a presigned URL to upload candidate photo' }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: 'Candidate ID' }),
+    (0, swagger_1.ApiBody)({ schema: { properties: { filename: { type: 'string' } } } }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Presigned upload URL' }),
+    __param(0, (0, common_1.Req)()),
+    __param(1, (0, common_1.Param)('id')),
+    __param(2, (0, common_1.Body)('filename')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String, String]),
+    __metadata("design:returntype", void 0)
+], CandidatesController.prototype, "photoUploadUrl", null);
+__decorate([
+    (0, common_1.Post)(':id/photo/attach'),
+    (0, rate_limit_1.RateLimited)(rate_limit_1.RateLimitProfile.WRITE),
+    (0, roles_decorator_1.Roles)('ADMIN', 'MANAGER', 'RECRUITER'),
+    (0, swagger_1.ApiOperation)({ summary: 'Attach uploaded photo to candidate' }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: 'Candidate ID' }),
+    (0, swagger_1.ApiBody)({ schema: { properties: { fileId: { type: 'string' }, s3Key: { type: 'string' } } } }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Photo attached to candidate' }),
+    __param(0, (0, common_1.Req)()),
+    __param(1, (0, common_1.Param)('id')),
+    __param(2, (0, common_1.Body)('fileId')),
+    __param(3, (0, common_1.Body)('s3Key')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String, String, String]),
+    __metadata("design:returntype", void 0)
+], CandidatesController.prototype, "attachPhoto", null);
 __decorate([
     (0, common_1.Post)('bulk-import'),
     (0, rate_limit_1.RateLimited)(rate_limit_1.RateLimitProfile.BULK),

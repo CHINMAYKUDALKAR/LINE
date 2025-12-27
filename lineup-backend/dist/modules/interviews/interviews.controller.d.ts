@@ -186,8 +186,8 @@ export declare class InterviewsController {
     listNotes(req: any, id: string): Promise<{
         data: {
             author: {
-                name: string | null;
                 id: string;
+                name: string | null;
                 email: string;
             };
             authorId: string;
@@ -201,8 +201,8 @@ export declare class InterviewsController {
     }>;
     addNote(req: any, id: string, dto: CreateInterviewNoteDto): Promise<{
         author: {
-            name: string | null;
             id: string;
+            name: string | null;
             email: string;
         };
         id: string;

@@ -216,6 +216,12 @@ export class IntegrationEventsService {
             return true;
         }
 
+        // HRIS providers support stage change events (for employee handoff)
+        const hrisProviders = ['bamboohr', 'workday'];
+        if (hrisProviders.includes(provider) && eventType === IntegrationEventType.CANDIDATE_STAGE_CHANGED) {
+            return true;
+        }
+
         // Calendar providers support interview events
         const calendarProviders = ['google_calendar', 'outlook_calendar'];
         const interviewEvents = [

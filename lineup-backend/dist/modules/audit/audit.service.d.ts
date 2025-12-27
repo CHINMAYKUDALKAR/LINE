@@ -18,7 +18,7 @@ export declare class AuditService {
             action: string;
             metadata: import("@prisma/client/runtime/library").JsonValue;
             ipAddress: any;
-            severity: "error" | "info" | "warning";
+            severity: "info" | "error" | "warning";
         }[];
         total: number;
         page: number;

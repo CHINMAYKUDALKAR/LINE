@@ -14,8 +14,8 @@ export declare class BusyBlockService {
         userId: string;
         source: string;
         reason: string | null;
-        startAt: Date;
         sourceId: string | null;
+        startAt: Date;
         endAt: Date;
     }[]>;
     createBusyBlock(tenantId: string, currentUserId: string, dto: CreateBusyBlockDto): Promise<{
@@ -27,8 +27,8 @@ export declare class BusyBlockService {
         userId: string;
         source: string;
         reason: string | null;
-        startAt: Date;
         sourceId: string | null;
+        startAt: Date;
         endAt: Date;
     }>;
     createFromInterview(tenantId: string, userId: string, interviewId: string, startAt: Date, endAt: Date): Promise<{
@@ -40,8 +40,8 @@ export declare class BusyBlockService {
         userId: string;
         source: string;
         reason: string | null;
-        startAt: Date;
         sourceId: string | null;
+        startAt: Date;
         endAt: Date;
     }>;
     deleteBusyBlock(tenantId: string, currentUserId: string, blockId: string): Promise<{
@@ -53,8 +53,8 @@ export declare class BusyBlockService {
         userId: string;
         source: string;
         reason: string | null;
-        startAt: Date;
         sourceId: string | null;
+        startAt: Date;
         endAt: Date;
     }>;
     deleteBySourceId(tenantId: string, sourceId: string): Promise<import("@prisma/client").Prisma.BatchPayload>;

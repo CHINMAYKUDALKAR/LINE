@@ -92,8 +92,17 @@ export default function Integrations() {
         const integration = integrations.find((i) => i.id === id);
         if (!integration) return;
 
-        // For disconnected integrations, initiate OAuth flow
+        // For disconnected integrations, check auth type
         if (integration.status === 'disconnected') {
+            // For API key providers, open the config panel directly
+            const apiKeyProviders = ['greenhouse'];
+            if (apiKeyProviders.includes(integration.provider)) {
+                setSelectedIntegration(integration);
+                setIsPanelOpen(true);
+                return;
+            }
+
+            // For OAuth providers, initiate OAuth flow
             setIsConnecting(true);
             try {
                 const response = await integrationsApi.connect(integration.provider);

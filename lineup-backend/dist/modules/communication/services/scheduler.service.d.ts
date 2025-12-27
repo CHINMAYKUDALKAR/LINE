@@ -10,7 +10,6 @@ export declare class SchedulerService {
         failed: number;
     }>;
     getUpcoming(tenantId: string, limit?: number): Promise<{
-        jobId: string | null;
         id: string;
         createdAt: Date;
         updatedAt: Date;
@@ -18,6 +17,7 @@ export declare class SchedulerService {
         status: import("@prisma/client").$Enums.ScheduleStatus;
         createdById: string | null;
         payload: import("@prisma/client/runtime/library").JsonValue;
+        jobId: string | null;
         channel: import("@prisma/client").$Enums.Channel;
         recipientType: import("@prisma/client").$Enums.RecipientType;
         recipientId: string;
@@ -25,7 +25,6 @@ export declare class SchedulerService {
         scheduledFor: Date;
     }[]>;
     findOne(tenantId: string, id: string): Promise<{
-        jobId: string | null;
         id: string;
         createdAt: Date;
         updatedAt: Date;
@@ -33,6 +32,7 @@ export declare class SchedulerService {
         status: import("@prisma/client").$Enums.ScheduleStatus;
         createdById: string | null;
         payload: import("@prisma/client/runtime/library").JsonValue;
+        jobId: string | null;
         channel: import("@prisma/client").$Enums.Channel;
         recipientType: import("@prisma/client").$Enums.RecipientType;
         recipientId: string;

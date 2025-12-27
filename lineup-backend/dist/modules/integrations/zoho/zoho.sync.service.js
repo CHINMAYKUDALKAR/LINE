@@ -78,8 +78,16 @@ let ZohoSyncService = ZohoSyncService_1 = class ZohoSyncService {
                     });
                     if (!existing && mapped.email) {
                         existing = await this.prisma.candidate.findFirst({
-                            where: { tenantId, email: mapped.email }
+                            where: { tenantId, email: { equals: mapped.email, mode: 'insensitive' } }
                         });
+                    }
+                    if (!existing && mapped.phone) {
+                        const normalizedPhone = mapped.phone.replace(/\D/g, '');
+                        if (normalizedPhone.length >= 10) {
+                            existing = await this.prisma.candidate.findFirst({
+                                where: { tenantId, phone: { contains: normalizedPhone.slice(-10) } }
+                            });
+                        }
                     }
                     if (existing) {
                         await this.prisma.candidate.update({
@@ -170,8 +178,16 @@ let ZohoSyncService = ZohoSyncService_1 = class ZohoSyncService {
                     });
                     if (!existing && mapped.email) {
                         existing = await this.prisma.candidate.findFirst({
-                            where: { tenantId, email: mapped.email }
+                            where: { tenantId, email: { equals: mapped.email, mode: 'insensitive' } }
                         });
+                    }
+                    if (!existing && mapped.phone) {
+                        const normalizedPhone = mapped.phone.replace(/\D/g, '');
+                        if (normalizedPhone.length >= 10) {
+                            existing = await this.prisma.candidate.findFirst({
+                                where: { tenantId, phone: { contains: normalizedPhone.slice(-10) } }
+                            });
+                        }
                     }
                     if (existing) {
                         await this.prisma.candidate.update({

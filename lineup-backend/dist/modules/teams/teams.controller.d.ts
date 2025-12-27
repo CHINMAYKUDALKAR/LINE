@@ -7,8 +7,8 @@ export declare class TeamsController {
     private teamsService;
     constructor(teamsService: TeamsService);
     createTeam(req: any, dto: CreateTeamDto): Promise<{
-        name: string;
         id: string;
+        name: string;
         createdAt: Date;
         updatedAt: Date;
         tenantId: string;
@@ -19,8 +19,8 @@ export declare class TeamsController {
         data: {
             memberCount: number;
             _count: undefined;
-            name: string;
             id: string;
+            name: string;
             createdAt: Date;
             updatedAt: Date;
             tenantId: string;
@@ -37,8 +37,8 @@ export declare class TeamsController {
     getTeam(req: any, teamId: string): Promise<{
         memberCount: number;
         _count: undefined;
-        name: string;
         id: string;
+        name: string;
         createdAt: Date;
         updatedAt: Date;
         tenantId: string;
@@ -46,8 +46,8 @@ export declare class TeamsController {
         leadId: string | null;
     }>;
     updateTeam(req: any, teamId: string, dto: UpdateTeamDto): Promise<{
-        name: string;
         id: string;
+        name: string;
         createdAt: Date;
         updatedAt: Date;
         tenantId: string;
@@ -76,8 +76,8 @@ export declare class TeamsController {
         teamRole: string | null;
         effectiveRole: import("@prisma/client").$Enums.Role;
         user: {
-            name: string | null;
             id: string;
+            name: string | null;
             email: string;
             role: import("@prisma/client").$Enums.Role;
             status: import("@prisma/client").$Enums.UserStatus;

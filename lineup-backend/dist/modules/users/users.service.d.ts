@@ -19,11 +19,11 @@ export declare class UsersService {
     }>;
     listUsers(tenantId: string, dto: ListUsersDto): Promise<{
         data: {
-            name: string | null;
             id: string;
-            email: string;
+            name: string | null;
             createdAt: Date;
             updatedAt: Date;
+            email: string;
             role: import("@prisma/client").$Enums.Role;
             status: import("@prisma/client").$Enums.UserStatus;
             lastLogin: Date | null;
@@ -36,23 +36,23 @@ export declare class UsersService {
         };
     }>;
     getUser(tenantId: string, userId: string): Promise<{
-        name: string | null;
         id: string;
-        email: string;
+        name: string | null;
         createdAt: Date;
         updatedAt: Date;
+        email: string;
         role: import("@prisma/client").$Enums.Role;
         status: import("@prisma/client").$Enums.UserStatus;
         teamIds: string[];
         lastLogin: Date | null;
     }>;
     updateUser(tenantId: string, adminId: string, userId: string, dto: UpdateUserDto): Promise<{
-        name: string | null;
         id: string;
-        email: string;
+        name: string | null;
         createdAt: Date;
         updatedAt: Date;
         tenantId: string | null;
+        email: string;
         role: import("@prisma/client").$Enums.Role;
         status: import("@prisma/client").$Enums.UserStatus;
         password: string;

@@ -2,7 +2,7 @@ import { ProviderCapabilities, StandardCandidate, StandardInterview, StandardJob
 export interface IntegrationProvider {
     getCapabilities(): ProviderCapabilities;
     getAuthUrl(tenantId: string, state?: string): Promise<string>;
-    exchangeCode(tenantId: string, code: string): Promise<void>;
+    exchangeCode(tenantId: string, code: string, companyDomain?: string): Promise<void>;
     refreshTokens(tenantId: string): Promise<void>;
     pushCandidate?(tenantId: string, candidate: StandardCandidate): Promise<SyncResult>;
     pullCandidates?(tenantId: string, since?: Date): Promise<StandardCandidate[]>;

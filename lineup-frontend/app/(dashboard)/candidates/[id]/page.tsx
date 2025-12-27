@@ -32,7 +32,8 @@ import { toast } from '@/hooks/use-toast';
 import { uploadCandidateResume, getCandidate, getCandidateDocuments, getCandidateNotes, addCandidateNote, API_BASE_URL } from '@/lib/api/candidates';
 import { getAuthToken } from '@/lib/auth';
 import { fadeInUp, fadeInRight, staggerContainer, staggerItem } from '@/lib/animations';
-import { useDeleteCandidate } from '@/lib/hooks/useCandidates';
+import { useDeleteCandidate, useUpdateCandidate } from '@/lib/hooks/useCandidates';
+import { ChangeStageModal } from '@/components/candidates/ChangeStageModal';
 import {
     AlertDialog,
     AlertDialogAction,
@@ -49,7 +50,9 @@ export default function CandidateProfile() {
     const id = params?.id as string;
     const router = useRouter();
     const deleteCandidateMutation = useDeleteCandidate();
+    const updateCandidateMutation = useUpdateCandidate();
     const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+    const [stageModalOpen, setStageModalOpen] = useState(false);
 
     const [candidate, setCandidate] = useState<CandidateProfileType | null>(null);
     const [documents, setDocuments] = useState<CandidateDocument[]>([]);
@@ -221,9 +224,17 @@ export default function CandidateProfile() {
     };
 
     const handleChangeStage = () => {
+        setStageModalOpen(true);
+    };
+
+    const handleStageChangeConfirm = async (candidateId: string, newStage: string, note?: string) => {
+        await updateCandidateMutation.mutateAsync({ id: candidateId, data: { stage: newStage } });
+        setStageModalOpen(false);
+        // Reload data to reflect stage change
+        loadData();
         toast({
-            title: 'Change Stage',
-            description: 'Opening stage selector...',
+            title: 'Stage Updated',
+            description: `Candidate stage changed to ${newStage}.`,
         });
     };
 
@@ -481,6 +492,18 @@ export default function CandidateProfile() {
                         </AlertDialogFooter>
                     </AlertDialogContent>
                 </AlertDialog>
+
+                {/* Change Stage Modal */}
+                {candidate && (
+                    <ChangeStageModal
+                        open={stageModalOpen}
+                        onOpenChange={setStageModalOpen}
+                        candidateId={candidate.id}
+                        candidateName={candidate.name}
+                        currentStage={candidate.currentStage}
+                        onStageChange={handleStageChangeConfirm}
+                    />
+                )}
             </div>
         </TooltipProvider>
     );

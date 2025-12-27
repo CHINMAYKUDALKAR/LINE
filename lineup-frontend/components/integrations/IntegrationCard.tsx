@@ -61,7 +61,7 @@ export function IntegrationCard({ integration, onConfigure, onConnect, onSync, i
             <div className="text-sm">
               <p className="font-medium text-destructive">Authentication Expired</p>
               <p className="text-muted-foreground text-xs mt-0.5">
-                {integration.lastError || 'OAuth token expired or revoked. Please reconnect to resume syncing.'}
+                {(integration as any).lastError || 'OAuth token expired or revoked. Please reconnect to resume syncing.'}
               </p>
             </div>
           </div>

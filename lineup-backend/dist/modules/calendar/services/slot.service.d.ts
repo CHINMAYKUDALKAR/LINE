@@ -25,8 +25,8 @@ export declare class SlotService {
             interviewId: string | null;
             startAt: Date;
             endAt: Date;
-            participants: Prisma.JsonValue;
             organizerId: string | null;
+            participants: Prisma.JsonValue;
         }[];
         total: number;
         page: number;
@@ -44,8 +44,8 @@ export declare class SlotService {
         interviewId: string | null;
         startAt: Date;
         endAt: Date;
-        participants: Prisma.JsonValue;
         organizerId: string | null;
+        participants: Prisma.JsonValue;
     }>;
     createSlot(tenantId: string, organizerId: string, dto: CreateSlotDto, forceCreate?: boolean): Promise<{
         id: string;
@@ -58,8 +58,8 @@ export declare class SlotService {
         interviewId: string | null;
         startAt: Date;
         endAt: Date;
-        participants: Prisma.JsonValue;
         organizerId: string | null;
+        participants: Prisma.JsonValue;
     } | {
         warning: string;
         id: string;
@@ -72,8 +72,8 @@ export declare class SlotService {
         interviewId: string | null;
         startAt: Date;
         endAt: Date;
-        participants: Prisma.JsonValue;
         organizerId: string | null;
+        participants: Prisma.JsonValue;
     }>;
     generateSlots(tenantId: string, organizerId: string, dto: GenerateSlotsDto): Promise<{
         created: {
@@ -87,8 +87,8 @@ export declare class SlotService {
             interviewId: string | null;
             startAt: Date;
             endAt: Date;
-            participants: Prisma.JsonValue;
             organizerId: string | null;
+            participants: Prisma.JsonValue;
         }[];
         total: number;
         limited: boolean;
@@ -104,8 +104,8 @@ export declare class SlotService {
         interviewId: string | null;
         startAt: Date;
         endAt: Date;
-        participants: Prisma.JsonValue;
         organizerId: string | null;
+        participants: Prisma.JsonValue;
     }>;
     rescheduleSlot(tenantId: string, slotId: string, userId: string, dto: RescheduleSlotDto): Promise<{
         id: string;
@@ -118,8 +118,8 @@ export declare class SlotService {
         interviewId: string | null;
         startAt: Date;
         endAt: Date;
-        participants: Prisma.JsonValue;
         organizerId: string | null;
+        participants: Prisma.JsonValue;
     }>;
     cancelSlot(tenantId: string, slotId: string, userId: string): Promise<{
         id: string;
@@ -132,7 +132,7 @@ export declare class SlotService {
         interviewId: string | null;
         startAt: Date;
         endAt: Date;
-        participants: Prisma.JsonValue;
         organizerId: string | null;
+        participants: Prisma.JsonValue;
     }>;
 }

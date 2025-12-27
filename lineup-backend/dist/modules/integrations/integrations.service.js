@@ -100,9 +100,23 @@ let IntegrationsService = IntegrationsService_1 = class IntegrationsService {
         if (!this.providerFactory.isSupported(provider)) {
             throw new common_1.BadRequestException(`Provider ${provider} is not supported`);
         }
-        const { tenantId } = (0, oauth_util_1.parseState)(state);
+        let tenantId;
+        let companyDomain;
+        if (provider === 'salesforce') {
+            tenantId = state;
+        }
+        else {
+            const parsed = (0, oauth_util_1.parseState)(state);
+            tenantId = parsed.tenantId;
+            companyDomain = parsed.companyDomain;
+        }
         const providerInstance = this.providerFactory.getProvider(provider);
-        await providerInstance.exchangeCode(tenantId, code);
+        if (provider === 'bamboohr' && companyDomain) {
+            await providerInstance.exchangeCode(tenantId, code, companyDomain);
+        }
+        else {
+            await providerInstance.exchangeCode(tenantId, code);
+        }
         await this.auditService.log({
             tenantId,
             userId,
@@ -219,11 +233,24 @@ let IntegrationsService = IntegrationsService_1 = class IntegrationsService {
         else {
             this.syncRateLimiter.set(key, { count: 1, resetAt: now + 3600000 });
         }
+        let syncModule = module;
+        if (!syncModule) {
+            const settings = integration.settings;
+            if (provider === 'salesforce') {
+                syncModule = settings?.config?.salesforceModule || 'all';
+            }
+            else if (provider === 'zoho') {
+                syncModule = settings?.config?.zohoModule || 'leads';
+            }
+            else {
+                syncModule = 'all';
+            }
+        }
         await this.syncQueue.add('sync', {
             tenantId,
             provider,
             since: since?.toISOString(),
-            module: module || 'leads',
+            module: syncModule,
         }, {
             attempts: 5,
             backoff: {

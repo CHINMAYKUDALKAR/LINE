@@ -84,7 +84,19 @@ export class CandidatesService {
     }
 
     async get(tenantId: string, id: string) {
-        const candidate = await this.prisma.candidate.findUnique({ where: { id } });
+        const candidate = await this.prisma.candidate.findUnique({
+            where: { id },
+            include: {
+                opportunityLinks: {
+                    include: {
+                        opportunityContext: true,
+                    },
+                },
+                externalFeedback: {
+                    orderBy: { interviewDate: 'desc' },
+                },
+            },
+        });
         if (!candidate || candidate.tenantId !== tenantId) {
             throw new NotFoundException('Candidate not found');
         }
@@ -93,19 +105,22 @@ export class CandidatesService {
 
     async list(tenantId: string, dto: ListCandidatesDto) {
         const page = Number(dto.page) || 1;
-        const perPage = Math.min(Number(dto.perPage) || 20, 100); // Cap at 100
+        const perPage = Math.min(Number(dto.perPage) || 20, 10000); // Cap at 10000 for "View All"
         const where: any = {
             tenantId,
             deletedAt: null
         };
 
-        if (dto.stage) where.stage = dto.stage;
+        if (dto.stage) where.stage = { equals: dto.stage, mode: 'insensitive' };
 
-        // Handle source filter - ZOHO_CRM is a wildcard for all Zoho sources
+        // Handle source filter - wildcards for CRM integrations
         if (dto.source) {
             if (dto.source === 'ZOHO_CRM') {
                 // Match any Zoho source (ZOHO_LEAD, ZOHO_CONTACT, or legacy ZOHO_CRM)
                 where.source = { in: ['ZOHO_CRM', 'ZOHO_LEAD', 'ZOHO_CONTACT'] };
+            } else if (dto.source === 'SALESFORCE') {
+                // Match any Salesforce source
+                where.source = { in: ['SALESFORCE', 'SALESFORCE_LEAD', 'SALESFORCE_CONTACT'] };
             } else {
                 where.source = dto.source;
             }
@@ -134,7 +149,7 @@ export class CandidatesService {
                 where,
                 skip: (page - 1) * perPage,
                 take: perPage,
-                orderBy: dto.sort ? this.parseSort(dto.sort) : { createdAt: 'desc' },
+                orderBy: dto.sort ? this.parseSort(dto.sort) : { createdAt: 'asc' },
                 select: {
                     id: true,
                     name: true,
@@ -245,6 +260,48 @@ export class CandidatesService {
         });
 
         return { success: true, fileId };
+    }
+
+    /**
+     * Generate photo upload URL using StorageService
+     */
+    async generatePhotoUploadUrl(tenantId: string, userId: string, candidateId: string, filename: string) {
+        await this.get(tenantId, candidateId);
+
+        // Use StorageService to generate upload URL with FileObject tracking
+        const result = await this.storageService.generateUploadUrl(tenantId, userId, {
+            filename,
+            linkedType: 'candidate',
+            linkedId: candidateId,
+        });
+
+        return result;
+    }
+
+    /**
+     * Attach photo to candidate profile
+     */
+    async attachPhoto(tenantId: string, userId: string, candidateId: string, fileId: string, s3Key: string) {
+        await this.get(tenantId, candidateId);
+
+        // Attach file via StorageService
+        await this.storageService.attachFile(tenantId, userId, {
+            fileId,
+            s3Key,
+            mimeType: 'image/jpeg', // Photos are typically JPEG
+        });
+
+        // Update candidate.photoUrl
+        await this.prisma.candidate.update({
+            where: { id: candidateId },
+            data: { photoUrl: s3Key }
+        });
+
+        await this.prisma.auditLog.create({
+            data: { tenantId, userId, action: 'CANDIDATE_PHOTO_ATTACH', metadata: { candidateId, fileId, s3Key } }
+        });
+
+        return { success: true, fileId, photoUrl: s3Key };
     }
 
     async bulkImport(tenantId: string, userId: string, dto: BulkImportDto) {

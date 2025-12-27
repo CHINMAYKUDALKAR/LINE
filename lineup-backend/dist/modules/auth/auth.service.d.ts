@@ -51,8 +51,8 @@ export declare class AuthService {
     validateUser(email: string, password: string): Promise<{
         userTenants: ({
             tenant: {
-                name: string;
                 id: string;
+                name: string;
                 brandingLogoUrl: string | null;
             };
         } & {
@@ -67,12 +67,12 @@ export declare class AuthService {
             invitedAt: Date | null;
         })[];
     } & {
-        name: string | null;
         id: string;
-        email: string;
+        name: string | null;
         createdAt: Date;
         updatedAt: Date;
         tenantId: string | null;
+        email: string;
         role: import("@prisma/client").$Enums.Role;
         status: import("@prisma/client").$Enums.UserStatus;
         password: string;
@@ -152,17 +152,17 @@ export declare class AuthService {
         role: import("@prisma/client").$Enums.Role;
         expiresAt: Date;
         tenant: {
-            name: string;
             id: string;
+            name: string;
             brandingLogoUrl: string | null;
             brandingColors: import("@prisma/client/runtime/library").JsonValue;
         };
     }>;
     listPendingInvitations(tenantId: string): Promise<{
         id: string;
-        email: string;
         createdAt: Date;
         tenantId: string;
+        email: string;
         role: import("@prisma/client").$Enums.Role;
         tokenHash: string;
         expiresAt: Date;
@@ -171,9 +171,9 @@ export declare class AuthService {
     }[]>;
     cancelInvitation(tenantId: string, inviteId: string): Promise<{
         id: string;
-        email: string;
         createdAt: Date;
         tenantId: string;
+        email: string;
         role: import("@prisma/client").$Enums.Role;
         tokenHash: string;
         expiresAt: Date;

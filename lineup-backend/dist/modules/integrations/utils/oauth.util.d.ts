@@ -4,6 +4,7 @@ export declare function parseState(state: string): {
     tenantId: string;
     timestamp: number;
     nonce: string;
+    companyDomain?: string;
 };
 export declare function computeExpiry(expiresIn: number): number;
 export declare function isExpired(tokenSet: OAuthTokenSet): boolean;

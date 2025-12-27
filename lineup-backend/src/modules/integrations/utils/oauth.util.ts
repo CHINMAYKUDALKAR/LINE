@@ -14,7 +14,7 @@ export function generateState(tenantId: string): string {
 /**
  * Parse and validate state parameter
  */
-export function parseState(state: string): { tenantId: string; timestamp: number; nonce: string } {
+export function parseState(state: string): { tenantId: string; timestamp: number; nonce: string; companyDomain?: string } {
     try {
         const payload = Buffer.from(state, 'base64url').toString('utf8');
         const parsed = JSON.parse(payload);

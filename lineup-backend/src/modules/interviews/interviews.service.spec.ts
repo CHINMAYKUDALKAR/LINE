@@ -7,6 +7,29 @@ import { RecycleBinService } from '../recycle-bin/recycle-bin.service';
 import { IntegrationEventsService } from '../integrations/services/integration-events.service';
 import { getQueueToken } from '@nestjs/bullmq';
 
+const mockInterview = {
+    id: 'i1',
+    tenantId: 't1',
+    candidateId: 'c1',
+    interviewerIds: ['u1'],
+    date: new Date(),
+    durationMins: 30,
+    stage: 'Scheduled',
+    status: 'SCHEDULED',
+    meetingLink: null,
+    notes: null,
+};
+
+const mockTransactionMethods = {
+    interview: {
+        findFirst: jest.fn().mockResolvedValue(null), // No existing interviews
+        findMany: jest.fn().mockResolvedValue([]), // No conflicts
+        create: jest.fn().mockResolvedValue(mockInterview),
+    },
+    auditLog: { create: jest.fn().mockResolvedValue({}) },
+    busyBlock: { create: jest.fn().mockResolvedValue({}) },
+};
+
 const mockPrismaService = {
     candidate: { findUnique: jest.fn() },
     user: { findMany: jest.fn() },
@@ -19,6 +42,10 @@ const mockPrismaService = {
     },
     auditLog: { create: jest.fn() },
     busyBlock: { create: jest.fn() },
+    $transaction: jest.fn().mockImplementation(async (callback) => {
+        // Execute the callback with mock transaction methods
+        return callback(mockTransactionMethods);
+    }),
 };
 
 const mockQueue = { add: jest.fn() };
@@ -27,6 +54,8 @@ describe('InterviewsService', () => {
     let service: InterviewsService;
 
     beforeEach(async () => {
+        jest.clearAllMocks();
+
         const module: TestingModule = await Test.createTestingModule({
             providers: [
                 InterviewsService,
@@ -69,34 +98,40 @@ describe('InterviewsService', () => {
             startAt: new Date().toISOString(),
             durationMins: 30
         };
+
         (mockPrismaService.candidate.findUnique as jest.Mock).mockResolvedValue({ id: 'c1', tenantId: 't1' });
         (mockPrismaService.user.findMany as jest.Mock).mockResolvedValue([{ id: 'u1', tenantId: 't1' }]);
-        (mockPrismaService.interview.findMany as jest.Mock).mockResolvedValue([]); // No conflicts
-        (mockPrismaService.interview.create as jest.Mock).mockResolvedValue({ id: 'i1', ...dto });
+
+        // Transaction mocks are already configured
+        mockTransactionMethods.interview.findFirst.mockResolvedValue(null);
+        mockTransactionMethods.interview.findMany.mockResolvedValue([]);
+        mockTransactionMethods.interview.create.mockResolvedValue({ id: 'i1', ...dto });
 
         const result = await service.create('t1', 'u1', dto);
         expect(result).toHaveProperty('id', 'i1');
     });
 
-    it('should throw conflict if overlap', async () => {
+    it('should throw conflict if candidate already has scheduled interview', async () => {
         const dto = {
             candidateId: 'c1',
             interviewerIds: ['u1'],
             startAt: '2025-01-01T10:00:00Z',
             durationMins: 60
         };
-        const start = new Date(dto.startAt);
-        // Existing interview 10:30-11:30 (overlaps 10:00-11:00)
-        const overlapping = {
+
+        // Existing interview for this candidate
+        const existingInterview = {
             id: 'i2',
             date: new Date('2025-01-01T10:30:00Z'),
-            durationMins: 60
+            candidateId: 'c1',
         };
 
         (mockPrismaService.candidate.findUnique as jest.Mock).mockResolvedValue({ id: 'c1', tenantId: 't1' });
         (mockPrismaService.user.findMany as jest.Mock).mockResolvedValue([{ id: 'u1', tenantId: 't1' }]);
-        (mockPrismaService.interview.findMany as jest.Mock).mockResolvedValue([overlapping]);
 
-        await expect(service.create('t1', 'u1', dto)).rejects.toThrow();
+        // Return an existing scheduled interview for this candidate
+        mockTransactionMethods.interview.findFirst.mockResolvedValue(existingInterview);
+
+        await expect(service.create('t1', 'u1', dto)).rejects.toThrow('Candidate already has a scheduled interview');
     });
 });

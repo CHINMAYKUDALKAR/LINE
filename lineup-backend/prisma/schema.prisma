@@ -58,8 +58,13 @@ model Tenant {
   // Hiring Pipeline
   hiringStages         HiringStage[]
   
+  // External Feedback from ATS
+  externalFeedbackContexts ExternalFeedbackContext[]
   // Custom Roles
   customRoles          CustomRole[]
+  
+  // Salesforce Opportunities (context, not candidates)
+  opportunityContexts  OpportunityContext[]
 }
 
 // Tenant-configurable hiring stages for the recruitment pipeline
@@ -208,6 +213,7 @@ model Candidate {
   stage       String
   source      String?
   resumeUrl   String?
+  photoUrl    String?  // Profile photo URL (stored in MinIO)
   notes       String?
   tags        String[]
   createdById String?
@@ -227,6 +233,8 @@ model Candidate {
   interviews     Interview[]
   candidateNotes CandidateNote[]
   stageHistory   CandidateStageHistory[]
+  opportunityLinks CandidateOpportunity[]  // Links to HubSpot Deals / Salesforce Opportunities
+  externalFeedback ExternalFeedbackContext[] // Historical feedback from ATS systems (read-only)
 
   @@unique([tenantId, externalId, externalSource], name: "unique_external_candidate")
   @@index([tenantId, createdAt], name: "idx_candidate_tenant_created")
@@ -314,16 +322,104 @@ model Integration {
   id           String    @id @default(cuid())
   tenantId     String
   tenant       Tenant    @relation(fields: [tenantId], references: [id])
-  provider     String // "zoho", "google_calendar", "outlook_calendar"
+  provider     String // "zoho", "salesforce", "google_calendar", "outlook_calendar"
   tokens       Json? // encrypted access/refresh tokens
   settings     Json? // mapping, field associations, flags
-  status       String? // "connected", "error", "pending"
+  status       String? // "connected", "error", "pending", "auth_required"
+  instanceUrl  String?  // Salesforce instance URL (e.g., https://na1.salesforce.com)
   lastSyncedAt DateTime?
   lastError    String?
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
   @@unique([tenantId, provider])
+}
+
+// Opportunity/Deal context from CRMs (NOT candidates - stored for interview context only)
+// Applies to: Salesforce Opportunities, HubSpot Deals
+model OpportunityContext {
+  id              String    @id @default(cuid())
+  tenantId        String
+  tenant          Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  
+  // Provider-agnostic fields
+  provider        String    // 'salesforce' | 'hubspot'
+  externalId      String    // External ID (Salesforce Opportunity ID or HubSpot Deal ID)
+  name            String
+  stageName       String?
+  
+  // Company/Account info
+  accountId       String?   // Salesforce Account ID or HubSpot Company ID
+  accountName     String?
+  
+  // Owner info
+  ownerId         String?
+  ownerName       String?
+  
+  // Deal details
+  amount          Float?
+  closeDate       DateTime?
+  probability     Float?
+  
+  // Associated candidates (many-to-many via join)
+  candidateLinks  CandidateOpportunity[]
+  
+  rawData         Json?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@unique([tenantId, provider, externalId])
+  @@index([tenantId])
+  @@index([tenantId, provider])
+}
+
+// Many-to-many relationship: Candidates can be linked to multiple Deals/Opportunities
+model CandidateOpportunity {
+  id                   String             @id @default(cuid())
+  candidateId          String
+  candidate            Candidate          @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  opportunityContextId String
+  opportunityContext   OpportunityContext @relation(fields: [opportunityContextId], references: [id], onDelete: Cascade)
+  
+  // Association metadata
+  associationType      String?            // 'primary' | 'related'
+  createdAt            DateTime           @default(now())
+
+  @@unique([candidateId, opportunityContextId])
+  @@index([candidateId])
+  @@index([opportunityContextId])
+}
+
+// External interview feedback from ATS systems (read-only context)
+model ExternalFeedbackContext {
+  id              String    @id @default(cuid())
+  tenantId        String
+  tenant          Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  
+  provider        String    // 'greenhouse' | 'lever' | etc
+  externalId      String    // External feedback/scorecard ID
+  
+  candidateId     String
+  candidate       Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  
+  // Feedback details (read-only reference)
+  interviewerName String?
+  interviewType   String?   // 'phone_screen' | 'onsite' | etc
+  interviewDate   DateTime?
+  
+  // Scores and comments
+  overallScore    String?   // Text representation (varies by ATS)
+  scorecard       Json?     // Structured scorecard data
+  comments        String?   @db.Text
+  recommendation  String?   // 'hire' | 'no_hire' | 'undecided' | etc
+  
+  rawData         Json?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@unique([tenantId, provider, externalId])
+  @@index([candidateId])
+  @@index([tenantId, provider])
 }
 
 model AuditLog {

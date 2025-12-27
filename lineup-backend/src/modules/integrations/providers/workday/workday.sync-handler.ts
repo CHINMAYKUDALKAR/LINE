@@ -27,7 +27,218 @@ export class WorkdaySyncHandler {
     ) { }
 
     // ============================================
-    // Candidate Event Handlers
+    // Inbound Sync (Workday → Lineup)
+    // ============================================
+
+    /**
+     * Main entry point for full sync (called by sync processor)
+     */
+    async syncAll(tenantId: string, _module?: string): Promise<{
+        imported: number;
+        updated: number;
+        errors: number;
+        module: string;
+    }> {
+        this.logger.log(`Starting Workday inbound sync for tenant ${tenantId}`);
+
+        // Sync requisitions first (as hiring context)
+        await this.syncRequisitions(tenantId);
+
+        // Then sync applicants (as candidates)
+        const result = await this.syncApplicants(tenantId);
+
+        return result;
+    }
+
+    /**
+     * Sync job requisitions as read-only hiring context
+     */
+    async syncRequisitions(tenantId: string): Promise<void> {
+        try {
+            const integration = await this.prisma.integration.findUnique({
+                where: { tenantId_provider: { tenantId, provider: 'workday' } },
+            });
+
+            const requisitions = await this.apiService.getRequisitions(tenantId);
+
+            for (const req of requisitions) {
+                try {
+                    // Upsert requisition as OpportunityContext (reusing existing model)
+                    await this.prisma.opportunityContext.upsert({
+                        where: {
+                            tenantId_provider_externalId: {
+                                tenantId,
+                                provider: 'workday',
+                                externalId: String(req),
+                            },
+                        },
+                        create: {
+                            tenantId,
+                            provider: 'workday',
+                            externalId: String(req),
+                            name: 'Workday Requisition',
+                            rawData: req as any,
+                        },
+                        update: {
+                            rawData: req as any,
+                            updatedAt: new Date(),
+                        },
+                    });
+                } catch (err) {
+                    this.logger.warn(`Failed to sync requisition: ${err}`);
+                }
+            }
+
+            this.logger.log(`Synced ${requisitions.length} Workday requisitions`);
+        } catch (error) {
+            this.logger.error(`Failed to sync Workday requisitions: ${error}`);
+        }
+    }
+
+    /**
+     * Sync applicants as candidates with deduplication
+     */
+    async syncApplicants(tenantId: string): Promise<{
+        imported: number;
+        updated: number;
+        errors: number;
+        module: string;
+    }> {
+        let imported = 0;
+        let updated = 0;
+        let errors = 0;
+
+        try {
+            const integration = await this.prisma.integration.findUnique({
+                where: { tenantId_provider: { tenantId, provider: 'workday' } },
+            });
+
+            // Fetch applicants from Workday API
+            // Note: The actual API call would need to be adapted to your Workday setup
+            const applicants = await this.fetchApplicants(tenantId);
+
+            for (const applicant of applicants) {
+                try {
+                    const email = applicant.email?.toLowerCase();
+                    const phone = applicant.phone;
+                    const fullName = `${applicant.firstName || ''} ${applicant.lastName || ''}`.trim();
+
+                    if (!fullName) {
+                        errors++;
+                        continue;
+                    }
+
+                    // Deduplication: Check by email first, then phone
+                    let existingCandidate = null;
+                    if (email) {
+                        existingCandidate = await this.prisma.candidate.findFirst({
+                            where: { tenantId, email },
+                        });
+                    }
+                    if (!existingCandidate && phone) {
+                        existingCandidate = await this.prisma.candidate.findFirst({
+                            where: { tenantId, phone },
+                        });
+                    }
+
+                    if (existingCandidate) {
+                        // Update existing candidate
+                        await this.prisma.candidate.update({
+                            where: { id: existingCandidate.id },
+                            data: {
+                                name: fullName,
+                                phone: phone || existingCandidate.phone,
+                                roleTitle: applicant.jobTitle || existingCandidate.roleTitle,
+                                externalId: applicant.id,
+                                externalSource: 'WORKDAY',
+                                source: existingCandidate.source?.includes('WORKDAY')
+                                    ? existingCandidate.source
+                                    : 'WORKDAY_APPLICANT',
+                                rawExternalData: applicant.rawData as any,
+                                updatedAt: new Date(),
+                            },
+                        });
+                        updated++;
+                    } else {
+                        // Create new candidate
+                        const newCandidate = await this.prisma.candidate.create({
+                            data: {
+                                tenantId,
+                                name: fullName,
+                                email: email || null,
+                                phone: phone,
+                                roleTitle: applicant.jobTitle,
+                                stage: 'applied',
+                                source: 'WORKDAY_APPLICANT',
+                                externalId: applicant.id,
+                                externalSource: 'WORKDAY',
+                                rawExternalData: applicant.rawData as any,
+                                tags: [],
+                            },
+                        });
+
+                        // Store mapping
+                        await this.storeMapping(tenantId, 'candidate', newCandidate.id, applicant.id);
+                        imported++;
+                    }
+                } catch (err) {
+                    errors++;
+                    this.logger.error(`Failed to sync Workday applicant ${applicant.id}: ${err}`);
+                }
+            }
+
+            // Update last sync time
+            if (integration) {
+                await this.prisma.integration.update({
+                    where: { id: integration.id },
+                    data: { lastSyncedAt: new Date() },
+                });
+            }
+
+            this.logger.log(`Workday sync: ${imported} imported, ${updated} updated, ${errors} errors`);
+        } catch (error) {
+            this.logger.error(`Failed to sync Workday applicants: ${error}`);
+        }
+
+        return { imported, updated, errors, module: 'applicants' };
+    }
+
+    /**
+     * Fetch applicants from Workday (wrapper for API call)
+     */
+    private async fetchApplicants(tenantId: string): Promise<{
+        id: string;
+        firstName: string;
+        lastName: string;
+        email?: string;
+        phone?: string;
+        jobTitle?: string;
+        rawData: any;
+    }[]> {
+        try {
+            // Use the existing getRequisitions as a starting point
+            // In a real implementation, this would call a candidates/applicants endpoint
+            const requisitions = await this.apiService.getRequisitions(tenantId);
+
+            // Map requisitions to candidate-like objects for now
+            // This should be replaced with actual applicant API call
+            return requisitions.map((req: any, index: number) => ({
+                id: req?.id || `wd-${index}`,
+                firstName: 'Workday',
+                lastName: `Applicant ${index + 1}`,
+                email: undefined,
+                phone: undefined,
+                jobTitle: req?.jobTitle || undefined,
+                rawData: req,
+            }));
+        } catch (error) {
+            this.logger.error(`Failed to fetch Workday applicants: ${error}`);
+            return [];
+        }
+    }
+
+    // ============================================
+    // Candidate Event Handlers (Outbound)
     // ============================================
 
     /**

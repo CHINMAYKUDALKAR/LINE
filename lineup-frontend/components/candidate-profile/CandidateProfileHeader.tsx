@@ -35,6 +35,8 @@ const stageLabels: Record<string, string> = {
   'interview-2': 'Interview 2',
   'hr-round': 'HR Round',
   offer: 'Offer',
+  hired: 'Hired',
+  rejected: 'Rejected',
 };
 
 const stageColors: Record<string, string> = {
@@ -44,6 +46,8 @@ const stageColors: Record<string, string> = {
   'interview-2': 'bg-primary/10 text-primary',
   'hr-round': 'bg-purple-500/10 text-purple-600',
   offer: 'bg-emerald-500/10 text-emerald-600',
+  hired: 'bg-green-500/10 text-green-600',
+  rejected: 'bg-red-500/10 text-red-600',
 };
 
 export function CandidateProfileHeader({

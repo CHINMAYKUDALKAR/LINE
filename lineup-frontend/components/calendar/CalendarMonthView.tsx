@@ -29,7 +29,8 @@ interface CalendarMonthViewProps {
 }
 
 const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-const MAX_VISIBLE_EVENTS = 3;
+// Increased from 3 to allow more events on larger screens
+const MAX_VISIBLE_EVENTS = 5;
 
 export function CalendarMonthView({
   currentDate,
@@ -51,108 +52,133 @@ export function CalendarMonthView({
     return eachDayOfInterval({ start: calendarStart, end: calendarEnd });
   }, [currentDate]);
 
+  const weeksCount = days.length / 7;
+
   const getEventsForDay = (day: Date) => {
     return events.filter((event) => isSameDay(new Date(event.startTime), day));
   };
 
   return (
-    <div className="bg-background/40 backdrop-blur-sm rounded-xl border border-border/50 overflow-hidden shadow-sm">
-      <div className="overflow-x-auto">
-        <div className="min-w-[600px]">
-          {/* Weekday Headers */}
-          <div className="grid grid-cols-7 border-b border-border/50">
-            {WEEKDAYS.map((day) => (
+    <div className="flex flex-col flex-1 h-full bg-background/50 backdrop-blur-sm rounded-xl border border-border/50 overflow-hidden shadow-sm">
+      {/* Weekday Headers */}
+      <div className="grid grid-cols-7 border-b border-border/50">
+        {WEEKDAYS.map((day) => (
+          <div
+            key={day}
+            className="py-3 text-center text-sm font-semibold tracking-wide text-muted-foreground bg-muted/30"
+          >
+            {day}
+          </div>
+        ))}
+      </div>
+
+      {/* Calendar Grid - auto-fills remaining height */}
+      <div
+        className="grid grid-cols-7 flex-1"
+        style={{
+          gridTemplateRows: `repeat(${weeksCount}, minmax(0, 1fr))`
+        }}
+      >
+        {days.map((day, idx) => {
+          const dayEvents = getEventsForDay(day);
+          const isCurrentMonth = isSameMonth(day, currentDate);
+          const isCurrentDay = isToday(day);
+          const hasMoreEvents = dayEvents.length > MAX_VISIBLE_EVENTS;
+          const displayEvents = dayEvents.slice(0, MAX_VISIBLE_EVENTS);
+
+          // Calculate if this is the last row or last column to remove borders
+          // const isLastRow = Math.floor(idx / 7) === weeksCount - 1;
+          const isLastCol = (idx + 1) % 7 === 0;
+
+          return (
+            <div
+              key={idx}
+              className={cn(
+                'relative p-1 transition-colors border-b border-r border-border/30 hover:bg-muted/10',
+                !isCurrentMonth && 'bg-muted/5',
+                isCurrentDay && 'bg-primary/5',
+                isLastCol && 'border-r-0'
+              )}
+              onClick={(e) => {
+                // Only trigger if clicking the cell background, not an event
+                if (e.target === e.currentTarget || e.target === e.currentTarget.firstChild) {
+                  onEmptySlotClick(day);
+                }
+              }}
+            >
+              {/* Date Header */}
               <div
-                key={day}
-                className="py-3 text-center text-sm font-medium text-muted-foreground bg-muted/30"
+                className={cn(
+                  "flex justify-between items-center px-1 py-1 mb-1 pointer-events-none",
+                  !isCurrentMonth && "text-muted-foreground/50"
+                )}
               >
-                {day}
-              </div>
-            ))}
-          </div>
-
-          {/* Calendar Grid */}
-          <div className="grid grid-cols-7">
-            {days.map((day, idx) => {
-              const dayEvents = getEventsForDay(day);
-              const isCurrentMonth = isSameMonth(day, currentDate);
-              const isCurrentDay = isToday(day);
-              const hasMoreEvents = dayEvents.length > MAX_VISIBLE_EVENTS;
-
-              return (
-                <div
-                  key={idx}
-                  className={cn(
-                    'min-h-[120px] border-b border-r border-border/30 p-2 transition-colors',
-                    !isCurrentMonth && 'bg-muted/10',
-                    isCurrentDay && 'bg-primary/5',
-                    'hover:bg-muted/20 cursor-pointer'
-                  )}
-                  onClick={(e) => {
-                    if (e.target === e.currentTarget) {
-                      onEmptySlotClick(day);
-                    }
-                  }}
-                >
-                  <div className="flex items-center justify-between mb-1">
-                    <span
-                      className={cn(
-                        'text-sm font-medium',
-                        !isCurrentMonth && 'text-muted-foreground',
-                        isCurrentDay &&
-                        'w-7 h-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center'
-                      )}
-                    >
-                      {format(day, 'd')}
-                    </span>
-                  </div>
-
-                  <div className="space-y-1">
-                    {dayEvents.slice(0, MAX_VISIBLE_EVENTS).map((event) => (
-                      <Popover
-                        key={event.id}
-                        open={selectedEvent?.id === event.id}
-                        onOpenChange={(open) => setSelectedEvent(open ? event : null)}
-                      >
-                        <PopoverTrigger asChild>
-                          <div onClick={(e) => e.stopPropagation()}>
-                            <CalendarEventCard
-                              event={event}
-                              compact
-                              onClick={() => setSelectedEvent(event)}
-                            />
-                          </div>
-                        </PopoverTrigger>
-                        <PopoverContent className="p-0 w-auto" align="start">
-                          <CalendarEventPopover
-                            event={event}
-                            userRole={userRole}
-                            onClose={() => setSelectedEvent(null)}
-                            onReschedule={onReschedule}
-                            onCancel={onCancel}
-                            onComplete={onComplete}
-                            onAddNote={onAddNote}
-                          />
-                        </PopoverContent>
-                      </Popover>
-                    ))}
-                    {hasMoreEvents && (
-                      <button
-                        className="text-xs text-primary hover:underline font-medium"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          // Could open a modal showing all events
-                        }}
-                      >
-                        + {dayEvents.length - MAX_VISIBLE_EVENTS} more
-                      </button>
-                    )}
-                  </div>
+                <div className={cn(
+                  "text-sm font-semibold w-7 h-7 flex items-center justify-center rounded-full",
+                  isCurrentDay
+                    ? "bg-primary text-primary-foreground shadow-sm"
+                    : "text-foreground/80"
+                )}>
+                  {format(day, 'd')}
                 </div>
-              );
-            })}
-          </div>
-        </div>
+                {isCurrentDay && (
+                  <span className="text-[10px] font-medium text-primary uppercase tracking-wider mr-1">Today</span>
+                )}
+              </div>
+
+              {/* Events Container */}
+              <div className="space-y-1 overflow-y-auto max-h-[calc(100%-2rem)] px-0.5 custom-scrollbar">
+                {displayEvents.map((event) => (
+                  <Popover
+                    key={event.id}
+                    open={selectedEvent?.id === event.id}
+                    onOpenChange={(open) => setSelectedEvent(open ? event : null)}
+                  >
+                    <PopoverTrigger asChild>
+                      <div onClick={(e) => e.stopPropagation()}>
+                        <CalendarEventCard
+                          event={event}
+                          compact
+                          onClick={() => setSelectedEvent(event)}
+                        />
+                      </div>
+                    </PopoverTrigger>
+                    <PopoverContent className="p-0 w-auto" align="start">
+                      <CalendarEventPopover
+                        event={event}
+                        userRole={userRole}
+                        onClose={() => setSelectedEvent(null)}
+                        onReschedule={onReschedule}
+                        onCancel={onCancel}
+                        onComplete={onComplete}
+                        onAddNote={onAddNote}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                ))}
+
+                {hasMoreEvents && (
+                  <div
+                    className="text-xs text-muted-foreground hover:text-primary font-medium px-2 py-1 cursor-pointer transition-colors"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      // Ideally switch to day view or show a modal
+                      onEmptySlotClick(day);
+                    }}
+                  >
+                    + {dayEvents.length - MAX_VISIBLE_EVENTS} more...
+                  </div>
+                )}
+              </div>
+
+              {/* Click target overlay for empty space */}
+              <div
+                className="absolute inset-0 z-0"
+                onClick={() => onEmptySlotClick(day)}
+              />
+            </div>
+          );
+        })}
       </div>
     </div>
   );

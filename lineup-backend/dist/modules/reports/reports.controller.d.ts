@@ -15,14 +15,14 @@ export declare class ReportsController {
     exportCsv(req: any, res: Response, type: ReportType, filters: GetReportDto): Promise<void>;
     exportPdf(req: any, res: Response, type: ReportType, filters: GetReportDto): Promise<void>;
     createSchedule(req: any, dto: CreateScheduledReportDto): Promise<{
-        isActive: boolean;
-        name: string | null;
         id: string;
+        name: string | null;
         createdAt: Date;
         updatedAt: Date;
         tenantId: string;
         time: string;
         createdById: string;
+        isActive: boolean;
         recipients: string[];
         reportType: string;
         frequency: string;
@@ -32,14 +32,14 @@ export declare class ReportsController {
         nextRunAt: Date | null;
     }>;
     listSchedules(req: any): Promise<{
-        isActive: boolean;
-        name: string | null;
         id: string;
+        name: string | null;
         createdAt: Date;
         updatedAt: Date;
         tenantId: string;
         time: string;
         createdById: string;
+        isActive: boolean;
         recipients: string[];
         reportType: string;
         frequency: string;
@@ -49,14 +49,14 @@ export declare class ReportsController {
         nextRunAt: Date | null;
     }[]>;
     getSchedule(req: any, id: string): Promise<{
-        isActive: boolean;
-        name: string | null;
         id: string;
+        name: string | null;
         createdAt: Date;
         updatedAt: Date;
         tenantId: string;
         time: string;
         createdById: string;
+        isActive: boolean;
         recipients: string[];
         reportType: string;
         frequency: string;
@@ -69,14 +69,14 @@ export declare class ReportsController {
         success: boolean;
     }>;
     toggleSchedule(req: any, id: string): Promise<{
-        isActive: boolean;
-        name: string | null;
         id: string;
+        name: string | null;
         createdAt: Date;
         updatedAt: Date;
         tenantId: string;
         time: string;
         createdById: string;
+        isActive: boolean;
         recipients: string[];
         reportType: string;
         frequency: string;
