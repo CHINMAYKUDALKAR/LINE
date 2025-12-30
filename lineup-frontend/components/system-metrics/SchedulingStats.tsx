@@ -20,28 +20,28 @@ export function SchedulingStats({ data, isLoading }: SchedulingStatsProps) {
             description: "Scheduled for today",
         },
         {
-            title: "Rescheduled Today",
+            title: "Rescheduled",
             value: data?.rescheduledToday ?? 0,
             icon: RefreshCw,
             color: "text-yellow-500",
-            description: "Interviews moved",
+            description: "Interviews moved today",
         },
         {
-            title: "Cancelled Today",
+            title: "Cancelled",
             value: data?.cancelledToday ?? 0,
             icon: XCircle,
             color: data && data.cancelledToday > 0 ? "text-red-500" : "text-muted-foreground",
-            description: "Interviews cancelled",
+            description: "Interviews cancelled today",
         },
         {
-            title: "Availability Engine",
+            title: "Availability Avg",
             value: data ? `${data.availabilityEngineAvgMs}ms` : "-",
             icon: Timer,
             color: "text-green-500",
             description: "Avg response time",
         },
         {
-            title: "Avg Time to First Interview",
+            title: "Time to Interview",
             value: data ? `${data.avgTimeToFirstInterviewHours.toFixed(1)}h` : "-",
             icon: Clock,
             color: "text-purple-500",
@@ -54,7 +54,7 @@ export function SchedulingStats({ data, isLoading }: SchedulingStatsProps) {
             {cards.map((card) => (
                 <Card key={card.title}>
                     <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-                        <CardTitle className="text-sm font-medium text-muted-foreground">
+                        <CardTitle className="text-sm font-medium text-muted-foreground truncate pr-2">
                             {card.title}
                         </CardTitle>
                         <card.icon className={`h-4 w-4 ${card.color}`} />

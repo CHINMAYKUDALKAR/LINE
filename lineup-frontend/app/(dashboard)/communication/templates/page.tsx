@@ -21,7 +21,10 @@ import {
 } from 'lucide-react';
 import { useTemplates, useDeleteTemplate, useDuplicateTemplate, usePreviewTemplate } from '@/lib/hooks/useCommunication';
 import type { Channel, MessageTemplate } from '@/lib/api/communication';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 const channelIcon: Record<Channel, any> = {
     EMAIL: Mail,
@@ -51,6 +54,11 @@ function TemplatesContent() {
     const [previewOpen, setPreviewOpen] = useState(false);
     const [previewContent, setPreviewContent] = useState<{ subject: string; body: string } | null>(null);
 
+    // Duplicate dialog state
+    const [duplicateDialogOpen, setDuplicateDialogOpen] = useState(false);
+    const [duplicateTemplateId, setDuplicateTemplateId] = useState<string | null>(null);
+    const [duplicateName, setDuplicateName] = useState('');
+
     const { data: templates, isLoading, error, refetch } = useTemplates(channelFilter);
     const deleteMutation = useDeleteTemplate();
     const duplicateMutation = useDuplicateTemplate();
@@ -61,10 +69,18 @@ function TemplatesContent() {
         await deleteMutation.mutateAsync(id);
     };
 
-    const handleDuplicate = async (id: string) => {
-        const newName = prompt('Enter name for the duplicated template:');
-        if (!newName) return;
-        await duplicateMutation.mutateAsync({ id, name: newName });
+    const openDuplicateDialog = (id: string) => {
+        setDuplicateTemplateId(id);
+        setDuplicateName('');
+        setDuplicateDialogOpen(true);
+    };
+
+    const handleDuplicate = async () => {
+        if (!duplicateTemplateId || !duplicateName.trim()) return;
+        await duplicateMutation.mutateAsync({ id: duplicateTemplateId, name: duplicateName.trim() });
+        setDuplicateDialogOpen(false);
+        setDuplicateTemplateId(null);
+        setDuplicateName('');
     };
 
     const handlePreview = async (template: MessageTemplate) => {
@@ -234,7 +250,7 @@ function TemplatesContent() {
                                                         <Eye className="w-4 h-4" />
                                                     </button>
                                                     <button
-                                                        onClick={() => handleDuplicate(template.id)}
+                                                        onClick={() => openDuplicateDialog(template.id)}
                                                         className="p-1.5 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded"
                                                         title="Duplicate"
                                                     >
@@ -295,6 +311,51 @@ function TemplatesContent() {
                             />
                         </div>
                     </div>
+                </DialogContent>
+            </Dialog>
+
+            {/* Duplicate Template Dialog */}
+            <Dialog open={duplicateDialogOpen} onOpenChange={setDuplicateDialogOpen}>
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>Duplicate Template</DialogTitle>
+                        <DialogDescription>
+                            Enter a name for the duplicated template.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="py-4">
+                        <Label htmlFor="duplicate-name" className="text-sm font-medium">
+                            Template Name
+                        </Label>
+                        <Input
+                            id="duplicate-name"
+                            value={duplicateName}
+                            onChange={(e) => setDuplicateName(e.target.value)}
+                            placeholder="Enter template name..."
+                            className="mt-2"
+                            autoFocus
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter' && duplicateName.trim()) {
+                                    handleDuplicate();
+                                }
+                            }}
+                        />
+                    </div>
+                    <DialogFooter className="gap-2">
+                        <Button variant="outline" onClick={() => setDuplicateDialogOpen(false)}>
+                            Cancel
+                        </Button>
+                        <Button
+                            onClick={handleDuplicate}
+                            disabled={!duplicateName.trim() || duplicateMutation.isPending}
+                        >
+                            {duplicateMutation.isPending ? (
+                                <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Duplicating...</>
+                            ) : (
+                                'Duplicate'
+                            )}
+                        </Button>
+                    </DialogFooter>
                 </DialogContent>
             </Dialog>
         </div>

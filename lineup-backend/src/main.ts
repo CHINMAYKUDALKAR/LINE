@@ -84,6 +84,20 @@ async function bootstrap() {
   await app.listen(port, host);
   console.log(`Application is running on: http://${host}:${port}`);
   console.log(`API Documentation: http://localhost:${port}/api/docs`);
+
+  // Show mobile access URL in development
+  if (isDev) {
+    const { networkInterfaces } = await import('os');
+    const nets = networkInterfaces();
+    for (const name of Object.keys(nets)) {
+      for (const net of nets[name] || []) {
+        if (net.family === 'IPv4' && !net.internal) {
+          console.log(`📱 Mobile Access: http://${net.address}:${port}`);
+          break;
+        }
+      }
+    }
+  }
 }
 
 bootstrap();

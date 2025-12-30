@@ -6,10 +6,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { cn } from '@/lib/utils';
-import { ArrowRight, Plus, Trash2, HelpCircle, CheckCircle, AlertTriangle, Loader2, Wand2 } from 'lucide-react';
+import { ArrowRight, Plus, Trash2, HelpCircle, CheckCircle, AlertTriangle, Loader2, Wand2, Sparkles, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface FieldMappingPanelProps {
   integrationId: string;
@@ -144,46 +145,64 @@ export function FieldMappingPanel({ integrationId, provider }: FieldMappingPanel
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between pb-2">
         <div>
-          <h3 className="font-semibold text-foreground">Field Mapping</h3>
+          <h3 className="font-semibold text-foreground text-lg">Field Mapping</h3>
           <p className="text-sm text-muted-foreground">Map source fields to target fields</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={handleAutoMap}>
-            <Wand2 className="mr-2 h-4 w-4" />
+          <Button variant="outline" size="sm" onClick={handleAutoMap} className="hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-200 transition-colors">
+            <Sparkles className="mr-2 h-3.5 w-3.5" />
             Auto-Map
           </Button>
-          <Button variant="outline" size="sm" onClick={handleAddMapping}>
+          <Button size="sm" onClick={handleAddMapping}>
             <Plus className="mr-2 h-4 w-4" />
             Add Mapping
           </Button>
         </div>
       </div>
 
-      {validationResult && !validationResult.valid && (
-        <Alert variant="destructive">
-          <AlertTriangle className="h-4 w-4" />
-          <AlertDescription>
-            <ul className="list-disc list-inside space-y-1">
-              {validationResult.errors.map((err, i) => (
-                <li key={i}>{err}</li>
-              ))}
-            </ul>
-          </AlertDescription>
-        </Alert>
-      )}
+      <AnimatePresence>
+        {validationResult && !validationResult.valid && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="overflow-hidden"
+          >
+            <Alert variant="destructive" className="mb-4">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Mapping Issues</AlertTitle>
+              <AlertDescription>
+                <ul className="list-disc list-inside space-y-1 mt-1">
+                  {validationResult.errors.map((err, i) => (
+                    <li key={i}>{err}</li>
+                  ))}
+                </ul>
+              </AlertDescription>
+            </Alert>
+          </motion.div>
+        )}
 
-      {validationResult?.valid && (
-        <Alert className="border-emerald-200 bg-emerald-50 text-emerald-800">
-          <CheckCircle className="h-4 w-4 text-emerald-600" />
-          <AlertDescription>All field mappings are valid and ready for sync.</AlertDescription>
-        </Alert>
-      )}
+        {validationResult?.valid && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="overflow-hidden"
+          >
+            <Alert className="mb-4 border-emerald-200 bg-emerald-50 text-emerald-800 dark:bg-emerald-900/20 dark:border-emerald-900">
+              <CheckCircle className="h-4 w-4 text-emerald-600" />
+              <AlertTitle>All Good!</AlertTitle>
+              <AlertDescription>All field mappings are valid and ready for sync.</AlertDescription>
+            </Alert>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-      <div className="space-y-3">
+      <div className="space-y-4">
         {/* Header */}
-        <div className="grid grid-cols-[1fr,40px,1fr,120px,40px] gap-2 px-2 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+        <div className="grid grid-cols-[1fr,32px,1fr,120px,32px] gap-3 px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
           <span>Source Field</span>
           <span></span>
           <span>Target Field</span>
@@ -192,89 +211,112 @@ export function FieldMappingPanel({ integrationId, provider }: FieldMappingPanel
         </div>
 
         {/* Mappings */}
-        {mappings.map((mapping) => (
-          <div
-            key={mapping.id}
-            className={cn(
-              "grid grid-cols-[1fr,40px,1fr,120px,40px] gap-2 items-center p-2 rounded-lg border",
-              mapping.validated ? "border-emerald-200 bg-emerald-50/50" : "border-border"
-            )}
-          >
-            <Select value={mapping.sourceField} onValueChange={(v) => handleSourceChange(mapping.id, v)}>
-              <SelectTrigger className="h-9">
-                <SelectValue placeholder="Select source..." />
-              </SelectTrigger>
-              <SelectContent>
-                {sourceFields.map((field) => (
-                  <SelectItem key={field.name} value={field.name}>
-                    <div className="flex items-center gap-2">
-                      <span>{field.label}</span>
-                      <Badge variant="outline" className="text-[10px] px-1 py-0">{field.type}</Badge>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <div className="flex justify-center">
-              <ArrowRight className="h-4 w-4 text-muted-foreground" />
-            </div>
-
-            <Select value={mapping.targetField} onValueChange={(v) => handleTargetChange(mapping.id, v)}>
-              <SelectTrigger className="h-9">
-                <SelectValue placeholder="Select target..." />
-              </SelectTrigger>
-              <SelectContent>
-                {targetFields.map((field) => (
-                  <SelectItem key={field.name} value={field.name}>
-                    <div className="flex items-center gap-2">
-                      <span>{field.label}</span>
-                      {field.required && <span className="text-destructive">*</span>}
-                      <Badge variant="outline" className="text-[10px] px-1 py-0">{field.type}</Badge>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <div className="relative">
-              <Input
-                placeholder="Transform"
-                value={mapping.transform || ''}
-                onChange={(e) => handleTransformChange(mapping.id, e.target.value)}
-                className="h-9 text-sm pr-7"
-              />
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <HelpCircle className="absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground cursor-help" />
-                </TooltipTrigger>
-                <TooltipContent className="max-w-xs">
-                  <p>Optional transform rule (e.g., UPPERCASE, DATE_FORMAT, LOOKUP_MAP)</p>
-                </TooltipContent>
-              </Tooltip>
-            </div>
-
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-9 w-9 p-0 text-muted-foreground hover:text-destructive"
-              onClick={() => handleRemoveMapping(mapping.id)}
+        <AnimatePresence initial={false}>
+          {mappings.map((mapping) => (
+            <motion.div
+              key={mapping.id}
+              layout
+              initial={{ opacity: 0, scale: 0.98 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className={cn(
+                "group grid grid-cols-[1fr,32px,1fr,120px,32px] gap-3 items-center p-3 rounded-xl border bg-card hover:shadow-sm transition-all",
+                mapping.validated ? "border-emerald-200/50 bg-emerald-50/30 dark:bg-emerald-900/10" : "border-border/50"
+              )}
             >
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          </div>
-        ))}
+              <div>
+                <Select value={mapping.sourceField} onValueChange={(v) => handleSourceChange(mapping.id, v)}>
+                  <SelectTrigger className="h-10 border-transparent bg-muted/30 group-hover:bg-muted/50 focus:bg-background transition-colors">
+                    <SelectValue placeholder="Select source..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {sourceFields.map((field) => (
+                      <SelectItem key={field.name} value={field.name}>
+                        <div className="flex items-center gap-2">
+                          <span>{field.label}</span>
+                          <Badge variant="secondary" className="text-[10px] px-1 py-0 h-4 font-mono">{field.type}</Badge>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex justify-center">
+                <ArrowRight className="h-4 w-4 text-muted-foreground/50" />
+              </div>
+
+              <div>
+                <Select value={mapping.targetField} onValueChange={(v) => handleTargetChange(mapping.id, v)}>
+                  <SelectTrigger className="h-10 border-transparent bg-muted/30 group-hover:bg-muted/50 focus:bg-background transition-colors">
+                    <SelectValue placeholder="Select target..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {targetFields.map((field) => (
+                      <SelectItem key={field.name} value={field.name}>
+                        <div className="flex items-center gap-2">
+                          <span>{field.label}</span>
+                          {field.required && <span className="text-red-500 font-bold">*</span>}
+                          <Badge variant="secondary" className="text-[10px] px-1 py-0 h-4 font-mono">{field.type}</Badge>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="relative">
+                <Input
+                  placeholder="None"
+                  value={mapping.transform || ''}
+                  onChange={(e) => handleTransformChange(mapping.id, e.target.value)}
+                  className="h-10 text-sm pr-7 border-transparent bg-muted/30 group-hover:bg-muted/50 focus:bg-background transition-colors text-center font-mono"
+                />
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <HelpCircle className="absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/50 cursor-help" />
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-xs">
+                    <p>Optional transform rule (e.g., UPPERCASE, DATE_FORMAT)</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive hover:bg-red-50 dark:hover:bg-red-900/20 opacity-0 group-hover:opacity-100 transition-all rounded-lg"
+                onClick={() => handleRemoveMapping(mapping.id)}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </motion.div>
+          ))}
+        </AnimatePresence>
 
         {mappings.length === 0 && (
-          <div className="text-center py-8 text-muted-foreground">
-            <p className="text-sm">No field mappings configured.</p>
-            <p className="text-xs mt-1">Click "Add Mapping" or "Auto-Map" to get started.</p>
-          </div>
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="flex flex-col items-center justify-center py-12 text-center border-2 border-dashed border-border/50 rounded-xl bg-muted/5"
+          >
+            <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-3">
+              <Wand2 className="h-6 w-6 text-muted-foreground" />
+            </div>
+            <p className="text-sm font-medium">No fields mapped yet</p>
+            <p className="text-xs text-muted-foreground max-w-xs mt-1 mb-4">
+              Map your data fields manually or let AI auto-discover matching fields.
+            </p>
+            <Button variant="secondary" size="sm" onClick={handleAutoMap}>
+              <Sparkles className="mr-2 h-3.5 w-3.5" />
+              Auto-Map Fields
+            </Button>
+          </motion.div>
         )}
       </div>
 
-      <div className="flex justify-end gap-2 pt-4 border-t border-border">
-        <Button variant="outline" size="sm" onClick={handleValidate} disabled={isValidating}>
+      <div className="flex justify-end gap-3 pt-6 border-t border-border mt-8">
+        <Button variant="outline" onClick={handleValidate} disabled={isValidating}>
           {isValidating ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -287,8 +329,8 @@ export function FieldMappingPanel({ integrationId, provider }: FieldMappingPanel
             </>
           )}
         </Button>
-        <Button size="sm" disabled={!validationResult?.valid}>
-          Save Mappings
+        <Button disabled={!validationResult?.valid}>
+          Save Settings
         </Button>
       </div>
     </div>

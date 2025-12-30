@@ -63,19 +63,22 @@ export default function TenantSettings() {
         {/* Content */}
         <motion.div variants={staggerItem} className="w-full p-4 md:px-8 md:py-8">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="flex flex-wrap h-auto gap-2 p-1 bg-muted/40 backdrop-blur-sm border border-border/50 mb-8 rounded-lg">
-              <TabsTrigger value="branding" className="flex-1 min-w-[120px] py-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">Branding</TabsTrigger>
-              <TabsTrigger value="domain" className="flex-1 min-w-[120px] py-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">Domain & URLs</TabsTrigger>
-              <TabsTrigger value="auth" className="flex-1 min-w-[120px] py-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">Auth & SSO</TabsTrigger>
-              <TabsTrigger value="security" className="flex-1 min-w-[120px] py-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">Security</TabsTrigger>
-              <TabsTrigger value="email" className="flex-1 min-w-[120px] py-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">Email/SMTP</TabsTrigger>
-              <TabsTrigger value="calendar" className="flex-1 min-w-[120px] py-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">Calendar</TabsTrigger>
-              <TabsTrigger value="hiring-stages" className="flex-1 min-w-[120px] py-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">Hiring Stages</TabsTrigger>
-              <TabsTrigger value="api-keys" className="flex-1 min-w-[120px] py-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">API Keys</TabsTrigger>
-              <TabsTrigger value="audit" className="flex-1 min-w-[120px] py-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">Audit Logs</TabsTrigger>
-            </TabsList>
+            {/* Scrollable tabs container for mobile */}
+            <div className="overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0 scrollbar-thin scrollbar-thumb-muted">
+              <TabsList className="inline-flex w-max md:flex md:flex-wrap md:w-full h-auto gap-1 md:gap-2 p-1 bg-muted/40 backdrop-blur-sm border border-border/50 mb-6 md:mb-8 rounded-lg">
+                <TabsTrigger value="branding" className="px-3 py-1.5 text-xs md:text-sm md:flex-1 md:min-w-[100px] md:py-2 whitespace-nowrap data-[state=active]:bg-background data-[state=active]:shadow-sm">Branding</TabsTrigger>
+                <TabsTrigger value="domain" className="px-3 py-1.5 text-xs md:text-sm md:flex-1 md:min-w-[100px] md:py-2 whitespace-nowrap data-[state=active]:bg-background data-[state=active]:shadow-sm">Domain</TabsTrigger>
+                <TabsTrigger value="auth" className="px-3 py-1.5 text-xs md:text-sm md:flex-1 md:min-w-[100px] md:py-2 whitespace-nowrap data-[state=active]:bg-background data-[state=active]:shadow-sm">Auth/SSO</TabsTrigger>
+                <TabsTrigger value="security" className="px-3 py-1.5 text-xs md:text-sm md:flex-1 md:min-w-[100px] md:py-2 whitespace-nowrap data-[state=active]:bg-background data-[state=active]:shadow-sm">Security</TabsTrigger>
+                <TabsTrigger value="email" className="px-3 py-1.5 text-xs md:text-sm md:flex-1 md:min-w-[100px] md:py-2 whitespace-nowrap data-[state=active]:bg-background data-[state=active]:shadow-sm">Email</TabsTrigger>
+                <TabsTrigger value="calendar" className="px-3 py-1.5 text-xs md:text-sm md:flex-1 md:min-w-[100px] md:py-2 whitespace-nowrap data-[state=active]:bg-background data-[state=active]:shadow-sm">Calendar</TabsTrigger>
+                <TabsTrigger value="hiring-stages" className="px-3 py-1.5 text-xs md:text-sm md:flex-1 md:min-w-[100px] md:py-2 whitespace-nowrap data-[state=active]:bg-background data-[state=active]:shadow-sm">Stages</TabsTrigger>
+                <TabsTrigger value="api-keys" className="px-3 py-1.5 text-xs md:text-sm md:flex-1 md:min-w-[100px] md:py-2 whitespace-nowrap data-[state=active]:bg-background data-[state=active]:shadow-sm">API Keys</TabsTrigger>
+                <TabsTrigger value="audit" className="px-3 py-1.5 text-xs md:text-sm md:flex-1 md:min-w-[100px] md:py-2 whitespace-nowrap data-[state=active]:bg-background data-[state=active]:shadow-sm">Audit</TabsTrigger>
+              </TabsList>
+            </div>
 
-            <div className="bg-card/40 backdrop-blur-sm border border-border/50 rounded-xl p-6 shadow-sm">
+            <div className="bg-card/40 backdrop-blur-sm border border-border/50 rounded-xl p-4 md:p-6 shadow-sm">
               <TabsContent value="branding" className="mt-0">
                 <BrandingTab />
               </TabsContent>

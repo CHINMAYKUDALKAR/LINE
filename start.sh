@@ -88,8 +88,19 @@ echo -e "   ${BLUE}Backend${NC}:      http://localhost:3001"
 echo -e "   ${BLUE}API Docs${NC}:     http://localhost:3001/api/docs"
 echo -e "   ${BLUE}MinIO Console${NC}: http://localhost:9001  (minioadmin/minioadmin)"
 echo ""
+
+# Get local IP for mobile access
+LOCAL_IP=$(ipconfig getifaddr en0 2>/dev/null || ipconfig getifaddr en1 2>/dev/null || hostname -I 2>/dev/null | awk '{print $1}')
+if [ -n "$LOCAL_IP" ]; then
+    echo -e "${YELLOW}📱 Mobile Access (same WiFi): ${BLUE}http://${LOCAL_IP}:3000${NC}"
+    echo ""
+fi
+
 echo -e "${YELLOW}Press Ctrl+C to stop all services${NC}"
 echo -e "${GREEN}════════════════════════════════════════════════════════${NC}"
+echo ""
+# Small pause so user can see the URLs
+sleep 2
 
 # Trap Ctrl+C to cleanup
 cleanup() {

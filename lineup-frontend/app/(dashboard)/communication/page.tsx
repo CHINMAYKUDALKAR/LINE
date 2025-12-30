@@ -197,20 +197,20 @@ export default function CommunicationOverviewPage() {
             </div>
 
             {/* Quick Actions */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
                 {quickActions.map((action) => (
                     <Link
                         key={action.label}
                         href={action.href}
                         className={cn(
-                            "flex items-center gap-3 p-4 rounded-xl border border-slate-200 transition-all duration-200",
-                            "hover:shadow-md hover:border-blue-200 bg-white group"
+                            "flex items-center gap-2 md:gap-3 p-3 md:p-4 rounded-xl border border-slate-200 transition-all duration-200",
+                            "hover:shadow-md hover:border-blue-200 bg-white group min-w-0"
                         )}
                     >
-                        <div className={cn("p-2.5 rounded-lg transition-colors duration-200", action.bg, action.hover)}>
-                            <action.icon className={cn("w-5 h-5", action.color)} />
+                        <div className={cn("p-2 md:p-2.5 rounded-lg transition-colors duration-200 shrink-0", action.bg, action.hover)}>
+                            <action.icon className={cn("w-4 h-4 md:w-5 md:h-5", action.color)} />
                         </div>
-                        <span className="font-medium text-slate-700 group-hover:text-slate-900">{action.label}</span>
+                        <span className="font-medium text-slate-700 group-hover:text-slate-900 text-xs md:text-sm truncate">{action.label}</span>
                     </Link>
                 ))}
             </div>

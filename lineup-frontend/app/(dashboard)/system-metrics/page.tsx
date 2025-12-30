@@ -63,11 +63,11 @@ export default function SystemMetricsPage() {
 
             {/* Tabbed Sections */}
             <Tabs defaultValue="queues" className="space-y-4">
-                <TabsList className="flex flex-wrap h-auto gap-2 w-full max-w-full bg-muted/50 p-1">
-                    <TabsTrigger value="queues" className="flex-1 min-w-[100px]">Queues</TabsTrigger>
-                    <TabsTrigger value="communication" className="flex-1 min-w-[100px]">Communication</TabsTrigger>
-                    <TabsTrigger value="scheduling" className="flex-1 min-w-[100px]">Scheduling</TabsTrigger>
-                    <TabsTrigger value="tenants" className="flex-1 min-w-[100px]">Tenants</TabsTrigger>
+                <TabsList className="w-full h-auto p-1 bg-muted/50 grid grid-cols-2 sm:grid-cols-4 gap-1">
+                    <TabsTrigger value="queues" className="text-xs sm:text-sm">Queues</TabsTrigger>
+                    <TabsTrigger value="communication" className="text-xs sm:text-sm">Communication</TabsTrigger>
+                    <TabsTrigger value="scheduling" className="text-xs sm:text-sm">Scheduling</TabsTrigger>
+                    <TabsTrigger value="tenants" className="text-xs sm:text-sm">Tenants</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="queues" className="space-y-4">

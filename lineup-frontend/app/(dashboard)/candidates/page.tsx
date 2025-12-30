@@ -426,9 +426,9 @@ export default function Candidates() {
                     )}
 
                     {/* Pagination Controls */}
-                    <div className="mt-4 flex items-center justify-between">
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                            <span>Show</span>
+                    <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+                        <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+                            <span className="hidden sm:inline">Show</span>
                             <select
                                 value={perPage}
                                 onChange={(e) => {
@@ -436,16 +436,16 @@ export default function Candidates() {
                                     setPerPage(val === 'all' ? 'all' : Number(val));
                                     setPage(1);
                                 }}
-                                className="h-8 rounded-md border border-input bg-background px-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                                className="h-8 w-16 rounded-md border border-input bg-background px-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                             >
                                 <option value={25}>25</option>
                                 <option value={50}>50</option>
                                 <option value={100}>100</option>
                                 <option value="all">All</option>
                             </select>
-                            <span>per page</span>
+                            <span className="hidden sm:inline">per page</span>
                             {candidatesData?.meta && (
-                                <span className="ml-2">
+                                <span className="text-xs sm:text-sm">
                                     ({candidatesData.meta.total} total)
                                 </span>
                             )}
