@@ -157,9 +157,9 @@ export function IntegrationDetailPanel({ integration, isOpen, onClose, onUpdate,
                       )} />
                       {status.label}
                     </Badge>
-                    {isConnected && integration.lastConnectedAt && (
+                    {isConnected && integration.lastSyncAt && (
                       <span className="text-xs text-muted-foreground">
-                        Last sync: {new Date(integration.lastConnectedAt).toLocaleDateString()}
+                        Last sync: {new Date(integration.lastSyncAt).toLocaleDateString()}
                       </span>
                     )}
                   </div>

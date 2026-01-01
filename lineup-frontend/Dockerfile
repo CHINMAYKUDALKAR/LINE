@@ -54,15 +54,9 @@ RUN addgroup --system --gid 1001 nodejs && \
 # Copy public assets
 COPY --from=builder /app/public ./public
 
-# Copy standalone build (if using standalone output)
-# Uncomment below if next.config.js has output: 'standalone'
-# COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
-# COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
-
-# For standard output, copy the full .next directory
-COPY --from=builder --chown=nextjs:nodejs /app/.next ./.next
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules ./node_modules
-COPY --from=builder --chown=nextjs:nodejs /app/package.json ./package.json
+# Copy standalone build (Next.js standalone output)
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
 # Switch to non-root user
 USER nextjs
@@ -74,5 +68,5 @@ EXPOSE 3001
 HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
     CMD wget --no-verbose --tries=1 --spider http://localhost:3001 || exit 1
 
-# Start the application
-CMD ["npm", "run", "start"]
+# Start the standalone application
+CMD ["node", "server.js"]

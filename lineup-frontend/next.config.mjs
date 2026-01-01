@@ -1,5 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Enable standalone output for Docker deployment
+  output: 'standalone',
   reactCompiler: true,
 
   // Production optimizations
@@ -24,8 +26,6 @@ const nextConfig = {
 
   // Experimental features
   experimental: {
-    allowedDevOrigins: ["0.0.0.0:3000", "192.168.29.236:3000", "localhost:3000"],
-    optimizeCss: true,
     scrollRestoration: true,
   },
 
