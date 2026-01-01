@@ -63,6 +63,8 @@ jobs:
         run: npx prisma generate
 
       - name: Validate Prisma Schema
+        env:
+          DATABASE_URL: postgresql://test:test@localhost:5432/lineup_test
         run: npx prisma validate
 
       - name: Check for pending migrations
