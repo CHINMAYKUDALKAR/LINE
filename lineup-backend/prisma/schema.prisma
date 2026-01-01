@@ -235,10 +235,29 @@ model Candidate {
   stageHistory   CandidateStageHistory[]
   opportunityLinks CandidateOpportunity[]  // Links to HubSpot Deals / Salesforce Opportunities
   externalFeedback ExternalFeedbackContext[] // Historical feedback from ATS systems (read-only)
+  portalTokens   CandidatePortalToken[]    // Portal access tokens
 
   @@unique([tenantId, externalId, externalSource], name: "unique_external_candidate")
   @@index([tenantId, createdAt], name: "idx_candidate_tenant_created")
   @@index([tenantId, externalId], name: "idx_candidate_external")
+}
+
+// Secure portal access tokens for candidates to view their application status
+model CandidatePortalToken {
+  id          String    @id @default(cuid())
+  tenantId    String
+  candidateId String
+  tokenHash   String    @unique
+  expiresAt   DateTime
+  lastUsedAt  DateTime?
+  createdAt   DateTime  @default(now())
+  revokedAt   DateTime?
+
+  candidate   Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+
+  @@index([candidateId])
+  @@index([tokenHash])
+  @@index([tenantId, expiresAt])
 }
 
 // Track all candidate stage transitions for audit trail
@@ -1112,3 +1131,193 @@ model UserCustomRole {
   @@index([roleId])
   @@index([tenantId])
 }
+
+// ============================================
+// SYSTEM STATUS / HEALTH MONITORING
+// ============================================
+
+model SystemComponent {
+  id           String   @id @default(cuid())
+  key          String   @unique  // 'api', 'database', 'redis', 'calendar', etc.
+  name         String   // Display name: "API Server"
+  description  String?
+  category     String?  // 'core', 'integration', 'communication'
+  order        Int      @default(0)  // Display order
+  isMonitored  Boolean  @default(true)
+  
+  // Manual status override (null = use calculated status)
+  statusOverride    ComponentStatus?
+  statusOverrideBy  String?
+  statusOverrideAt  DateTime?
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  healthChecks HealthCheckResult[]
+  incidents    IncidentComponent[]
+
+  @@index([isMonitored])
+}
+
+model HealthCheckResult {
+  id            String    @id @default(cuid())
+  componentId   String
+  component     SystemComponent @relation(fields: [componentId], references: [id], onDelete: Cascade)
+  
+  status        ComponentStatus  // OPERATIONAL, DEGRADED, PARTIAL_OUTAGE, MAJOR_OUTAGE
+  latencyMs     Int?             // Response time if applicable
+  message       String?          // Error message or details
+  metadata      Json?            // Additional check-specific data
+  
+  checkedAt     DateTime @default(now())
+
+  @@index([componentId, checkedAt])
+  @@index([checkedAt])
+}
+
+enum ComponentStatus {
+  OPERATIONAL
+  DEGRADED
+  PARTIAL_OUTAGE
+  MAJOR_OUTAGE
+  MAINTENANCE
+}
+
+model Incident {
+  id           String          @id @default(cuid())
+  title        String
+  status       IncidentStatus  @default(INVESTIGATING)
+  severity     IncidentSeverity @default(MINOR)
+  
+  startedAt    DateTime        @default(now())
+  resolvedAt   DateTime?
+  
+  createdById  String?         // Admin who created it
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
+  components   IncidentComponent[]
+  updates      IncidentUpdate[]
+
+  @@index([status, startedAt])
+  @@index([startedAt])
+}
+
+model IncidentComponent {
+  id           String          @id @default(cuid())
+  incidentId   String
+  incident     Incident        @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  componentId  String
+  component    SystemComponent @relation(fields: [componentId], references: [id], onDelete: Cascade)
+  impactLevel  ComponentStatus // How this component is affected
+
+  @@unique([incidentId, componentId])
+  @@index([componentId])
+}
+
+model IncidentUpdate {
+  id           String          @id @default(cuid())
+  incidentId   String
+  incident     Incident        @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  
+  status       IncidentStatus
+  message      String          @db.Text
+  createdById  String?
+  createdAt    DateTime        @default(now())
+
+  @@index([incidentId, createdAt])
+}
+
+enum IncidentStatus {
+  INVESTIGATING
+  IDENTIFIED
+  MONITORING
+  RESOLVED
+}
+
+enum IncidentSeverity {
+  MINOR       // Minimal impact
+  MAJOR       // Significant impact
+  CRITICAL    // System-wide outage
+}
+
+// ============================================
+// PENDING APPROVALS / OPERATIONS GOVERNANCE
+// ============================================
+
+model ApprovalRequest {
+  id                   String             @id @default(cuid())
+  tenantId             String
+  entityType           ApprovalEntityType @default(CANDIDATE)
+  
+  // Approval workflow
+  approvalStatus       ApprovalStatus     @default(PENDING)
+  submissionStatus     String?            // "Submission Pending", etc.
+  
+  // Recruiter info
+  recruiterId          String?
+  recruiterName        String?
+  
+  // Candidate/Entity info
+  candidateId          String?
+  candidateFirstName   String?
+  candidateLastName    String?
+  candidateEmail       String?
+  
+  // Job/Interview context
+  interviewId          String?
+  interviewDate        DateTime?
+  clientName           String?
+  positionAppliedFor   String?
+  
+  // Approval tracking
+  approvedBy           String?
+  approvedAt           DateTime?
+  rejectedBy           String?
+  rejectedAt           DateTime?
+  remarks              String?
+  
+  // Metadata for extensibility
+  metadata             Json?
+  
+  submittedAt          DateTime           @default(now())
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+
+  @@index([tenantId, approvalStatus])
+  @@index([tenantId, submittedAt])
+  @@index([tenantId, interviewDate])
+}
+
+enum ApprovalEntityType {
+  CANDIDATE
+  SUBMISSION
+  JOB
+  OTHER
+}
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+// ============================================
+// MANUAL SUBMISSION RUNS (AUDIT LOGGING)
+// ============================================
+
+model SubmissionRun {
+  id              String    @id @default(cuid())
+  tenantId        String
+  triggeredBy     String    // User ID who triggered the run
+  triggeredAt     DateTime  @default(now())
+  totalScanned    Int
+  totalSubmitted  Int
+  totalSkipped    Int
+  errors          Json?     // Array of error objects: { interviewId, reason }
+  remarks         String?   // Optional remarks from the user
+  completedAt     DateTime?
+
+  @@index([tenantId, triggeredAt])
+}
+

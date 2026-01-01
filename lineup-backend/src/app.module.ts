@@ -32,6 +32,10 @@ import { TenantsModule } from './modules/tenants/tenants.module';
 import { AdminConsoleModule } from './modules/admin-console/admin-console.module';
 import { UsageModule } from './modules/usage/usage.module';
 import { RolesModule } from './modules/roles/roles.module';
+import { CandidatePortalModule } from './modules/candidate-portal/candidate-portal.module';
+import { SystemStatusModule } from './modules/system-status/system-status.module';
+import { ApprovalsModule } from './modules/approvals/approvals.module';
+import { SubmissionsModule } from './modules/submissions/submissions.module';
 import { HealthController } from './common/health.controller';
 import { S3Service } from './common/s3.service';
 import { PrismaService } from './common/prisma.service';
@@ -75,6 +79,10 @@ import { IPAllowlistGuard } from './common/ip-allowlist.guard';
     AdminConsoleModule,
     UsageModule,
     RolesModule,
+    CandidatePortalModule,
+    SystemStatusModule,
+    ApprovalsModule,
+    SubmissionsModule,
   ],
   controllers: [HealthController],
   providers: [

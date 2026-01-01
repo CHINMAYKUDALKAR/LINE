@@ -72,6 +72,16 @@ export class StorageController {
         return this.storageService.streamFile(req.user.tenantId, id, req.user);
     }
 
+    @Get(':id/download-url')
+    @Roles('ADMIN', 'MANAGER', 'RECRUITER', 'INTERVIEWER')
+    @ApiOperation({ summary: 'Get presigned download URL for a file' })
+    @ApiParam({ name: 'id', description: 'File ID' })
+    @ApiResponse({ status: 200, description: 'Presigned download URL', schema: { example: { url: 'https://...' } } })
+    @ApiResponse({ status: 404, description: 'File not found' })
+    getDownloadUrl(@Req() req: any, @Param('id') id: string) {
+        return this.storageService.getDownloadUrl(req.user.tenantId, id);
+    }
+
     @Get(':id/versions')
     @Roles('ADMIN', 'MANAGER', 'RECRUITER')
     @ApiOperation({ summary: 'List all versions of a file' })

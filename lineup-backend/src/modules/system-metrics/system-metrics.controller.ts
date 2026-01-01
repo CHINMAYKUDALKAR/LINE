@@ -11,7 +11,7 @@ import { IntegrationMetricsService } from './services/integration-metrics.servic
 
 @Controller('api/v1/system-metrics')
 @UseGuards(JwtAuthGuard, RbacGuard)
-@Roles('SUPERADMIN') // System-wide metrics require SUPERADMIN
+@Roles('ADMIN', 'SUPERADMIN') // System-wide metrics accessible to ADMIN and SUPERADMIN
 export class SystemMetricsController {
     constructor(
         private platformMetrics: PlatformMetricsService,

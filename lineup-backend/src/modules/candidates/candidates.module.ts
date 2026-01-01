@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { CandidatesService } from './candidates.service';
 import { CandidatesController } from './candidates.controller';
 import { CandidateImportProcessor } from './processors/candidate-import.processor';
@@ -13,6 +13,7 @@ import { StorageModule } from '../storage/storage.module';
 import { BullModule } from '@nestjs/bullmq';
 import { RecycleBinModule } from '../recycle-bin/recycle-bin.module';
 import { IntegrationsModule } from '../integrations/integrations.module';
+import { CandidatePortalModule } from '../candidate-portal/candidate-portal.module';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { IntegrationsModule } from '../integrations/integrations.module';
     EmailModule,
     StorageModule,
     IntegrationsModule,
+    forwardRef(() => CandidatePortalModule),
   ],
   controllers: [CandidatesController],
   providers: [CandidatesService, StageTransitionService, ResumeParserService, PrismaService, S3Service, CandidateImportProcessor],

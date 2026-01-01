@@ -1,12 +1,12 @@
 import { Controller, Get, Post, Delete, Param, Query, Request, UseGuards } from '@nestjs/common';
 import { RecycleBinService } from './recycle-bin.service';
-import { AuthGuard } from '../../common/auth.guard';
+import { JwtAuthGuard } from '../auth/guards/jwt.guard';
 import { ListRecycleBinDto } from './dto/list-recycle-bin.dto';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 
 @ApiTags('Recycle Bin')
 @ApiBearerAuth()
-@UseGuards(AuthGuard)
+@UseGuards(JwtAuthGuard)
 @Controller('api/v1/recycle-bin')
 export class RecycleBinController {
     constructor(private readonly recycleBinService: RecycleBinService) { }

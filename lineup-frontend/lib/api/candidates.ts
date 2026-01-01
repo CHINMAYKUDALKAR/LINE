@@ -115,6 +115,14 @@ export async function getCandidateDocuments(candidateId: string, _token?: string
     return client.get(`/candidates/${candidateId}/documents`);
 }
 
+/**
+ * Get presigned download URL for a document
+ */
+export async function getDocumentDownloadUrl(fileId: string): Promise<string> {
+    const response = await client.get<{ url: string }>(`/storage/${fileId}/download-url`);
+    return response.url;
+}
+
 // =====================================================
 // CANDIDATE NOTES API
 // =====================================================

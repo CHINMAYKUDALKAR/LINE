@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, use } from 'react';
+import { useState, useEffect } from 'react';
 import { sanitizeHtml } from '@/lib/sanitize';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
@@ -15,7 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 interface TemplateEditorPageProps {
-    params: Promise<{ id: string }>;
+    params: { id: string };
 }
 
 const categories: { value: TemplateCategory; label: string }[] = [
@@ -30,7 +30,7 @@ const categories: { value: TemplateCategory; label: string }[] = [
 ];
 
 export default function TemplateEditorPage({ params }: TemplateEditorPageProps) {
-    const { id } = use(params);
+    const { id } = params;
     const isNew = id === 'new';
     const router = useRouter();
 

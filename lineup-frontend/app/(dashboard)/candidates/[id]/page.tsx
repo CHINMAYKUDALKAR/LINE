@@ -29,7 +29,7 @@ import {
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from '@/hooks/use-toast';
-import { uploadCandidateResume, getCandidate, getCandidateDocuments, getCandidateNotes, addCandidateNote, API_BASE_URL } from '@/lib/api/candidates';
+import { uploadCandidateResume, getCandidate, getCandidateDocuments, getCandidateNotes, addCandidateNote, getDocumentDownloadUrl } from '@/lib/api/candidates';
 import { getAuthToken } from '@/lib/auth';
 import { fadeInUp, fadeInRight, staggerContainer, staggerItem } from '@/lib/animations';
 import { useDeleteCandidate, useUpdateCandidate } from '@/lib/hooks/useCandidates';
@@ -112,16 +112,26 @@ export default function CandidateProfile() {
                 // Fetch documents and notes from real API endpoints
                 try {
                     const docsResponse = await getCandidateDocuments(id, token) as { data: any[] };
-                    const frontendDocs: CandidateDocument[] = (docsResponse.data || []).map((doc: any) => ({
-                        id: doc.id,
-                        type: (doc.mimeType?.includes('pdf') ? 'resume' : 'other') as CandidateDocument['type'],
-                        name: doc.filename,
-                        url: `${API_BASE_URL}/api/v1/storage/${doc.id}/download`,
-                        uploadedAt: doc.createdAt,
-                        uploadedBy: 'System',
-                        size: doc.size || 0,
-                    }));
-                    setDocuments(frontendDocs);
+                    const docsWithUrls = await Promise.all(
+                        (docsResponse.data || []).map(async (doc: any) => {
+                            let downloadUrl = '';
+                            try {
+                                downloadUrl = await getDocumentDownloadUrl(doc.id);
+                            } catch (e) {
+                                console.warn(`Failed to get download URL for doc ${doc.id}:`, e);
+                            }
+                            return {
+                                id: doc.id,
+                                type: (doc.mimeType?.includes('pdf') ? 'resume' : 'other') as CandidateDocument['type'],
+                                name: doc.filename,
+                                url: downloadUrl,
+                                uploadedAt: doc.createdAt,
+                                uploadedBy: 'System',
+                                size: doc.size || 0,
+                            };
+                        })
+                    );
+                    setDocuments(docsWithUrls);
                 } catch (e) {
                     console.error('Failed to fetch documents:', e);
                     setDocuments([]);

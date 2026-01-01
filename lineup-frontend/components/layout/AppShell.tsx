@@ -11,6 +11,7 @@ import {
   mockTenants,
   mockCurrentUser,
   mainNavItems,
+  opsNavItems,
   adminNavItems
 } from '@/lib/navigation-mock-data';
 import { UploadCandidatesModal } from '@/components/candidates/UploadCandidatesModal';
@@ -67,6 +68,7 @@ export function AppShell({ children }: AppShellProps) {
       <div className="flex flex-col md:flex-row h-screen w-full overflow-hidden bg-background">
         <MobileHeader
           mainNav={mainNavItems}
+          opsNav={opsNavItems}
           adminNav={adminNavItems}
           currentUser={mockCurrentUser}
           onLogout={handleLogout}
@@ -79,6 +81,7 @@ export function AppShell({ children }: AppShellProps) {
           currentTenantId={currentTenantId}
           currentUser={mockCurrentUser}
           mainNav={mainNavItems}
+          opsNav={opsNavItems}
           adminNav={adminNavItems}
           onTenantChange={handleTenantChange}
           onLogout={handleLogout}

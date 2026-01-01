@@ -12,6 +12,7 @@ import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { IntegrationEventsService } from '../integrations/services/integration-events.service';
 import { parseSpreadsheet, isSupportedSpreadsheet } from './utils/spreadsheet-parser.util';
+import { CandidatePortalService } from '../candidate-portal/candidate-portal.service';
 
 @Injectable()
 export class CandidatesService {
@@ -21,7 +22,8 @@ export class CandidatesService {
         @InjectQueue('candidate-import') private importQueue: Queue,
         private eventEmitter: EventEmitter2,
         private recycleBinService: RecycleBinService,
-        private integrationEvents: IntegrationEventsService
+        private integrationEvents: IntegrationEventsService,
+        private candidatePortalService: CandidatePortalService,
     ) { }
 
     async create(tenantId: string, userId: string, dto: CreateCandidateDto) {
@@ -801,6 +803,27 @@ export class CandidatesService {
         await invalidateCache(`reports:${tenantId}:*`);
 
         return candidate;
+    }
+
+    // =====================================================
+    // CANDIDATE PORTAL
+    // =====================================================
+
+    /**
+     * Generate a portal access token for a candidate
+     */
+    async generatePortalToken(tenantId: string, candidateId: string) {
+        const { token, expiresAt } = await this.candidatePortalService.generateToken(tenantId, candidateId);
+
+        // Generate full portal URL
+        const baseUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+        const portalUrl = `${baseUrl}/portal/${token}`;
+
+        return {
+            token,
+            portalUrl,
+            expiresAt,
+        };
     }
 
     private parseSort(sort: string) {

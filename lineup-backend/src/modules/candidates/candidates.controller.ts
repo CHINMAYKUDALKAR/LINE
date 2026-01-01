@@ -320,4 +320,19 @@ export class CandidatesController {
     deleteNote(@Req() req: any, @Param('noteId') noteId: string) {
         return this.svc.deleteNote(req.user.tenantId, noteId, req.user.sub, req.user.role);
     }
+
+    // =====================================================
+    // CANDIDATE PORTAL
+    // =====================================================
+
+    @Post(':id/portal-token')
+    @RateLimited(RateLimitProfile.WRITE)
+    @Roles('ADMIN', 'MANAGER', 'RECRUITER')
+    @ApiOperation({ summary: 'Generate a portal access token for the candidate' })
+    @ApiParam({ name: 'id', description: 'Candidate ID' })
+    @ApiResponse({ status: 201, description: 'Portal token generated' })
+    @ApiResponse({ status: 404, description: 'Candidate not found' })
+    async generatePortalToken(@Req() req: any, @Param('id') id: string) {
+        return this.svc.generatePortalToken(req.user.tenantId, id);
+    }
 }

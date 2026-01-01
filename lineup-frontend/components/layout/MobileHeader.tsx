@@ -44,12 +44,13 @@ const iconMap: Record<string, LucideIcon> = {
 
 interface MobileHeaderProps {
     mainNav?: NavGroup;
+    opsNav?: NavGroup;
     adminNav?: NavGroup;
     currentUser?: CurrentUser;
     onLogout?: () => void;
 }
 
-export function MobileHeader({ mainNav, adminNav, currentUser, onLogout }: MobileHeaderProps) {
+export function MobileHeader({ mainNav, opsNav, adminNav, currentUser, onLogout }: MobileHeaderProps) {
     const [open, setOpen] = useState(false);
     const pathname = usePathname();
 
@@ -63,6 +64,7 @@ export function MobileHeader({ mainNav, adminNav, currentUser, onLogout }: Mobil
     ];
 
     const mainItems = mainNav?.items || defaultMainItems;
+    const opsItems = opsNav?.items || [];
     const adminItems = adminNav?.items || [];
 
     const renderNavItem = (item: NavItem) => {
@@ -129,6 +131,17 @@ export function MobileHeader({ mainNav, adminNav, currentUser, onLogout }: Mobil
                                     Main
                                 </p>
                                 {mainItems.map(renderNavItem)}
+
+                                {/* Operations Navigation */}
+                                {opsItems.length > 0 && (
+                                    <>
+                                        <Separator className="my-3" />
+                                        <p className="px-3 py-2 text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                                            {opsNav?.label || 'Operations'}
+                                        </p>
+                                        {opsItems.map(renderNavItem)}
+                                    </>
+                                )}
 
                                 {/* Admin Navigation */}
                                 {adminItems.length > 0 && (

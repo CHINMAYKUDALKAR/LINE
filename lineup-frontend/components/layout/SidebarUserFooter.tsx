@@ -11,7 +11,15 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { ChevronLeft, ChevronRight, LogOut, Settings, User } from 'lucide-react';
+import {
+  PanelLeftClose,
+  PanelLeftOpen,
+  LogOut,
+  Settings,
+  User,
+  ChevronsLeft,
+  ChevronsRight
+} from 'lucide-react';
 
 interface SidebarUserFooterProps {
   user: {
@@ -34,23 +42,72 @@ export function SidebarUserFooter({ user, collapsed, onCollapsedChange, onLogout
     .slice(0, 2);
 
   return (
-    <div className={cn('p-3', collapsed ? 'flex flex-col items-center gap-2' : '')}>
-      {/* Collapse Toggle */}
-      <Tooltip>
+    <div className={cn('p-3', collapsed ? 'flex flex-col items-center gap-3' : 'space-y-3')}>
+      {/* Enhanced Collapse Toggle */}
+      <Tooltip delayDuration={0}>
         <TooltipTrigger asChild>
           <Button
             variant="ghost"
-            size="icon"
+            size="sm"
             onClick={() => onCollapsedChange(!collapsed)}
             className={cn(
-              'h-8 w-8 text-slate-400 hover:text-slate-600',
-              !collapsed && 'absolute top-4 right-2'
+              'group relative overflow-hidden transition-all duration-300',
+              collapsed
+                ? 'w-10 h-10 p-0 rounded-full bg-gradient-to-br from-slate-100 to-slate-200 hover:from-blue-50 hover:to-blue-100 hover:shadow-md border border-slate-200/50'
+                : 'w-full h-9 justify-start gap-2 px-3 bg-gradient-to-r from-slate-50 to-slate-100 hover:from-blue-50 hover:to-blue-100 border border-slate-200/50 rounded-lg hover:shadow-sm'
             )}
           >
-            {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+            {/* Animated Icon Container */}
+            <span className={cn(
+              'flex items-center justify-center transition-transform duration-300',
+              !collapsed && 'group-hover:-translate-x-0.5'
+            )}>
+              {collapsed ? (
+                <ChevronsRight className={cn(
+                  'h-4 w-4 text-slate-500 transition-all duration-300',
+                  'group-hover:text-blue-600 group-hover:scale-110'
+                )} />
+              ) : (
+                <ChevronsLeft className={cn(
+                  'h-4 w-4 text-slate-500 transition-all duration-300',
+                  'group-hover:text-blue-600 group-hover:scale-110'
+                )} />
+              )}
+            </span>
+
+            {/* Label for expanded state */}
+            {!collapsed && (
+              <span className="text-sm font-medium text-slate-600 group-hover:text-blue-600 transition-colors duration-200">
+                Collapse
+              </span>
+            )}
+
+            {/* Subtle shine effect on hover */}
+            <span className={cn(
+              'absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/30 to-transparent',
+              'group-hover:translate-x-full transition-transform duration-700'
+            )} />
           </Button>
         </TooltipTrigger>
-        <TooltipContent side="right">{collapsed ? 'Expand sidebar' : 'Collapse sidebar'}</TooltipContent>
+        <TooltipContent
+          side="right"
+          className="bg-slate-900 text-white border-0 shadow-lg"
+        >
+          <div className="flex items-center gap-2">
+            {collapsed ? (
+              <>
+                <PanelLeftOpen className="h-3.5 w-3.5" />
+                <span>Expand sidebar</span>
+              </>
+            ) : (
+              <>
+                <PanelLeftClose className="h-3.5 w-3.5" />
+                <span>Collapse sidebar</span>
+              </>
+            )}
+          </div>
+          <span className="text-xs text-slate-400 mt-0.5 block">⌘ + B</span>
+        </TooltipContent>
       </Tooltip>
 
       {/* User Card */}
@@ -58,19 +115,24 @@ export function SidebarUserFooter({ user, collapsed, onCollapsedChange, onLogout
         <DropdownMenuTrigger asChild>
           <button
             className={cn(
-              'flex items-center gap-3 w-full p-2 rounded-lg hover:bg-slate-100 transition-colors text-left',
+              'flex items-center gap-3 w-full p-2 rounded-lg hover:bg-slate-100 transition-all duration-200 text-left group',
               collapsed && 'justify-center p-2'
             )}
           >
-            <Avatar className="h-8 w-8">
+            <Avatar className={cn(
+              'h-8 w-8 ring-2 ring-transparent transition-all duration-200',
+              'group-hover:ring-blue-200 group-hover:ring-offset-1'
+            )}>
               <AvatarImage src={user.avatar} />
-              <AvatarFallback className="bg-gradient-to-br from-indigo-500 to-purple-600 text-white text-xs">
+              <AvatarFallback className="bg-gradient-to-br from-blue-500 to-blue-600 text-white text-xs font-medium">
                 {initials}
               </AvatarFallback>
             </Avatar>
             {!collapsed && (
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-slate-900 truncate">{user.name}</p>
+                <p className="text-sm font-medium text-slate-900 truncate group-hover:text-blue-600 transition-colors">
+                  {user.name}
+                </p>
                 <p className="text-xs text-slate-500 truncate">{user.role}</p>
               </div>
             )}

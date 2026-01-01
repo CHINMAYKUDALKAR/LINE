@@ -171,3 +171,84 @@ export function useBulkImportCandidates() {
         },
     });
 }
+
+// Portal Link Generation
+export interface PortalLinkResponse {
+    token: string;
+    portalUrl: string;
+    expiresAt: string;
+}
+
+async function generatePortalLink(candidateId: string): Promise<PortalLinkResponse> {
+    return client.post(`/candidates/${candidateId}/portal-token`);
+}
+
+export function useGeneratePortalLink() {
+    return useMutation({
+        mutationFn: (candidateId: string) => generatePortalLink(candidateId),
+    });
+}
+
+// =====================================================
+// CANDIDATE NOTES HOOKS
+// =====================================================
+
+export interface CandidateNote {
+    id: string;
+    candidateId: string;
+    content: string;
+    authorId: string;
+    author: {
+        id: string;
+        name: string;
+        email: string;
+    };
+    createdAt: string;
+    updatedAt: string;
+}
+
+export const noteKeys = {
+    all: (candidateId: string) => ['candidates', candidateId, 'notes'] as const,
+};
+
+async function fetchCandidateNotes(candidateId: string): Promise<{ data: CandidateNote[] }> {
+    return client.get(`/candidates/${candidateId}/notes`);
+}
+
+async function addCandidateNote(candidateId: string, content: string): Promise<CandidateNote> {
+    return client.post(`/candidates/${candidateId}/notes`, { content });
+}
+
+async function deleteCandidateNote(candidateId: string, noteId: string): Promise<void> {
+    return client.delete(`/candidates/${candidateId}/notes/${noteId}`);
+}
+
+export function useCandidateNotes(candidateId: string) {
+    return useQuery({
+        queryKey: noteKeys.all(candidateId),
+        queryFn: () => fetchCandidateNotes(candidateId),
+        enabled: !!candidateId,
+    });
+}
+
+export function useAddCandidateNote() {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: ({ candidateId, content }: { candidateId: string; content: string }) =>
+            addCandidateNote(candidateId, content),
+        onSuccess: (_, variables) => {
+            queryClient.invalidateQueries({ queryKey: noteKeys.all(variables.candidateId) });
+        },
+    });
+}
+
+export function useDeleteCandidateNote() {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: ({ candidateId, noteId }: { candidateId: string; noteId: string }) =>
+            deleteCandidateNote(candidateId, noteId),
+        onSuccess: (_, variables) => {
+            queryClient.invalidateQueries({ queryKey: noteKeys.all(variables.candidateId) });
+        },
+    });
+}

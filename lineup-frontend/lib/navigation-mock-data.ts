@@ -27,6 +27,18 @@ export const mainNavItems: NavGroup = {
   ],
 };
 
+// Operations - workflow/action-based modules for business users
+export const opsNavItems: NavGroup = {
+  label: 'Operations',
+  requiredRole: ['admin'],
+  items: [
+    { title: 'Application Status', path: '/admin/status', icon: 'Activity' },
+    { title: 'Pending Approvals', path: '/admin/pending-approvals', icon: 'UserCog' },
+    { title: 'Missed Approvals', path: '/admin/missed-approvals', icon: 'UserCog' },
+  ],
+};
+
+// Admin - configuration/system modules
 export const adminNavItems: NavGroup = {
   label: 'Admin',
   requiredRole: ['admin'],

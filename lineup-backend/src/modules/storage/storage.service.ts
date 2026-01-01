@@ -207,6 +207,15 @@ export class StorageService {
         return this.s3.downloadFile(key);
     }
 
+    /**
+     * Get presigned download URL for a file
+     */
+    async getDownloadUrl(tenantId: string, fileId: string) {
+        const file = await this.getFile(tenantId, fileId);
+        const url = await this.s3.getPresignedDownloadUrl(file.key, file.filename);
+        return { url };
+    }
+
     async updateMetadata(tenantId: string, fileId: string, dto: UpdateFileMetadataDto) {
         const file = await this.getFile(tenantId, fileId);
 

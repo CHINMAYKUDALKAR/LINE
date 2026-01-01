@@ -16,6 +16,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Textarea } from '@/components/ui/textarea';
 import {
     Mail,
     Phone,
@@ -26,11 +27,19 @@ import {
     Clock,
     MoreHorizontal,
     Edit,
-    Trash
+    Trash,
+    Link2,
+    Loader2,
+    Copy,
+    Check,
+    Send,
+    MessageSquare,
+    User,
+    Activity
 } from 'lucide-react';
-import { useCandidate } from '@/lib/hooks/useCandidates';
+import { useCandidate, useGeneratePortalLink, useCandidateNotes, useAddCandidateNote, useDeleteCandidateNote } from '@/lib/hooks/useCandidates';
 import { getInitials, stageLabels, stageColors } from '@/lib/candidate-constants';
-import { format } from 'date-fns';
+import { format, formatDistanceToNow } from 'date-fns';
 import { CandidateListItem } from '@/types/candidate-list';
 
 interface CandidateDetailSheetProps {
@@ -50,6 +59,13 @@ export function CandidateDetailSheet({
 }: CandidateDetailSheetProps) {
     const router = useRouter();
     const { data: candidate, isLoading } = useCandidate(candidateId || '');
+    const { data: notesData, isLoading: notesLoading } = useCandidateNotes(candidateId || '');
+    const addNoteMutation = useAddCandidateNote();
+    const deleteNoteMutation = useDeleteCandidateNote();
+    const generatePortalLink = useGeneratePortalLink();
+    const [portalLink, setPortalLink] = useState<string | null>(null);
+    const [copied, setCopied] = useState(false);
+    const [newNote, setNewNote] = useState('');
 
     if (!candidateId) return null;
 
@@ -57,6 +73,62 @@ export function CandidateDetailSheet({
         onOpenChange(false);
         router.push(`/candidates/${candidateId}`);
     };
+
+    const handleGeneratePortalLink = async () => {
+        try {
+            const result = await generatePortalLink.mutateAsync(candidateId);
+            setPortalLink(result.portalUrl);
+        } catch (error) {
+            console.error('Failed to generate portal link:', error);
+        }
+    };
+
+    const handleCopyLink = () => {
+        if (portalLink) {
+            navigator.clipboard.writeText(portalLink);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+        }
+    };
+
+    const handleAddNote = async () => {
+        if (!newNote.trim() || !candidateId) return;
+        try {
+            await addNoteMutation.mutateAsync({ candidateId, content: newNote.trim() });
+            setNewNote('');
+        } catch (error) {
+            console.error('Failed to add note:', error);
+        }
+    };
+
+    const handleDeleteNote = async (noteId: string) => {
+        if (!candidateId) return;
+        try {
+            await deleteNoteMutation.mutateAsync({ candidateId, noteId });
+        } catch (error) {
+            console.error('Failed to delete note:', error);
+        }
+    };
+
+    const notes = notesData?.data || [];
+
+    // Mock activity history based on candidate data
+    const activityHistory = candidate ? [
+        {
+            id: '1',
+            type: 'stage_change',
+            description: `Stage changed to ${stageLabels[candidate.stage] || candidate.stage}`,
+            timestamp: candidate.updatedAt,
+            user: 'System',
+        },
+        {
+            id: '2',
+            type: 'created',
+            description: 'Candidate profile created',
+            timestamp: candidate.createdAt,
+            user: 'System',
+        },
+    ] : [];
 
     return (
         <Sheet open={open} onOpenChange={onOpenChange}>
@@ -76,7 +148,7 @@ export function CandidateDetailSheet({
                 ) : candidate ? (
                     <>
                         {/* Header */}
-                        <div className="p-6 border-b border-border bg-muted/10">
+                        <div className="p-6 pr-12 border-b border-border bg-muted/10">
                             <div className="flex items-start justify-between">
                                 <div className="flex items-center gap-4">
                                     <Avatar className="h-16 w-16 border-2 border-background shadow-sm">
@@ -112,6 +184,47 @@ export function CandidateDetailSheet({
                                     <MoreHorizontal className="h-4 w-4" />
                                 </Button>
                             </div>
+
+                            {/* Portal Link Section */}
+                            <div className="mt-4 p-3 bg-muted/30 rounded-lg border border-dashed">
+                                {portalLink ? (
+                                    <div className="space-y-2">
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-sm font-medium text-foreground">Portal Link</span>
+                                            <Button size="sm" variant="ghost" onClick={handleCopyLink} className="h-7">
+                                                {copied ? (
+                                                    <><Check className="mr-1 h-3 w-3 text-green-500" /> Copied!</>
+                                                ) : (
+                                                    <><Copy className="mr-1 h-3 w-3" /> Copy</>
+                                                )}
+                                            </Button>
+                                        </div>
+                                        <p className="text-xs text-muted-foreground break-all font-mono bg-background p-2 rounded">
+                                            {portalLink}
+                                        </p>
+                                    </div>
+                                ) : (
+                                    <div className="flex items-center justify-between">
+                                        <div>
+                                            <p className="text-sm font-medium text-foreground">Candidate Portal</p>
+                                            <p className="text-xs text-muted-foreground">Generate a link for the candidate to view their application</p>
+                                        </div>
+                                        <Button
+                                            size="sm"
+                                            variant="outline"
+                                            onClick={handleGeneratePortalLink}
+                                            disabled={generatePortalLink.isPending}
+                                        >
+                                            {generatePortalLink.isPending ? (
+                                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                            ) : (
+                                                <Link2 className="mr-2 h-4 w-4" />
+                                            )}
+                                            Generate Link
+                                        </Button>
+                                    </div>
+                                )}
+                            </div>
                         </div>
 
                         {/* Content */}
@@ -129,7 +242,7 @@ export function CandidateDetailSheet({
                                             value="notes"
                                             className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-4 py-2"
                                         >
-                                            Notes
+                                            Notes {notes.length > 0 && <Badge variant="secondary" className="ml-1.5 h-5 px-1.5">{notes.length}</Badge>}
                                         </TabsTrigger>
                                         <TabsTrigger
                                             value="history"
@@ -205,95 +318,114 @@ export function CandidateDetailSheet({
                                                 <p className="text-sm text-muted-foreground italic">No resume uploaded</p>
                                             )}
                                         </div>
+                                    </TabsContent>
 
-                                        {/* Hiring Context (Deals/Opportunities) */}
-                                        {(candidate as any).opportunityLinks && (candidate as any).opportunityLinks.length > 0 && (
-                                            <>
-                                                <Separator />
-                                                <div className="space-y-3">
-                                                    <h3 className="text-sm font-medium text-foreground">Hiring Context</h3>
-                                                    <p className="text-xs text-muted-foreground">Linked opportunities from connected CRMs (read-only)</p>
-                                                    <div className="space-y-3">
-                                                        {(candidate as any).opportunityLinks.map((link: any) => {
-                                                            const opp = link.opportunityContext;
-                                                            return (
-                                                                <div key={link.id} className="p-4 border rounded-lg bg-gradient-to-br from-muted/20 to-muted/5">
-                                                                    {/* Header */}
-                                                                    <div className="flex items-start justify-between mb-3">
-                                                                        <div className="flex items-center gap-2">
-                                                                            <div className="p-2 bg-primary/10 rounded-md">
-                                                                                <Briefcase className="h-4 w-4 text-primary" />
-                                                                            </div>
-                                                                            <div>
-                                                                                <span className="text-sm font-semibold text-foreground">
-                                                                                    {opp?.name || 'Unnamed Deal'}
-                                                                                </span>
-                                                                                {opp?.stageName && (
-                                                                                    <p className="text-xs text-muted-foreground">
-                                                                                        Stage: {opp.stageName}
-                                                                                    </p>
-                                                                                )}
-                                                                            </div>
-                                                                        </div>
-                                                                        <Badge variant="outline" className="text-xs shrink-0">
-                                                                            {opp?.provider === 'hubspot' ? 'HubSpot' : 'Salesforce'}
-                                                                        </Badge>
-                                                                    </div>
+                                    <TabsContent value="notes" className="mt-0 space-y-4">
+                                        {/* Add Note Form */}
+                                        <div className="space-y-3">
+                                            <Textarea
+                                                placeholder="Add a note about this candidate..."
+                                                value={newNote}
+                                                onChange={(e) => setNewNote(e.target.value)}
+                                                rows={3}
+                                                className="resize-none"
+                                            />
+                                            <Button
+                                                size="sm"
+                                                onClick={handleAddNote}
+                                                disabled={!newNote.trim() || addNoteMutation.isPending}
+                                                className="w-full"
+                                            >
+                                                {addNoteMutation.isPending ? (
+                                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                                ) : (
+                                                    <Send className="mr-2 h-4 w-4" />
+                                                )}
+                                                Add Note
+                                            </Button>
+                                        </div>
 
-                                                                    {/* Details Grid */}
-                                                                    <div className="grid grid-cols-2 gap-2 text-xs">
-                                                                        {opp?.accountName && (
-                                                                            <div className="flex items-center gap-1.5">
-                                                                                <span className="text-muted-foreground">Company:</span>
-                                                                                <span className="font-medium">{opp.accountName}</span>
-                                                                            </div>
-                                                                        )}
-                                                                        {opp?.amount && (
-                                                                            <div className="flex items-center gap-1.5">
-                                                                                <span className="text-muted-foreground">Value:</span>
-                                                                                <span className="font-medium text-green-600">${opp.amount.toLocaleString()}</span>
-                                                                            </div>
-                                                                        )}
-                                                                        {opp?.closeDate && (
-                                                                            <div className="flex items-center gap-1.5">
-                                                                                <span className="text-muted-foreground">Close Date:</span>
-                                                                                <span className="font-medium">
-                                                                                    {new Date(opp.closeDate).toLocaleDateString()}
-                                                                                </span>
-                                                                            </div>
-                                                                        )}
-                                                                        {opp?.ownerName && (
-                                                                            <div className="flex items-center gap-1.5">
-                                                                                <span className="text-muted-foreground">Owner:</span>
-                                                                                <span className="font-medium">{opp.ownerName}</span>
-                                                                            </div>
-                                                                        )}
-                                                                        {opp?.probability && (
-                                                                            <div className="flex items-center gap-1.5">
-                                                                                <span className="text-muted-foreground">Probability:</span>
-                                                                                <span className="font-medium">{opp.probability}%</span>
-                                                                            </div>
-                                                                        )}
-                                                                    </div>
+                                        <Separator />
+
+                                        {/* Notes List */}
+                                        {notesLoading ? (
+                                            <div className="space-y-3">
+                                                <Skeleton className="h-20 w-full" />
+                                                <Skeleton className="h-20 w-full" />
+                                            </div>
+                                        ) : notes.length === 0 ? (
+                                            <div className="text-center py-8">
+                                                <MessageSquare className="h-10 w-10 mx-auto text-muted-foreground/50 mb-2" />
+                                                <p className="text-sm text-muted-foreground">No notes yet</p>
+                                                <p className="text-xs text-muted-foreground">Add a note to keep track of important information</p>
+                                            </div>
+                                        ) : (
+                                            <div className="space-y-3">
+                                                {notes.map((note) => (
+                                                    <div key={note.id} className="p-3 rounded-lg border bg-muted/20">
+                                                        <div className="flex items-start justify-between gap-2">
+                                                            <div className="flex items-center gap-2">
+                                                                <Avatar className="h-6 w-6">
+                                                                    <AvatarFallback className="text-xs bg-primary/10 text-primary">
+                                                                        {note.author?.name?.charAt(0) || 'U'}
+                                                                    </AvatarFallback>
+                                                                </Avatar>
+                                                                <div>
+                                                                    <span className="text-sm font-medium">{note.author?.name || 'Unknown'}</span>
+                                                                    <span className="text-xs text-muted-foreground ml-2">
+                                                                        {formatDistanceToNow(new Date(note.createdAt), { addSuffix: true })}
+                                                                    </span>
                                                                 </div>
-                                                            );
-                                                        })}
+                                                            </div>
+                                                            <Button
+                                                                size="icon"
+                                                                variant="ghost"
+                                                                className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                                                                onClick={() => handleDeleteNote(note.id)}
+                                                                disabled={deleteNoteMutation.isPending}
+                                                            >
+                                                                <Trash className="h-3 w-3" />
+                                                            </Button>
+                                                        </div>
+                                                        <p className="text-sm mt-2 whitespace-pre-wrap">{note.content}</p>
                                                     </div>
-                                                </div>
-                                            </>
+                                                ))}
+                                            </div>
                                         )}
                                     </TabsContent>
 
-                                    <TabsContent value="notes" className="mt-0">
-                                        <div className="text-center py-8">
-                                            <p className="text-sm text-muted-foreground">Notes functionality coming soon.</p>
-                                        </div>
-                                    </TabsContent>
-
                                     <TabsContent value="history" className="mt-0">
-                                        <div className="text-center py-8">
-                                            <p className="text-sm text-muted-foreground">Activity history coming soon.</p>
-                                        </div>
+                                        {activityHistory.length === 0 ? (
+                                            <div className="text-center py-8">
+                                                <Activity className="h-10 w-10 mx-auto text-muted-foreground/50 mb-2" />
+                                                <p className="text-sm text-muted-foreground">No activity yet</p>
+                                            </div>
+                                        ) : (
+                                            <div className="space-y-4">
+                                                {activityHistory.map((activity, index) => (
+                                                    <div key={activity.id} className="flex gap-3">
+                                                        <div className="flex flex-col items-center">
+                                                            <div className="p-2 rounded-full bg-muted">
+                                                                {activity.type === 'stage_change' ? (
+                                                                    <Activity className="h-3 w-3 text-primary" />
+                                                                ) : (
+                                                                    <User className="h-3 w-3 text-muted-foreground" />
+                                                                )}
+                                                            </div>
+                                                            {index < activityHistory.length - 1 && (
+                                                                <div className="w-px h-full bg-border my-1" />
+                                                            )}
+                                                        </div>
+                                                        <div className="flex-1 pb-4">
+                                                            <p className="text-sm font-medium">{activity.description}</p>
+                                                            <p className="text-xs text-muted-foreground mt-0.5">
+                                                                {formatDistanceToNow(new Date(activity.timestamp), { addSuffix: true })} • {activity.user}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
                                     </TabsContent>
                                 </Tabs>
                             </div>
