@@ -136,7 +136,6 @@ jobs:
     if: github.ref == 'refs/heads/main' || inputs.environment == 'dev'
     environment:
       name: dev
-      url: ${{ secrets.DEV_URL }}
 
     steps:
       - name: Checkout code
@@ -173,7 +172,6 @@ jobs:
     if: inputs.environment == 'staging' || inputs.environment == 'production'
     environment:
       name: staging
-      url: ${{ secrets.STAGING_URL }}
 
     steps:
       - name: Checkout code
@@ -203,7 +201,6 @@ jobs:
     if: inputs.environment == 'production'
     environment:
       name: production
-      url: ${{ secrets.PRODUCTION_URL }}
     # ⚠️ Production requires manual approval via GitHub Environments
 
     steps:
