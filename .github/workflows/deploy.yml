@@ -29,8 +29,7 @@ on:
 env:
   NODE_VERSION: '18.x'
   REGISTRY: ghcr.io
-  BACKEND_IMAGE: ${{ github.repository }}/lineup-backend
-  FRONTEND_IMAGE: ${{ github.repository }}/lineup-frontend
+  IMAGE_NAME_PREFIX: chinmaykudalkar
 
 jobs:
   # ============================================
@@ -107,8 +106,8 @@ jobs:
           file: ./lineup-backend/Dockerfile
           push: true
           tags: |
-            ${{ env.REGISTRY }}/${{ env.BACKEND_IMAGE }}:${{ github.sha }}
-            ${{ env.REGISTRY }}/${{ env.BACKEND_IMAGE }}:latest
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_PREFIX }}/lineup-backend:${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_PREFIX }}/lineup-backend:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -119,8 +118,8 @@ jobs:
           file: ./lineup-frontend/Dockerfile
           push: true
           tags: |
-            ${{ env.REGISTRY }}/${{ env.FRONTEND_IMAGE }}:${{ github.sha }}
-            ${{ env.REGISTRY }}/${{ env.FRONTEND_IMAGE }}:latest
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_PREFIX }}/lineup-frontend:${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_PREFIX }}/lineup-frontend:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
           build-args: |
@@ -144,7 +143,7 @@ jobs:
       - name: Deploy to Dev
         run: |
           echo "🚀 Deploying to DEV environment..."
-          echo "Image: ${{ env.REGISTRY }}/${{ env.BACKEND_IMAGE }}:${{ github.sha }}"
+          echo "Image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_PREFIX }}/lineup-backend:${{ github.sha }}"
           # Add your deployment commands here:
           # - SSH to server and pull new images
           # - Update docker-compose and restart
@@ -180,7 +179,7 @@ jobs:
       - name: Deploy to Staging
         run: |
           echo "🚀 Deploying to STAGING environment..."
-          echo "Image: ${{ env.REGISTRY }}/${{ env.BACKEND_IMAGE }}:${{ github.sha }}"
+          echo "Image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_PREFIX }}/lineup-backend:${{ github.sha }}"
           # Add staging deployment commands
 
       - name: Run integration tests
@@ -216,7 +215,7 @@ jobs:
       - name: Deploy to Production
         run: |
           echo "🚀 Deploying to PRODUCTION environment..."
-          echo "Image: ${{ env.REGISTRY }}/${{ env.BACKEND_IMAGE }}:${{ github.sha }}"
+          echo "Image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_PREFIX }}/lineup-backend:${{ github.sha }}"
           # Add production deployment commands
 
       - name: Health check
