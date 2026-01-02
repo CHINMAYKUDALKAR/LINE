@@ -2,6 +2,7 @@ import { Tenant, CurrentUser, NavGroup } from '@/types/navigation';
 
 export const mockTenants: Tenant[] = [
   { id: 'tenant_123', name: 'Mintskill', logo: undefined },
+  { id: 'tenant_456', name: 'Mintskill 2', logo: undefined },
 ];
 
 export const mockCurrentUser: CurrentUser = {

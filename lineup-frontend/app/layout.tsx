@@ -3,6 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import Providers from "./providers";
 import { ThemeProvider } from "@/components/theme-provider";
+import { AccessibilityProvider } from "@/lib/accessibility-context";
 
 export default function RootLayout({
     children,
@@ -19,9 +20,11 @@ export default function RootLayout({
                         forcedTheme="light"
                         disableTransitionOnChange
                     >
-                        {children}
-                        <Toaster />
-                        <Sonner />
+                        <AccessibilityProvider>
+                            {children}
+                            <Toaster />
+                            <Sonner />
+                        </AccessibilityProvider>
                     </ThemeProvider>
                 </Providers>
             </body>

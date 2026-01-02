@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -12,14 +13,23 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+} from '@/components/ui/sheet';
+import {
   PanelLeftClose,
   PanelLeftOpen,
   LogOut,
   Settings,
   User,
   ChevronsLeft,
-  ChevronsRight
+  ChevronsRight,
+  Accessibility
 } from 'lucide-react';
+import { AccessibilitySettingsPanel } from '@/components/accessibility/AccessibilitySettingsPanel';
 
 interface SidebarUserFooterProps {
   user: {
@@ -34,6 +44,8 @@ interface SidebarUserFooterProps {
 }
 
 export function SidebarUserFooter({ user, collapsed, onCollapsedChange, onLogout }: SidebarUserFooterProps) {
+  const [accessibilityOpen, setAccessibilityOpen] = useState(false);
+
   const initials = user.name
     .split(' ')
     .map((n) => n[0])
@@ -109,6 +121,69 @@ export function SidebarUserFooter({ user, collapsed, onCollapsedChange, onLogout
           <span className="text-xs text-slate-400 mt-0.5 block">⌘ + B</span>
         </TooltipContent>
       </Tooltip>
+
+      {/* Accessibility Settings Button */}
+      <Tooltip delayDuration={0}>
+        <TooltipTrigger asChild>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setAccessibilityOpen(true)}
+            className={cn(
+              'group relative overflow-hidden transition-all duration-300',
+              collapsed
+                ? 'w-10 h-10 p-0 rounded-full bg-gradient-to-br from-slate-100 to-slate-200 hover:from-indigo-50 hover:to-indigo-100 hover:shadow-md border border-slate-200/50'
+                : 'w-full h-9 justify-start gap-2 px-3 bg-gradient-to-r from-slate-50 to-slate-100 hover:from-indigo-50 hover:to-indigo-100 border border-slate-200/50 rounded-lg hover:shadow-sm'
+            )}
+          >
+            <span className={cn(
+              'flex items-center justify-center transition-transform duration-300',
+              !collapsed && 'group-hover:scale-110'
+            )}>
+              <Accessibility className={cn(
+                'h-4 w-4 text-slate-500 transition-all duration-300',
+                'group-hover:text-indigo-600'
+              )} />
+            </span>
+            {!collapsed && (
+              <span className="text-sm font-medium text-slate-600 group-hover:text-indigo-600 transition-colors duration-200">
+                Accessibility
+              </span>
+            )}
+            <span className={cn(
+              'absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/30 to-transparent',
+              'group-hover:translate-x-full transition-transform duration-700'
+            )} />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent
+          side="right"
+          className="bg-slate-900 text-white border-0 shadow-lg"
+        >
+          <div className="flex items-center gap-2">
+            <Accessibility className="h-3.5 w-3.5" />
+            <span>Accessibility Settings</span>
+          </div>
+        </TooltipContent>
+      </Tooltip>
+
+      {/* Accessibility Settings Sheet */}
+      <Sheet open={accessibilityOpen} onOpenChange={setAccessibilityOpen}>
+        <SheetContent side="right" className="w-[400px] sm:w-[450px]">
+          <SheetHeader>
+            <SheetTitle className="flex items-center gap-2">
+              <Accessibility className="h-5 w-5" />
+              Accessibility Settings
+            </SheetTitle>
+            <SheetDescription>
+              Customize your experience for better accessibility and comfort.
+            </SheetDescription>
+          </SheetHeader>
+          <div className="mt-6">
+            <AccessibilitySettingsPanel />
+          </div>
+        </SheetContent>
+      </Sheet>
 
       {/* User Card */}
       <DropdownMenu>

@@ -13,6 +13,7 @@ import { Separator } from '@/components/ui/separator';
 
 const tenants = [
   { id: 'mintskill', name: 'Mintskill', logo: 'MS' },
+  { id: 'mintskill2', name: 'Mintskill 2', logo: 'M2' },
 ];
 
 interface DashboardHeaderProps {

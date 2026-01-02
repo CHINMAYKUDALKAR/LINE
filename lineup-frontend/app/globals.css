@@ -197,11 +197,100 @@
         transform: scale(0);
         opacity: 0;
     }
+
     50% {
         transform: scale(1.2);
     }
+
     100% {
         transform: scale(1);
         opacity: 1;
     }
+}
+
+/* ================================ */
+/* Accessibility Utilities          */
+/* ================================ */
+
+/* Underline Links - when accessibility-underline-links class is on html */
+.accessibility-underline-links a {
+    text-decoration: underline !important;
+    text-underline-offset: 2px;
+}
+
+.accessibility-underline-links a:hover {
+    text-decoration-thickness: 2px;
+}
+
+/* Text Magnifier Effect */
+[data-text-magnifier="true"] *:hover {
+    transform: scale(1.2);
+    transform-origin: center;
+    transition: transform 0.15s ease-out;
+}
+
+/* Mandatory Field Formats */
+/* Asterisk format is default, text format needs special handling */
+[data-mandatory-format="text"] .mandatory-indicator::after {
+    content: " (Mandatory)" !important;
+    color: hsl(var(--destructive));
+    font-size: 0.75rem;
+}
+
+[data-mandatory-format="asterisk"] .mandatory-indicator::after {
+    content: " *" !important;
+    color: hsl(var(--destructive));
+}
+
+/* Error Display with Icon */
+[data-error-icon="true"] .error-message::before {
+    content: "⚠ ";
+}
+
+/* CSS Custom Properties for Accessibility */
+:root {
+    --accessibility-text-size: 1rem;
+    --accessibility-letter-spacing: 0em;
+    --accessibility-error-color: #dc2626;
+}
+
+/* Apply accessibility error color to error messages */
+.error-message {
+    color: var(--accessibility-error-color);
+}
+
+/* High visibility focus states for accessibility */
+*:focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
+}
+
+/* Screen reader only content */
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+}
+
+/* Skip to main content link for keyboard navigation */
+.skip-to-content {
+    position: absolute;
+    left: -9999px;
+    z-index: 999;
+    padding: 1em;
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    text-decoration: none;
+}
+
+.skip-to-content:focus {
+    left: 50%;
+    transform: translateX(-50%);
+    top: 0;
 }

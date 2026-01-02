@@ -15,6 +15,8 @@ import { InterviewStage, InterviewStatus } from '@/types/interview';
 import { getOverview, getFunnel } from '@/lib/api/reports';
 import { getInterviews } from '@/lib/api/interviews';
 import { fadeInUp, staggerContainer, staggerItem } from '@/lib/animations';
+import { useTenant, filterByTenant } from '@/lib/tenant-context';
+import { mockInterviews, mockMetrics, mockStageCounts } from '@/lib/mock-data';
 
 // Types for dashboard data
 type Metrics = {
@@ -62,6 +64,7 @@ const emptyMetrics: Metrics = {
 };
 
 const Dashboard = () => {
+    const { currentTenantId, currentTenant } = useTenant();
     const [isLoading, setIsLoading] = useState(true);
     const [hasError, setHasError] = useState(false);
     const [activeStage, setActiveStage] = useState<InterviewStage | undefined>();
@@ -105,6 +108,9 @@ const Dashboard = () => {
                     noShows: 0,
                     noShowsTrend: 0,
                 });
+            } else {
+                // Fallback to mock metrics
+                setMetrics(mockMetrics);
             }
 
             // Process funnel data for stage pipeline
@@ -164,6 +170,9 @@ const Dashboard = () => {
                 if (sortedStages.length > 0) {
                     setStageCounts(sortedStages);
                 }
+            } else {
+                // Fallback to mock stage counts
+                setStageCounts(mockStageCounts as StageCount[]);
             }
 
             // Process interviews data
@@ -201,17 +210,30 @@ const Dashboard = () => {
                     dateTime: i.date,
                     stage: normalizeStage(i.stage) as InterviewStage,
                     status: normalizeStatus(i.status) as any,
-                    tenantId: i.tenantId,
+                    tenantId: i.tenantId || currentTenantId,
                 }));
-                setInterviews(mappedInterviews);
+                // Filter by current tenant
+                const filteredInterviews = mappedInterviews.filter(
+                    (i: Interview) => !i.tenantId || i.tenantId === currentTenantId
+                );
+                setInterviews(filteredInterviews);
+            } else {
+                // Fallback to filtered mock interviews
+                const filteredMockInterviews = filterByTenant(mockInterviews, currentTenantId) as Interview[];
+                setInterviews(filteredMockInterviews);
             }
         } catch (error) {
             console.error('Failed to load dashboard data:', error);
             setHasError(true);
+            // Use filtered mock data as fallback
+            setMetrics(mockMetrics);
+            setStageCounts(mockStageCounts as StageCount[]);
+            const filteredMockInterviews = filterByTenant(mockInterviews, currentTenantId) as Interview[];
+            setInterviews(filteredMockInterviews);
         } finally {
             setIsLoading(false);
         }
-    }, []);
+    }, [currentTenantId]);
 
     useEffect(() => {
         loadDashboardData();

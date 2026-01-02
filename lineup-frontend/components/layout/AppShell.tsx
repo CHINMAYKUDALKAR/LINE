@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { AppSidebar } from './AppSidebar';
 import { MobileHeader } from './MobileHeader';
@@ -14,6 +14,7 @@ import {
   opsNavItems,
   adminNavItems
 } from '@/lib/navigation-mock-data';
+import { TenantProvider, useTenant } from '@/lib/tenant-context';
 import { UploadCandidatesModal } from '@/components/candidates/UploadCandidatesModal';
 import { ScheduleInterviewModal } from '@/components/scheduling/ScheduleInterviewModal';
 
@@ -21,9 +22,9 @@ interface AppShellProps {
   children: React.ReactNode;
 }
 
-export function AppShell({ children }: AppShellProps) {
+function AppShellContent({ children }: AppShellProps) {
   const router = useRouter();
-  const [currentTenantId, setCurrentTenantId] = useState(mockCurrentUser.tenantId);
+  const { currentTenantId, setCurrentTenantId } = useTenant();
 
   // Modal states for keyboard shortcuts
   const [showAddCandidateModal, setShowAddCandidateModal] = useState(false);
@@ -118,3 +119,11 @@ export function AppShell({ children }: AppShellProps) {
   );
 }
 
+// Exported wrapper that provides TenantContext
+export function AppShell({ children }: AppShellProps) {
+  return (
+    <TenantProvider initialTenantId={mockCurrentUser.tenantId}>
+      <AppShellContent>{children}</AppShellContent>
+    </TenantProvider>
+  );
+}

@@ -9,6 +9,7 @@ const interviewers = ['Sarah Chen', 'Mike Johnson', 'Priya Sharma'];
 const roles = ['Senior Frontend Engineer', 'Product Manager', 'Backend Developer', 'Data Analyst', 'DevOps Engineer'];
 
 export const mockInterviews: Interview[] = [
+  // Mintskill (tenant_123) interviews
   {
     id: 'int-1',
     candidateId: 'cand-1',
@@ -73,6 +74,46 @@ export const mockInterviews: Interview[] = [
     stage: 'screening',
     status: 'scheduled',
     tenantId: 'tenant_123',
+  },
+  // Mintskill 2 (tenant_456) interviews
+  {
+    id: 'int-6',
+    candidateId: 'cand-6',
+    candidateName: 'Olivia Brown',
+    candidateEmail: 'olivia.brown@gmail.com',
+    interviewerName: 'John Smith',
+    interviewerEmail: 'john.smith@mintskill2.com',
+    role: 'UX Designer',
+    dateTime: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(),
+    stage: 'screening',
+    status: 'scheduled',
+    tenantId: 'tenant_456',
+  },
+  {
+    id: 'int-7',
+    candidateId: 'cand-7',
+    candidateName: 'Michael Chen',
+    candidateEmail: 'michael.chen@outlook.com',
+    interviewerName: 'Lisa Wang',
+    interviewerEmail: 'lisa.wang@mintskill2.com',
+    role: 'Mobile Developer',
+    dateTime: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString(),
+    stage: 'interview-1',
+    status: 'scheduled',
+    tenantId: 'tenant_456',
+  },
+  {
+    id: 'int-8',
+    candidateId: 'cand-8',
+    candidateName: 'Sarah Johnson',
+    candidateEmail: 'sarah.j@yahoo.com',
+    interviewerName: 'Tom Davis',
+    interviewerEmail: 'tom.davis@mintskill2.com',
+    role: 'QA Engineer',
+    dateTime: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
+    stage: 'hr-round',
+    status: 'completed',
+    tenantId: 'tenant_456',
   },
 ];
 
