@@ -133,8 +133,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [build-images]
     if: github.ref == 'refs/heads/main' || inputs.environment == 'dev'
-    environment:
-      name: dev
+    environment: dev
 
     steps:
       - name: Checkout code
@@ -169,8 +168,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [deploy-dev]
     if: inputs.environment == 'staging' || inputs.environment == 'production'
-    environment:
-      name: staging
+    environment: staging
 
     steps:
       - name: Checkout code
@@ -198,8 +196,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [deploy-staging]
     if: inputs.environment == 'production'
-    environment:
-      name: production
+    environment: production
     # ⚠️ Production requires manual approval via GitHub Environments
 
     steps:
